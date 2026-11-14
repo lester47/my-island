@@ -313,7 +313,7 @@ function buildTags() {
     b.style.setProperty('--tc', c); if (I.tint) { b.style.setProperty('--ttint', I.tint); b.style.setProperty('--tink', I.ink); }
     b.setAttribute('aria-label', id === 'center' ? `${I.name}，${I.role}` : `第 ${I.order} 島 ${I.name}，${stallsOf(id).length} 攤`);
     b.setAttribute('aria-expanded', 'false'); b.setAttribute('aria-controls', 'panel');
-    b.innerHTML = id === 'center' ? `<span>★ ${esc(I.name)}</span><span class="ct">服務台</span><span class="st"></span>` : `<span class="no">${I.order}</span><span>${esc(I.name)}</span><span class="ct">${stallsOf(id).length} 攤</span><span class="st"></span>`;
+    b.innerHTML = id === 'center' ? `<span>★ ${esc(I.name)}</span><span class="ct">活動資訊</span><span class="st"></span>` : `<span class="no">${I.order}</span><span>${esc(I.name)}</span><span class="ct">${stallsOf(id).length} 攤</span><span class="st"></span>`;
     b.addEventListener('click', () => openIsland(id, { opener: b }));
     box.append(b); tags[id] = b;
   }
