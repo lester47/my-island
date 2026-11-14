@@ -1,0 +1,694 @@
+// 3D 世界：天空、海、遠山、島嶼與地標、橋、日夜光影
+import * as THREE from 'three';
+import { TAU, clamp, lerp, smooth, rng, loopNoise, mat, Builder, GEO, glowTexture, C } from './kit.js';
+
+export const H = 1.75;               // 島頂草地高度
+const SEG = 72;                      // 海岸線分段（6 的倍數，六角轉角落在頂點上）
+
+// 群島配置（示意配置，非實際比例）；+z 朝向預設鏡頭
+export const LAYOUT = {
+  center:  { x: 0,   z: 0,   R: 10.0, seed: 3.1 },
+  food:    { x: -12, z: -22, R: 6.6,  seed: 1.2 },
+  craft:   { x: 12,  z: -22, R: 6.6,  seed: 5.7 },
+  puzzle:  { x: -24, z: 4,   R: 6.6,  seed: 8.3 },
+  sport:   { x: 24,  z: 4,   R: 6.6,  seed: 2.9 },
+  recycle: { x: 0,   z: 25,  R: 6.6,  seed: 6.4 },
+};
+// 每座島的配色（3 層以上色階）
+const PAL = {
+  center:  { grass: ['#8fc96b', '#7dbb5b', '#a6d681'], path: ['#e7dcc6', '#d8cbb1'] },
+  food:    { grass: ['#9fcf6c', '#8cc25d', '#b2db82'], path: ['#f1d9b8', '#e4c79e'], main: '#e8762b', soft: '#f7b170', deep: '#b9541a' },
+  craft:   { grass: ['#93c978', '#81bb67', '#a9d58f'], path: ['#e6dcef', '#d4c6e2'], main: '#8a5cd0', soft: '#c1a6ec', deep: '#5e3b9c' },
+  puzzle:  { grass: ['#8cc777', '#79b965', '#a2d48d'], path: ['#dbe7f3', '#c6d7ea'], main: '#2f7fd1', soft: '#8dbcec', deep: '#1d5596' },
+  sport:   { grass: ['#97ca6e', '#86bd5d', '#acd685'], path: ['#f2d8d3', '#e5c1ba'], main: '#dc4848', soft: '#f19a92', deep: '#9c2b2b' },
+  recycle: { grass: ['#86c56f', '#73b65d', '#9dd286'], path: ['#dcebd8', '#c7dcc1'], main: '#3e9b4f', soft: '#93d09c', deep: '#286b34' },
+};
+const SAND = ['#f3dfb2', '#e8cf98', '#dcc084'], ROCK = ['#b3a48f', '#9c8d79', '#c4b7a3', '#877a68'];
+const WOOD = '#b98352', WOOD2 = '#8d5d35', WOOD3 = '#d4a571', WHITE = '#fbf7ee';
+
+// 六角形加噪聲的海岸線（不是正六角柱）
+export function shapeR(theta, seed) {
+  const k = ((theta % (TAU / 6)) + TAU / 6) % (TAU / 6) - TAU / 12;
+  const hex = Math.cos(TAU / 12) / Math.cos(k);
+  return lerp(hex, 1, .16) * (1 + .045 * loopNoise(theta, seed));
+}
+
+// ------------------------------------------------------------------ 島的地形（沙灘 → 岩壁 → 草地）
+function terrain(L, pal) {
+  const { R, seed } = L;
+  const rand = rng(Math.floor(seed * 1000));
+  const rings = [ // [半徑倍率, 高度, 色階]
+    [1.24, -1.4, SAND[2]], [1.22, .12, SAND[1]], [1.16, .36, SAND[0]], [1.08, .58, SAND[0]],
+    [1.035, .66, ROCK[3]], [1.02, 1.05, ROCK[1]], [1.005, 1.42, ROCK[0]], [.995, 1.62, ROCK[2]], [.975, H, pal.grass[1]],
+  ];
+  const pos = [], col = [];
+  const P = (ri, a) => {
+    const th = a / SEG * TAU, r = shapeR(th, seed) * R * rings[ri][0];
+    const jitter = ri >= 4 && ri <= 7 ? (rand() - .5) * .18 : 0;
+    return [Math.cos(th) * (r + jitter), rings[ri][1] + (ri >= 4 && ri <= 7 ? (rand() - .5) * .12 : 0), Math.sin(th) * (r + jitter)];
+  };
+  const grid = rings.map((_, ri) => Array.from({ length: SEG }, (_, a) => P(ri, a)));
+  const push = (a, b, c, hex, k = 1) => { const cc = C(hex).multiplyScalar(k); pos.push(...a, ...b, ...c); for (let i = 0; i < 3; i++) col.push(cc.r, cc.g, cc.b); };
+  for (let ri = 0; ri < rings.length - 1; ri++) for (let a = 0; a < SEG; a++) {
+    const a1 = (a + 1) % SEG, p00 = grid[ri][a], p01 = grid[ri][a1], p10 = grid[ri + 1][a], p11 = grid[ri + 1][a1];
+    const hex = rings[ri + 1][2], k = .93 + rand() * .12;
+    push(p00, p10, p01, hex, k); push(p01, p10, p11, hex, k * .97);
+  }
+  // 草地頂面：同心環，三種草色
+  const TR = 6, top = [];
+  for (let j = 0; j <= TR; j++) top.push(Array.from({ length: SEG }, (_, a) => {
+    const t = 1 - j / TR, th = a / SEG * TAU, r = shapeR(th, seed) * R * .975 * t;
+    return [Math.cos(th) * r, H + (j > 0 && j < TR ? (rand() - .5) * .07 : 0), Math.sin(th) * r];
+  }));
+  for (let j = 0; j < TR; j++) for (let a = 0; a < SEG; a++) {
+    const a1 = (a + 1) % SEG, p00 = top[j][a], p01 = top[j][a1], p10 = top[j + 1][a], p11 = top[j + 1][a1];
+    const g = pal.grass[(Math.floor(rand() * 7) + j) % 3], k = .96 + rand() * .07;
+    push(p00, p10, p01, g, k);
+    if (j < TR - 1) push(p01, p10, p11, g, k * .98);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  geo.computeVertexNormals();
+  const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: .92 }));
+  m.receiveShadow = true; m.castShadow = true;
+  return m;
+}
+
+// 浪花圈
+function foamRing(L) {
+  const pos = [], idx = [];
+  for (let a = 0; a <= SEG; a++) {
+    const th = a / SEG * TAU, r = shapeR(th, L.seed) * L.R;
+    for (const [k, y] of [[1.2, .16], [1.36, .1]]) pos.push(Math.cos(th) * r * k, y, Math.sin(th) * r * k);
+  }
+  for (let a = 0; a < SEG; a++) { const i = a * 2; idx.push(i, i + 2, i + 1, i + 1, i + 2, i + 3); }
+  const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setIndex(idx);
+  const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: .55, depthWrite: false, side: THREE.DoubleSide }));
+  m.renderOrder = 1; return m;
+}
+
+// ------------------------------------------------------------------ 小物件（全部用程式幾何原創）
+const NIGHT = { windows: [], lamps: [], glows: [] };
+const winMat = new THREE.MeshStandardMaterial({ color: '#3d4660', emissive: '#ffcf73', emissiveIntensity: 0, flatShading: true, roughness: .4 });
+const lampMat = new THREE.MeshStandardMaterial({ color: '#fff3c9', emissive: '#ffcf73', emissiveIntensity: .1, flatShading: true, roughness: .3 });
+const MAT_FOR = (key) => key === 'win' ? winMat : key === 'lamp' ? lampMat : mat(key);
+
+function house(B, roof, wall = '#fbf3e3', s = 1) {
+  B.push(0, 0, 0, 0, s);
+  B.add(GEO.box, WOOD2, 0, .08, 0, 0, 0, 0, 2.3, .16, 2.0);
+  B.add(GEO.box, wall, 0, 1.0, 0, 0, 0, 0, 2.1, 1.75, 1.8);
+  B.add(GEO.cone4, roof, 0, 2.45, 0, 0, Math.PI / 4, 0, 3.3, 1.25, 2.9);
+  B.add(GEO.box, WOOD2, 0, .78, .91, 0, 0, 0, .62, 1.2, .06);          // 門
+  B.add(GEO.box, 'win', -.62, 1.15, .91, 0, 0, 0, .5, .48, .05);       // 窗（夜晚亮）
+  B.add(GEO.box, 'win', .62, 1.15, .91, 0, 0, 0, .5, .48, .05);
+  B.add(GEO.box, 'win', 1.06, 1.15, 0, 0, Math.PI / 2, 0, .5, .48, .05);
+  B.add(GEO.box, WOOD3, -.62, .86, .98, 0, 0, 0, .6, .07, .16);         // 窗台花箱
+  B.add(GEO.box, WOOD3, .62, .86, .98, 0, 0, 0, .6, .07, .16);
+  for (const x of [-.78, -.5, .5, .78]) B.add(GEO.ball0, ['#ff8fa3', '#ffd25a'][Math.abs(x) > .6 ? 0 : 1], x * .9, .96, .99, 0, 0, 0, .14);
+  B.add(GEO.box, '#a3502f', .7, 2.75, -.3, 0, 0, 0, .28, .7, .28);        // 煙囪
+  B.pop();
+}
+function treeRound(B, s = 1, tone = 0) {
+  const greens = [['#5fae49', '#78c25c', '#4e9a3d'], ['#6cb84f', '#8bcc68', '#559f41']][tone % 2];
+  B.push(0, 0, 0, 0, s);
+  B.add(GEO.cyl6, WOOD2, 0, .7, 0, 0, 0, 0, .26, 1.4, .26);
+  B.add(GEO.ball1, greens[0], 0, 1.95, 0, 0, 0, 0, 1.55, 1.35, 1.55);
+  B.add(GEO.ball1, greens[1], .38, 2.35, .15, 0, 0, 0, 1.0);
+  B.add(GEO.ball1, greens[2], -.35, 2.2, -.2, 0, 0, 0, 1.05);
+  B.pop();
+}
+function treePine(B, s = 1) {
+  B.push(0, 0, 0, 0, s);
+  B.add(GEO.cyl6, WOOD2, 0, .45, 0, 0, 0, 0, .24, .9, .24);
+  B.add(GEO.cone8, '#3f8f4a', 0, 1.35, 0, 0, 0, 0, 1.55, 1.4, 1.55);
+  B.add(GEO.cone8, '#4f9f55', 0, 2.05, 0, 0, .3, 0, 1.2, 1.2, 1.2);
+  B.add(GEO.cone8, '#62b267', 0, 2.65, 0, 0, .6, 0, .8, 1.0, .8);
+  B.pop();
+}
+function bush(B, s = 1) { B.push(0, 0, 0, 0, s); B.add(GEO.ball1, '#6fb752', 0, .32, 0, 0, 0, 0, .9, .65, .9); B.add(GEO.ball1, '#86c766', .3, .42, .1, 0, 0, 0, .55); B.pop(); }
+function flowerBed(B, w = 2.2, d = 1.0, colors = ['#ff8fa3', '#ffd25a', '#ffffff', '#b18cf0']) {
+  B.add(GEO.box, '#9a6a3f', 0, .12, 0, 0, 0, 0, w + .2, .24, d + .2);
+  B.add(GEO.box, '#6b4a2d', 0, .25, 0, 0, 0, 0, w, .04, d);
+  let i = 0;
+  for (let x = -w / 2 + .2; x < w / 2; x += .32) for (let z = -d / 2 + .2; z < d / 2; z += .32, i++) {
+    B.add(GEO.cyl6, '#4f9a3c', x, .38, z, 0, 0, 0, .04, .26, .04);
+    B.add(GEO.ball0, colors[i % colors.length], x, .55, z, 0, 0, 0, .2);
+  }
+}
+function fence(B, len = 3) {
+  for (let x = -len / 2; x <= len / 2 + .01; x += .5) B.add(GEO.box, WOOD3, x, .35, 0, 0, 0, 0, .1, .7, .1);
+  B.add(GEO.box, WOOD3, 0, .5, 0, 0, 0, 0, len, .08, .06); B.add(GEO.box, WOOD3, 0, .26, 0, 0, 0, 0, len, .08, .06);
+}
+function bench(B) {
+  B.add(GEO.box, WOOD, 0, .42, 0, 0, 0, 0, 1.3, .08, .42); B.add(GEO.box, WOOD, 0, .72, -.2, -.15, 0, 0, 1.3, .3, .06);
+  for (const x of [-.55, .55]) B.add(GEO.box, '#5b5f66', x, .2, 0, 0, 0, 0, .08, .42, .38);
+}
+function crate(B, s = 1) {
+  B.push(0, 0, 0, 0, s);
+  B.add(GEO.box, WOOD3, 0, .32, 0, 0, 0, 0, .64, .64, .64);
+  for (const y of [.12, .52]) B.add(GEO.box, WOOD2, 0, y, .33, 0, 0, 0, .66, .08, .02);
+  B.pop();
+}
+function signBoard(B, color) {
+  B.add(GEO.box, WOOD2, 0, .6, 0, 0, 0, 0, .1, 1.2, .1);
+  B.add(GEO.box, WOOD3, 0, 1.15, .06, 0, 0, 0, .9, .55, .08);
+  B.add(GEO.box, color, 0, 1.15, .11, 0, 0, 0, .72, .38, .02);
+}
+function well(B) {
+  B.add(GEO.cyl12, ROCK[0], 0, .35, 0, 0, 0, 0, 1.1, .7, 1.1);
+  B.add(GEO.cyl12, '#3c6f8f', 0, .71, 0, 0, 0, 0, .86, .02, .86);
+  for (const x of [-.48, .48]) B.add(GEO.box, WOOD2, x, 1.05, 0, 0, 0, 0, .09, 1.4, .09);
+  B.add(GEO.cone4, '#c4553a', 0, 1.9, 0, 0, Math.PI / 4, 0, 1.5, .6, 1.2);
+}
+function lampPost(B, world, groupWorldPos) {
+  B.add(GEO.cyl6, '#4a4f58', 0, 1.1, 0, 0, 0, 0, .1, 2.2, .1);
+  B.add(GEO.box, '#4a4f58', 0, 2.25, 0, 0, 0, 0, .36, .08, .36);
+  B.add(GEO.box, 'lamp', 0, 2.05, 0, 0, 0, 0, .28, .34, .28);
+  NIGHT.glows.push(new THREE.Vector3(0, 2.05, 0).applyMatrix4(B.m));
+}
+function rocks(B, rand, n, rMin, rMax, seed, R) {
+  for (let i = 0; i < n; i++) {
+    const th = rand() * TAU, r = (rMin + rand() * (rMax - rMin)) * shapeR(th, seed) * R;
+    B.add(GEO.dode, ROCK[i % 3], Math.cos(th) * r, H + .05, Math.sin(th) * r, rand(), rand() * 3, 0, .35 + rand() * .45, .25 + rand() * .3, .35 + rand() * .4);
+  }
+}
+function edgeGreens(B, rand, L, skipAngles) {
+  // 邊緣草叢與小石頭
+  for (let i = 0; i < 46; i++) {
+    const th = i / 46 * TAU + rand() * .06;
+    if (skipAngles.some((a) => Math.abs(Math.atan2(Math.sin(th - a), Math.cos(th - a))) < .22)) continue;
+    const r = shapeR(th, L.seed) * L.R * (.9 + rand() * .05), x = Math.cos(th) * r, z = Math.sin(th) * r;
+    const q = rand();
+    if (q < .55) for (let k = 0; k < 4; k++) { const a = k / 4 * TAU + rand(); B.add(GEO.cone4, k % 2 ? '#5ea844' : '#7cc25c', x + Math.cos(a) * .1, H + .22, z + Math.sin(a) * .1, Math.sin(a) * .35, rand(), -Math.cos(a) * .35, .12, .5 + rand() * .3, .12); }
+    else if (q < .8) B.add(GEO.dode, ROCK[Math.floor(rand() * 3)], x, H + .06, z, rand(), rand(), 0, .22 + rand() * .2, .14, .22 + rand() * .15);
+    else { B.add(GEO.ball0, ['#ffffff', '#ffd25a', '#ff9fb2'][Math.floor(rand() * 3)], x, H + .22, z, 0, 0, 0, .18); B.add(GEO.cyl6, '#4f9a3c', x, H + .1, z, 0, 0, 0, .03, .2, .03); }
+  }
+}
+function stonePath(B, pal, rRing, rand, spokeAngles, R, seed, width = .95) {
+  const n = Math.round(rRing * TAU / .78);
+  for (let i = 0; i < n; i++) {
+    const th = i / n * TAU, x = Math.cos(th) * rRing, z = Math.sin(th) * rRing;
+    B.add(GEO.cyl6, pal.path[i % 2], x, H + .03, z, 0, th + rand() * .4, 0, width * .78, .07, width * .66);
+  }
+  for (const a of spokeAngles) {
+    const end = shapeR(a, seed) * R * .97;
+    for (let r = rRing + .7; r < end; r += .72) B.add(GEO.cyl6, pal.path[Math.round(r) % 2], Math.cos(a) * r, H + .03, Math.sin(a) * r, 0, a + rand(), 0, .7, .07, .6);
+  }
+}
+function dock(B, L, ang) {
+  // 碼頭與小船：放在沙灘外側
+  const r0 = shapeR(ang, L.seed) * L.R * 1.06;
+  B.push(Math.cos(ang) * r0, 0, Math.sin(ang) * r0, -ang + Math.PI / 2);
+  for (let i = 0; i < 6; i++) B.add(GEO.box, i % 2 ? WOOD : WOOD3, 0, .62, i * .5 + .2, 0, 0, 0, 1.3, .1, .45);
+  for (const x of [-.6, .6]) for (const z of [.3, 1.4, 2.6]) B.add(GEO.cyl6, WOOD2, x, .2, z, 0, 0, 0, .14, 1.2, .14);
+  B.pop();
+  return { x: Math.cos(ang) * (r0 + 2.4) + 1.2 * Math.cos(ang + Math.PI / 2), z: Math.sin(ang) * (r0 + 2.4) + 1.2 * Math.sin(ang + Math.PI / 2), ry: -ang };
+}
+function rowBoat(color) {
+  const B = new Builder();
+  B.add(GEO.box, color, 0, .25, 0, 0, 0, 0, .9, .3, 1.9);
+  B.add(GEO.cone4, color, 0, .25, 1.15, Math.PI / 2, Math.PI / 4, 0, .63, .5, .3);
+  B.add(GEO.box, WOOD3, 0, .38, 0, 0, 0, 0, .8, .06, .3);
+  return B.build(MAT_FOR);
+}
+
+// ------------------------------------------------------------------ 各島地標
+const ANIM = [];   // 會動的小機關（減少動態時停止）
+function landmarkFood(B, g, P) {
+  // 條紋點心攤＋巨型果汁招牌
+  B.push(0, H, -.3);
+  for (const [x, z] of [[-1.6, -.7], [1.6, -.7], [-1.6, .7], [1.6, .7]]) B.add(GEO.box, WOOD2, x, 1.25, z, 0, 0, 0, .14, 2.5, .14);
+  B.add(GEO.box, WOOD, 0, .55, 0, 0, 0, 0, 3.3, 1.1, 1.3);
+  for (let i = 0; i < 10; i++) for (let j = 0; j < 4; j++) B.add(GEO.box, (i + j) % 2 ? WHITE : P.soft, -1.48 + i * .33, 1.13, -.5 + j * .33, 0, 0, 0, .33, .04, .33);
+  for (let i = 0; i < 9; i++) B.add(GEO.box, i % 2 ? WHITE : P.main, -1.6 + i * .4, 2.62, 0, -.22, 0, 0, .4, .07, 1.9);
+  for (let i = 0; i < 9; i++) B.add(GEO.cyl8, i % 2 ? WHITE : P.main, -1.6 + i * .4, 2.32, 1.0, Math.PI / 2, 0, 0, .4, .1, .4);
+  for (let i = 0; i < 4; i++) B.add(GEO.cyl8, '#ffffff', -1.1 + i * .3, 1.27, .25, 0, 0, 0, .22, .3, .22);
+  B.add(GEO.cyl12, '#ffd34a', .8, 1.42, -.15, 0, 0, 0, .7, .6, .7);
+  B.add(GEO.cyl12, '#fff6d8', .8, 1.76, -.15, 0, 0, 0, .64, .08, .64);
+  B.add(GEO.cyl12, WHITE, 1.25, 1.17, .35, 0, 0, 0, .9, .05, .9);
+  for (let i = 0; i < 5; i++) B.add(GEO.cyl8, '#c98a47', 1.25 + Math.cos(i * 1.26) * .22, 1.24, .35 + Math.sin(i * 1.26) * .22, 0, 0, 0, .26, .06, .26);
+  B.pop();
+  // 招牌柱上的巨型果汁杯（慢慢轉）
+  B.add(GEO.cyl6, WOOD2, -2.2, H + 1.6, .7, 0, 0, 0, .14, 3.2, .14);
+  const cup = new THREE.Group(); cup.position.set(-2.2, H + 3.5, .7);
+  const m = (geo, c, y, sx, sy, sz, rz = 0) => { const o = new THREE.Mesh(geo, mat(c)); o.position.y = y; o.scale.set(sx, sy, sz); o.rotation.z = rz; o.castShadow = true; cup.add(o); };
+  m(new THREE.CylinderGeometry(.5, .38, 1, 12), '#fff6d8', 0, 1.1, 1.2, 1.1);
+  m(new THREE.CylinderGeometry(.5, .38, 1, 12), '#ff9e2c', -.08, 1.0, .95, 1.0);
+  m(GEO.sph, '#fff6d8', .62, 1.15, .4, 1.15);
+  m(GEO.cyl6, '#ff5a5a', 1.15, .1, 1.1, .1, .25);
+  g.add(cup); ANIM.push((t) => { cup.rotation.y = t * .5; });
+}
+function landmarkCraft(B, g, P) {
+  // 紫色手作帳篷（條紋圓錐頂）＋巨型剪刀＋調色盤
+  B.push(0, H, -.4);
+  B.add(GEO.cyl12, '#f6f0ff', 0, .9, 0, 0, 0, 0, 3.2, 1.8, 3.2);
+  for (let i = 0; i < 12; i++) B.add(GEO.cone4, i % 2 ? WHITE : P.main, Math.cos(i / 12 * TAU) * .02, 2.6, Math.sin(i / 12 * TAU) * .02, 0, i / 12 * TAU, 0, 3.7, 1.7, .2 + 0);
+  B.add(GEO.cone8, P.main, 0, 2.6, 0, 0, 0, 0, 3.6, 1.6, 3.6);
+  B.add(GEO.cyl6, WOOD2, 0, 3.7, 0, 0, 0, 0, .06, .7, .06);
+  B.add(GEO.cone4, '#ffd25a', .22, 3.9, 0, 0, 0, -Math.PI / 2, .3, .45, .05);
+  B.add(GEO.box, '#3d2a5c', 0, .75, 1.58, 0, 0, 0, 1.1, 1.5, .05);       // 帳篷門
+  B.add(GEO.box, WOOD, 1.0, .45, 2.0, 0, 0, 0, 1.4, .1, .7);
+  for (let i = 0; i < 5; i++) B.add(GEO.cyl8, ['#ff6b6b', '#ffd25a', '#4aa3e8', '#5ec26a', '#b18cf0'][i], .55 + i * .23, .62, 2.0, 0, 0, 0, .16, .26, .16);
+  for (const [x, z] of [[.5, 1.7], [1.5, 1.7], [.5, 2.3], [1.5, 2.3]]) B.add(GEO.box, WOOD2, x, .2, z, 0, 0, 0, .07, .4, .07);
+  B.pop();
+  // 巨型剪刀
+  B.push(-2.3, H, .9, .5);
+  B.add(GEO.box, '#7d8794', 0, .2, 0, 0, 0, 0, 1.2, .4, .8);
+  for (const s of [-1, 1]) {
+    B.add(GEO.torus, s < 0 ? '#ff8fc0' : P.main, s * .35, 1.0, 0, 0, 0, 0, 1.1, 1.1, 1.6);
+    B.add(GEO.box, '#d6dde6', -s * .2, 2.1, 0, 0, 0, s * .3, .16, 1.9, .07);
+  }
+  B.add(GEO.ball0, '#6b7380', 0, 1.45, .06, 0, 0, 0, .2);
+  B.pop();
+  // 調色盤
+  B.push(2.4, H + .05, .9, -.4);
+  B.add(GEO.cyl16, '#e9c48f', 0, .06, 0, 0, 0, 0, 1.6, .1, 1.2);
+  for (let i = 0; i < 6; i++) B.add(GEO.ball0, ['#ff6b6b', '#ffd25a', '#4aa3e8', '#5ec26a', '#b18cf0', '#ff9a3d'][i], Math.cos(i * 1.05) * .45, .16, Math.sin(i * 1.05) * .33, 0, 0, 0, .22, .1, .22);
+  B.pop();
+}
+function landmarkPuzzle(B, g, P) {
+  // 木製彈珠迷宮
+  B.push(.3, H, .3);
+  B.add(GEO.box, '#e0b47a', 0, .2, 0, 0, 0, 0, 3.4, .4, 2.6);
+  const walls = [[0, -1.25, 3.4, .12], [0, 1.25, 3.4, .12], [-1.65, 0, .12, 2.6], [1.65, 0, .12, 2.6], [-.8, -.3, .12, 1.6], [0, .4, 1.6, .12], [.8, -.5, .12, 1.3], [.35, -.75, .9, .12], [-1.15, .75, .8, .12]];
+  for (const [x, z, w, d] of walls) B.add(GEO.box, '#f3d3a2', x, .55, z, 0, 0, 0, w, .3, d);
+  for (const [x, z, c] of [[-1.2, -.8, '#3c8dea'], [.4, .8, '#55c9a8'], [1.2, .15, '#3c8dea'], [-.3, -.9, '#7ad0ff']]) B.add(GEO.sph, c, x, .58, z, 0, 0, 0, .3);
+  B.add(GEO.torus, '#e0463a', 1.2, .42, -.8, 0, 0, 0, .6, .6, .9);
+  B.pop();
+  // 拼圖拱門
+  B.push(0, H, -2.2);
+  for (const s of [-1, 1]) { B.add(GEO.box, s < 0 ? P.main : '#ffcf3a', s * 1.3, 1.2, 0, 0, 0, 0, .8, 2.4, .5); B.add(GEO.cyl12, s < 0 ? P.main : '#ffcf3a', s * 1.3 + s * -.5, 1.4, 0, 0, 0, Math.PI / 2, .44, .3, .44); }
+  B.add(GEO.box, P.soft, 0, 2.75, 0, 0, 0, 0, 3.4, .75, .5);
+  B.add(GEO.cyl12, P.soft, 0, 3.15, 0, Math.PI / 2, 0, 0, .5, .5, .5);
+  B.add(GEO.cyl12, '#5ec26a', -.75, 2.75, .2, Math.PI / 2, 0, 0, .36, .2, .36);
+  B.pop();
+  const marble = new THREE.Mesh(GEO.sph, mat('#ff5a8a', { roughness: .2 })); marble.scale.setScalar(.32); marble.castShadow = true; g.add(marble);
+  ANIM.push((t) => { const a = t * .8; marble.position.set(.3 + Math.cos(a) * 1.2, H + .6, .3 + Math.sin(a * 2) * .5); });
+}
+function landmarkSport(B, g, P) {
+  // 沙包投擲洞洞板
+  B.push(-1.2, H, -.8, .25);
+  B.add(GEO.box, '#e7c48c', 0, 1.1, 0, -.5, 0, 0, 2.4, 2.6, .16);
+  B.add(GEO.box, WOOD2, 0, 1.1, -.04, -.5, 0, 0, 2.55, 2.75, .1);
+  const tilt = -.5;
+  for (const [x, y, c] of [[-.55, .55, '#ffcf3a'], [.55, .55, '#3c8dea'], [-.55, -.5, '#5ec26a'], [.55, -.5, P.main]]) {
+    B.add(GEO.torus, c, x, 1.1 + y * Math.cos(tilt), -y * Math.sin(tilt) * -1 * -1 + .1, Math.PI / 2 + tilt, 0, 0, .7, .7, .7);
+  }
+  for (const x of [-1, 1]) B.add(GEO.box, WOOD2, x, .9, -1.0, .55, 0, 0, .1, 2.0, .1);
+  B.pop();
+  B.push(1.0, H, 1.6);
+  B.add(GEO.cyl12, '#c8955a', 0, .3, 0, 0, 0, 0, 1.1, .6, 1.1);
+  for (const [x, z, c] of [[-.2, 0, P.main], [.15, .15, '#3c8dea'], [.1, -.2, '#ffcf3a']]) B.add(GEO.box, c, x, .66, z, 0, x * 3, 0, .34, .14, .3);
+  B.pop();
+  // 陀螺擂台（陀螺會轉）
+  B.push(1.6, H, -1.4);
+  B.add(GEO.cyl16, '#5b6474', 0, .2, 0, 0, 0, 0, 2.4, .4, 2.4);
+  B.add(GEO.cyl16, '#d9e2ec', 0, .41, 0, 0, 0, 0, 2.1, .04, 2.1);
+  B.pop();
+  for (const [i, c] of [[0, P.main], [1, '#3c8dea']]) {
+    const top = new THREE.Group();
+    const a = new THREE.Mesh(new THREE.ConeGeometry(.28, .4, 8), mat(c)); a.rotation.x = Math.PI; a.position.y = .25; top.add(a);
+    const b = new THREE.Mesh(GEO.cyl8, mat('#fbf7ee')); b.scale.set(.6, .1, .6); b.position.y = .45; top.add(b);
+    top.traverse((o) => { o.castShadow = true; }); g.add(top);
+    ANIM.push((t) => { const q = t * 1.3 + i * Math.PI; top.position.set(1.6 + Math.cos(q) * .55, H + .42, -1.4 + Math.sin(q) * .55); top.rotation.y = t * 14; top.rotation.z = Math.sin(t * 3 + i) * .08; });
+  }
+}
+function landmarkRecycle(B, g, P) {
+  // 交換小屋（開放式前廊）＋書櫃＋循環標誌
+  B.push(-.4, H, -1.0);
+  B.add(GEO.box, '#f1ead8', 0, 1.0, -.2, 0, 0, 0, 3.0, 2.0, 1.6);
+  B.add(GEO.box, P.main, 0, 2.15, .15, -.18, 0, 0, 3.4, .14, 2.4);
+  B.add(GEO.box, WOOD, 0, .4, .8, 0, 0, 0, 2.8, .8, .5);
+  for (let i = 0; i < 6; i++) B.add(GEO.box, ['#e0463a', '#3c8dea', '#ffcf3a', '#5ec26a', '#b18cf0', '#ff9a3d'][i], -1.1 + i * .42, .95, .78, 0, 0, (i % 3 - 1) * .08, .28, .28, .35);
+  B.add(GEO.box, 'win', -.9, 1.35, .61, 0, 0, 0, .6, .5, .04);
+  B.add(GEO.box, 'win', .9, 1.35, .61, 0, 0, 0, .6, .5, .04);
+  B.pop();
+  B.push(2.2, H, .3, -.6);  // 書櫃
+  B.add(GEO.box, WOOD, 0, .8, 0, 0, 0, 0, 1.2, 1.6, .5);
+  for (let r = 0; r < 3; r++) for (let i = 0; i < 5; i++) B.add(GEO.box, ['#e0463a', '#3c8dea', '#ffcf3a', '#5ec26a', '#ff9a3d'][(i + r) % 5], -.42 + i * .2, .32 + r * .5, .08, 0, 0, 0, .16, .38, .32);
+  B.pop();
+  B.push(-2.3, H, 1.2, .4); crate(B, 1.1); B.add(GEO.sph, '#ffffff', 0, .85, 0, 0, 0, 0, .55); B.pop();
+  // 會轉的循環標誌
+  B.add(GEO.cyl6, WOOD2, 1.2, H + 1.5, -2.4, 0, 0, 0, .14, 3, .14);
+  const sign = new THREE.Group(); sign.position.set(1.2, H + 3.4, -2.4);
+  for (let i = 0; i < 3; i++) {
+    const arc = new THREE.Mesh(new THREE.TorusGeometry(.55, .13, 6, 14, TAU / 3 - .45), mat(P.main)); arc.rotation.z = i * TAU / 3; sign.add(arc);
+    const head = new THREE.Mesh(GEO.cone4, mat(P.main)); const a = i * TAU / 3 + TAU / 3 - .45;
+    head.position.set(Math.cos(a) * .55, Math.sin(a) * .55, 0); head.rotation.z = a; head.scale.set(.42, .36, .2); sign.add(head);
+  }
+  sign.traverse((o) => { o.castShadow = true; }); g.add(sign);
+  ANIM.push((t) => { sign.rotation.y = t * .6; });
+}
+function landmarkCenter(B, g, P, extras) {
+  // 活動服務台涼亭
+  B.push(0, H, 0);
+  B.add(GEO.cyl6, '#e9dcc3', 0, .12, 0, 0, Math.PI / 6, 0, 5.0, .24, 5.0);
+  for (let i = 0; i < 6; i++) { const a = i / 6 * TAU + Math.PI / 6; B.add(GEO.cyl6, WHITE, Math.cos(a) * 2.1, 1.35, Math.sin(a) * 2.1, 0, 0, 0, .2, 2.5, .2); }
+  B.add(GEO.cone6, '#e3a33b', 0, 3.25, 0, 0, Math.PI / 6, 0, 5.4, 1.5, 5.4);
+  B.add(GEO.cone6, '#3f7d3a', 0, 3.98, 0, 0, Math.PI / 6, 0, 2.0, .6, 2.0);
+  B.add(GEO.box, WOOD, 0, .7, .4, 0, 0, 0, 2.6, .9, .7);
+  B.add(GEO.box, '#3f7d3a', 0, .9, .76, 0, 0, 0, 2.2, .35, .04);
+  for (let i = 0; i < 4; i++) B.add(GEO.cyl8, ['#e8762b', '#8a5cd0', '#2f7fd1', '#dc4848'][i], -.8 + i * .5, 1.24, .35, 0, 0, 0, .3, .1, .3);
+  B.pop();
+  // 鯉魚旗竿（三尾隨風飄）
+  B.add(GEO.cyl6, '#d8d2c4', 3.6, H + 3.2, -2.6, 0, 0, 0, .14, 6.4, .14);
+  B.add(GEO.ball0, '#e3a33b', 3.6, H + 6.5, -2.6, 0, 0, 0, .35);
+  const koiCols = [['#e8473f', '#ffffff'], ['#2f7fd1', '#ffffff'], ['#e8762b', '#fff1e2']];
+  koiCols.forEach(([c1, c2], i) => {
+    const koi = new THREE.Group(); koi.position.set(3.6, H + 5.9 - i * 1.15, -2.6);
+    const len = 2.2 - i * .3;
+    for (let k = 0; k < 5; k++) {
+      const seg = new THREE.Mesh(GEO.cyl12, mat(k % 2 ? c2 : c1)); seg.rotation.z = Math.PI / 2; seg.position.x = .1 + k * len / 5 + len / 10;
+      const r = .55 - k * .07; seg.scale.set(r, len / 5, r); seg.castShadow = true; koi.add(seg);
+    }
+    const eye = new THREE.Mesh(GEO.sph, mat('#ffffff')); eye.position.set(.25, .12, .26); eye.scale.setScalar(.2); koi.add(eye);
+    const pupil = new THREE.Mesh(GEO.sph, mat('#222222')); pupil.position.set(.27, .12, .33); pupil.scale.setScalar(.1); koi.add(pupil);
+    const tail = new THREE.Mesh(GEO.cone4, mat(c1)); tail.position.x = .2 + len + .2; tail.rotation.z = -Math.PI / 2; tail.scale.set(.6, .5, .1); koi.add(tail);
+    g.add(koi);
+    ANIM.push((t) => { koi.rotation.y = -.9 + Math.sin(t * .9 + i) * .25; koi.rotation.z = Math.sin(t * 2.1 + i * 1.3) * .08; koi.children.forEach((s, k) => { if (k < 5) s.position.y = Math.sin(t * 4 + k * .8 + i) * .06 * k; }); });
+  });
+  // 風車（點綴）
+  const wm = new THREE.Vector3(-6.3, 0, -4.2);
+  B.push(wm.x, H, wm.z, .5);
+  B.add(new THREE.CylinderGeometry(.55, 1.0, 1, 8), WHITE, 0, 2.0, 0, 0, 0, 0, 1, 4.0, 1);
+  B.add(GEO.cone8, '#c4553a', 0, 4.5, 0, 0, 0, 0, 1.5, 1.1, 1.5);
+  B.add(GEO.box, WOOD2, 0, .7, .8, 0, 0, 0, .55, 1.1, .1);
+  B.add(GEO.box, 'win', 0, 2.6, .66, 0, 0, 0, .38, .4, .05);
+  B.pop();
+  const blades = new THREE.Group(); blades.position.set(wm.x + Math.sin(.5) * .95, H + 3.9, wm.z + Math.cos(.5) * .95); blades.rotation.y = .5;
+  for (let i = 0; i < 4; i++) {
+    const arm = new THREE.Group(); arm.rotation.z = i * TAU / 4;
+    const bar = new THREE.Mesh(GEO.box, mat(WOOD2)); bar.scale.set(.12, 2.3, .06); bar.position.y = 1.15; arm.add(bar);
+    const sail = new THREE.Mesh(GEO.box, mat('#fbf3e3')); sail.scale.set(.6, 1.6, .03); sail.position.set(.34, 1.35, 0); arm.add(sail);
+    blades.add(arm);
+  }
+  const hub = new THREE.Mesh(GEO.sph, mat(WOOD2)); hub.scale.setScalar(.35); blades.add(hub);
+  blades.traverse((o) => { o.castShadow = true; }); g.add(blades);
+  ANIM.push((t) => { blades.rotation.z = -t * 1.1; });
+  extras.windmill = wm;
+  // 花田（點綴）：一大片彩色花田
+  const cols = ['#ff7aa2', '#ffd25a', '#ffffff', '#b18cf0', '#ff9a3d'];
+  B.push(7.0, H, 4.3, -.55);
+  for (let r = 0; r < 5; r++) {
+    B.add(GEO.box, '#7a5a3a', 0, .06, r * .62 - 1.2, 0, 0, 0, 3.6, .1, .34);
+    for (let i = 0; i < 9; i++) { B.add(GEO.cyl6, '#4f9a3c', -1.6 + i * .4, .25, r * .62 - 1.2, 0, 0, 0, .04, .34, .04); B.add(GEO.ball0, cols[(r + i) % 5], -1.6 + i * .4, .46, r * .62 - 1.2, 0, 0, 0, .26); }
+  }
+  B.pop();
+  extras.flowerField = new THREE.Vector3(7.0, H, 4.3);
+  // 市集攤位＋燈串
+  const stallCols = ['#e8762b', '#2f7fd1', '#dc4848'];
+  stallCols.forEach((c, i) => {
+    const a = -.9 + i * .55, r = 7.0;
+    B.push(Math.cos(a) * r, H, Math.sin(a) * r, -a - Math.PI / 2);
+    for (const [x, z] of [[-.9, -.5], [.9, -.5], [-.9, .5], [.9, .5]]) B.add(GEO.box, WOOD2, x, 1.05, z, 0, 0, 0, .1, 2.1, .1);
+    B.add(GEO.box, WOOD, 0, .45, 0, 0, 0, 0, 1.9, .9, 1.0);
+    for (let k = 0; k < 5; k++) B.add(GEO.box, k % 2 ? WHITE : c, -.8 + k * .4, 2.15, 0, -.2, 0, 0, .4, .06, 1.4);
+    for (let k = 0; k < 3; k++) B.add(GEO.ball0, ['#ffd25a', '#ff7aa2', '#7fd06a'][k], -.5 + k * .5, 1.0, -.1, 0, 0, 0, .3);
+    B.add(GEO.box, 'lamp', -.95, 1.95, .55, 0, 0, 0, .14, .14, .14); B.add(GEO.box, 'lamp', .95, 1.95, .55, 0, 0, 0, .14, .14, .14);
+    NIGHT.glows.push(new THREE.Vector3(-.95, 1.95, .55).applyMatrix4(B.m), new THREE.Vector3(.95, 1.95, .55).applyMatrix4(B.m));
+    B.pop();
+  });
+  extras.market = new THREE.Vector3(Math.cos(-.35) * 6.0, H, Math.sin(-.35) * 6.0);
+}
+
+// 每座島外圈要放的東西（角度相對於連往中央島的橋）
+const OUTER = {
+  food:    ['house:#d9644a', 'treeR', 'bed', 'bench', 'treeP', 'lamp', 'crate', 'treeR', 'sign', 'bush'],
+  craft:   ['house:#6aa6c9', 'treeP', 'bed', 'lamp', 'treeR', 'bench', 'well', 'treeR', 'sign', 'fence'],
+  puzzle:  ['house:#e3a33b', 'treeR', 'fence', 'bench', 'treeP', 'lamp', 'crate', 'bed', 'treeR', 'sign'],
+  sport:   ['house:#6aa6c9', 'treeP', 'bench', 'bed', 'lamp', 'treeR', 'crate', 'treeP', 'sign', 'bush'],
+  recycle: ['house:#d9644a', 'treeR', 'bed', 'well', 'treeP', 'lamp', 'bench', 'treeR', 'sign', 'fence'],
+  center:  ['house:#d9644a', 'treeR', 'lamp', 'bench', 'treeP', 'house:#6aa6c9', 'lamp', 'treeR', 'bench', 'treeP', 'lamp', 'bed', 'crate', 'treeR', 'lamp', 'sign'],
+};
+
+// ------------------------------------------------------------------ 建造一座島
+function buildIsland(id, scene, quality) {
+  const L = LAYOUT[id], P = PAL[id] || PAL.center, isC = id === 'center';
+  const group = new THREE.Group(); group.position.set(L.x, 0, L.z); scene.add(group);
+  const rand = rng(Math.floor(L.seed * 7777));
+  const terr = terrain(L, P); group.add(terr);
+  const foam = foamRing(L); group.add(foam);
+  const B = new Builder();
+  const info = { id, R: L.R, seed: L.seed, pos: new THREE.Vector3(L.x, 0, L.z), group, colliders: [], ring: isC ? L.R * .52 : L.R * .56, extras: {}, pick: [terr] };
+  // 橋的方向（往中央島）；中央島則是五條放射路
+  const bridgeAngles = isC ? ['food', 'craft', 'puzzle', 'sport', 'recycle'].map((k) => Math.atan2(LAYOUT[k].z, LAYOUT[k].x)) : [Math.atan2(-L.z, -L.x)];
+  info.bridgeAngles = bridgeAngles;
+  const lmGroup = new THREE.Group(); group.add(lmGroup);
+  ({ food: landmarkFood, craft: landmarkCraft, puzzle: landmarkPuzzle, sport: landmarkSport, recycle: landmarkRecycle, center: landmarkCenter })[id](B, lmGroup, P, info.extras);
+  info.colliders.push({ x: 0, z: isC ? 0 : -.3, r: isC ? 3.0 : 2.6 });
+  if (isC) { info.colliders.push({ x: info.extras.windmill.x, z: info.extras.windmill.z, r: 1.2 }, { x: 7.0, z: 4.3, r: 2.0 }, { x: 3.6, z: -2.6, r: .4 }); }
+  stonePath(B, P, info.ring, rand, bridgeAngles, L.R, L.seed, isC ? 1.1 : .95);
+  // 外圈物件：避開橋的方向與正面標籤區
+  const items = OUTER[id];
+  const startA = bridgeAngles[0];
+  const occupied = [];
+  items.forEach((it, i) => {
+    let a = startA + .55 + i / items.length * (TAU - 1.1);
+    if (isC) a = startA + .38 + i / items.length * TAU;
+    if (bridgeAngles.some((b) => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b))) < .3)) a += .32;
+    const edge = shapeR(a, L.seed) * L.R;
+    const r = it.startsWith('house') ? edge * .76 : it === 'fence' || it === 'bed' ? edge * .8 : edge * .82;
+    if (isC && Math.hypot(Math.cos(a) * r - 7.0, Math.sin(a) * r - 4.3) < 2.6) return;            // 讓出花田
+    if (isC && Math.hypot(Math.cos(a) * r - info.extras.windmill.x, Math.sin(a) * r - info.extras.windmill.z) < 2.2) return;
+    if (isC && Math.hypot(Math.cos(a) * r - Math.cos(-.35) * 7, Math.sin(a) * r - Math.sin(-.35) * 7) < 2.4) return; // 讓出市集
+    const x = Math.cos(a) * r, z = Math.sin(a) * r, face = -a - Math.PI / 2;
+    B.push(x, H, z, face);
+    const [kind, arg] = it.split(':');
+    if (kind === 'house') { house(B, arg, '#fbf3e3', .92); info.colliders.push({ x, z, r: 1.55 }); info.extras.house = info.extras.house || new THREE.Vector3(x, H, z); }
+    else if (kind === 'treeR') { treeRound(B, .85 + rand() * .3, i); info.colliders.push({ x, z, r: .45 }); }
+    else if (kind === 'treeP') { treePine(B, .9 + rand() * .3); info.colliders.push({ x, z, r: .45 }); }
+    else if (kind === 'bed') { flowerBed(B, 2.0, .9); info.colliders.push({ x, z, r: 1.1 }); }
+    else if (kind === 'fence') { fence(B, 2.6); bush(B, .8); info.colliders.push({ x, z, r: 1.2 }); }
+    else if (kind === 'bench') { bench(B); info.colliders.push({ x, z, r: .6 }); }
+    else if (kind === 'crate') { crate(B, 1); B.push(.6, 0, .2, .4); crate(B, .7); B.pop(); info.colliders.push({ x, z, r: .6 }); }
+    else if (kind === 'sign') { signBoard(B, P.main || '#3f7d3a'); info.colliders.push({ x, z, r: .3 }); }
+    else if (kind === 'well') { well(B); info.colliders.push({ x, z, r: .8 }); }
+    else if (kind === 'lamp') { lampPost(B); info.colliders.push({ x, z, r: .2 }); }
+    else if (kind === 'bush') { bush(B, 1.1); info.colliders.push({ x, z, r: .5 }); }
+    B.pop(); occupied.push(a);
+  });
+  // 草地上的小石頭與邊緣草叢
+  rocks(B, rand, isC ? 8 : 5, .66, .74, L.seed, L.R);
+  edgeGreens(B, rand, L, bridgeAngles);
+  // 碼頭與小船（背向中央島的一側）
+  const dockA = bridgeAngles[0] + (isC ? Math.PI / 5 : Math.PI);
+  const boatAt = dock(B, L, dockA);
+  const statics = B.build(MAT_FOR, true); group.add(statics); info.pick.push(...statics.children);
+  const boat = rowBoat(isC ? '#2f7fd1' : (P.main || '#2f7fd1')); boat.position.set(boatAt.x, .05, boatAt.z); boat.rotation.y = boatAt.ry; group.add(boat);
+  info.boat = boat;
+  // 撿貝殼的位置（沙灘上）
+  const sa = dockA + 1.0, sr = shapeR(sa, L.seed) * L.R * 1.12;
+  info.shellSpot = new THREE.Vector3(L.x + Math.cos(sa) * sr, .44, L.z + Math.sin(sa) * sr);
+  info.foam = foam;
+  info.top = (th) => shapeR(th, L.seed) * L.R * .95;
+  return info;
+}
+
+// ------------------------------------------------------------------ 橋
+function buildBridge(scene, from, to) {
+  const a = Math.atan2(to.pos.z - from.pos.z, to.pos.x - from.pos.x);
+  const p0 = from.pos.clone().add(new THREE.Vector3(Math.cos(a), 0, Math.sin(a)).multiplyScalar(from.top(a) * .985));
+  const b = a + Math.PI;
+  const p1 = to.pos.clone().add(new THREE.Vector3(Math.cos(b), 0, Math.sin(b)).multiplyScalar(to.top(b) * .985));
+  const len = p0.distanceTo(p1), B = new Builder();
+  B.push(p0.x, 0, p0.z, -a + Math.PI / 2);
+  const n = Math.ceil(len / .42);
+  for (let i = 0; i <= n; i++) {
+    const t = i / n, y = H + Math.sin(t * Math.PI) * .9;
+    B.add(GEO.box, i % 2 ? WOOD : WOOD3, 0, y, t * len, 0, 0, 0, 1.7, .12, .38);
+    if (i % 3 === 0) for (const x of [-.85, .85]) B.add(GEO.box, WOOD2, x, y + .38, t * len, 0, 0, 0, .1, .8, .1);
+  }
+  for (const x of [-.85, .85]) for (let i = 0; i < n; i += 3) {
+    const t0 = i / n, t1 = Math.min(1, (i + 3) / n), y0 = H + Math.sin(t0 * Math.PI) * .9 + .72, y1 = H + Math.sin(t1 * Math.PI) * .9 + .72;
+    const dz = (t1 - t0) * len; B.add(GEO.box, WOOD3, x, (y0 + y1) / 2, (t0 + t1) / 2 * len, -Math.atan2(y1 - y0, dz), 0, 0, .08, .08, Math.hypot(dz, y1 - y0));
+  }
+  for (const t of [.25, .5, .75]) for (const x of [-.7, .7]) B.add(GEO.cyl6, WOOD2, x, (H + Math.sin(t * Math.PI) * .9) / 2 - .3, t * len, 0, 0, 0, .2, H + Math.sin(t * Math.PI) * .9 + .6, .2);
+  B.pop();
+  const m = B.build(MAT_FOR, true); scene.add(m);
+  return { p0, p1, len, a, to: to.id };
+}
+
+// ------------------------------------------------------------------ 天空、海、遠山
+function makeSky(scene) {
+  const geo = new THREE.SphereGeometry(520, 32, 16);
+  const m = new THREE.ShaderMaterial({
+    side: THREE.BackSide, depthWrite: false, fog: false,
+    uniforms: { top: { value: C('#5fb3f0') }, hor: { value: C('#cfeafc') }, bot: { value: C('#9fd3ea') } },
+    vertexShader: 'varying vec3 vP; void main(){ vP = normalize(position); gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }',
+    fragmentShader: 'uniform vec3 top; uniform vec3 hor; uniform vec3 bot; varying vec3 vP; void main(){ float h=vP.y; vec3 c = h>0.0 ? mix(hor, top, pow(clamp(h,0.0,1.0),0.55)) : mix(hor, bot, clamp(-h*4.0,0.0,1.0)); gl_FragColor=vec4(c,1.0); }',
+  });
+  const sky = new THREE.Mesh(geo, m); sky.renderOrder = -10; scene.add(sky);
+  // 星星
+  const n = 900, pos = new Float32Array(n * 3), r = rng(91);
+  for (let i = 0; i < n; i++) { const th = r() * TAU, y = .12 + r() * .88, s = Math.sqrt(1 - y * y); pos.set([Math.cos(th) * s * 480, y * 480, Math.sin(th) * s * 480], i * 3); }
+  const sg = new THREE.BufferGeometry(); sg.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const stars = new THREE.Points(sg, new THREE.PointsMaterial({ color: 0xffffff, size: 1.6, sizeAttenuation: false, transparent: true, opacity: 0, fog: false, depthWrite: false }));
+  scene.add(stars);
+  const sun = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture('rgba(255,244,214,1)', 'rgba(255,210,140,0)'), blending: THREE.AdditiveBlending, depthWrite: false, fog: false, transparent: true }));
+  sun.scale.setScalar(90); scene.add(sun);
+  const moon = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture('rgba(235,242,255,1)', 'rgba(170,190,255,0)'), blending: THREE.AdditiveBlending, depthWrite: false, fog: false, transparent: true, opacity: 0 }));
+  moon.scale.setScalar(55); scene.add(moon);
+  return { sky, m, stars, sun, moon };
+}
+function makeSea(scene, quality) {
+  const seg = quality === 'low' ? 70 : 140;
+  const geo = new THREE.PlaneGeometry(700, 700, seg, seg); geo.rotateX(-Math.PI / 2);
+  const m = new THREE.MeshStandardMaterial({ color: '#3fa6c9', flatShading: true, roughness: .38, metalness: .04, transparent: true, opacity: .96 });
+  const uni = { uTime: { value: 0 }, uAmp: { value: 1 } };
+  m.onBeforeCompile = (sh) => {
+    sh.uniforms.uTime = uni.uTime; sh.uniforms.uAmp = uni.uAmp;
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nuniform float uTime; uniform float uAmp;')
+      .replace('#include <begin_vertex>', `#include <begin_vertex>
+        float w = sin(position.x*.16+uTime*.9)*.22 + cos(position.z*.13+uTime*.7)*.2 + sin((position.x+position.z)*.31+uTime*1.6)*.07;
+        transformed.y += w*uAmp;`);
+  };
+  const sea = new THREE.Mesh(geo, m); sea.receiveShadow = true; sea.position.y = -.05; scene.add(sea);
+  return { sea, m, uni };
+}
+function makeMountains(scene) {
+  const B = new Builder(), r = rng(57);
+  for (let i = 0; i < 46; i++) {
+    const a = i / 46 * TAU + r() * .08, d = 230 + r() * 50, h = 22 + r() * 40, w = 30 + r() * 40;
+    B.add(new THREE.ConeGeometry(.5, 1, 7), i % 3 ? '#6f9f86' : '#5d8f78', Math.cos(a) * d, h / 2 - 3, Math.sin(a) * d, 0, r() * 3, 0, w, h, w * .8);
+    if (i % 2) B.add(new THREE.ConeGeometry(.5, 1, 6), '#7fae92', Math.cos(a + .03) * (d - 18), h * .3, Math.sin(a + .03) * (d - 18), 0, r() * 3, 0, w * .9, h * .7, w * .7);
+  }
+  const m = B.build(MAT_FOR, false); scene.add(m); return m;
+}
+
+// ------------------------------------------------------------------ 時段（白天／黃昏／夜晚）
+const KEYS = [
+  { h: 0,    top: '#0b1736', hor: '#283a63', sun: '#9fb4ff', si: .55, hs: '#5a6d9c', hg: '#1c2433', hi: .55, fog: '#1d2b47', sea: '#1b4466', exp: .95 },
+  { h: 4.6,  top: '#0f1d42', hor: '#33406e', sun: '#9fb4ff', si: .5,  hs: '#5a6d9c', hg: '#1c2433', hi: .55, fog: '#26355a', sea: '#1b4466', exp: .95 },
+  { h: 5.8,  top: '#3b5a96', hor: '#f3a77e', sun: '#ffb27a', si: 1.0, hs: '#c9a7b5', hg: '#5a4a4a', hi: .75, fog: '#e2b39f', sea: '#3a7393', exp: 1.0 },
+  { h: 7.5,  top: '#4fb0f0', hor: '#d3edfd', sun: '#fff1d6', si: 2.7, hs: '#e3f2ff', hg: '#cdb991', hi: 1.05, fog: '#cfe8f7', sea: '#3fa6c9', exp: 1.0 },
+  { h: 16,   top: '#4aa9ec', hor: '#d9eefc', sun: '#fff0d0', si: 2.5, hs: '#e3f2ff', hg: '#cdb991', hi: 1.0, fog: '#d3e9f6', sea: '#3fa3c6', exp: 1.0 },
+  { h: 18.1, top: '#4d65a6', hor: '#ffad6b', sun: '#ffa564', si: 1.7, hs: '#e9c3c8', hg: '#4a5a72', hi: .85, fog: '#e9b49a', sea: '#3f78b0', exp: 1.04 },
+  { h: 19.6, top: '#16234d', hor: '#4a4877', sun: '#9fb4ff', si: .55, hs: '#5b6aa0', hg: '#1c2433', hi: .55, fog: '#2b3858', sea: '#1d4669', exp: .96 },
+  { h: 24,   top: '#0b1736', hor: '#283a63', sun: '#9fb4ff', si: .55, hs: '#5a6d9c', hg: '#1c2433', hi: .55, fog: '#1d2b47', sea: '#1b4466', exp: .95 },
+];
+export function periodOf(h) { return h >= 6 && h < 16 ? 'day' : (h >= 16 && h < 19) || (h >= 5 && h < 6) ? 'dusk' : 'night'; }
+export const PERIOD_NAME = { day: '白天', dusk: '黃昏', night: '夜晚' };
+function sample(h) {
+  h = ((h % 24) + 24) % 24;
+  let i = 0; while (i < KEYS.length - 1 && KEYS[i + 1].h <= h) i++;
+  const a = KEYS[i], b = KEYS[Math.min(i + 1, KEYS.length - 1)], t = b.h === a.h ? 0 : smooth((h - a.h) / (b.h - a.h));
+  const o = {};
+  for (const k of Object.keys(a)) o[k] = typeof a[k] === 'number' ? lerp(a[k], b[k], t) : C(a[k]).lerp(C(b[k]), t);
+  return o;
+}
+export function nightFactor(h) {
+  h = ((h % 24) + 24) % 24;
+  if (h >= 19.4 || h < 4.8) return 1;
+  if (h >= 17.8) return smooth((h - 17.8) / 1.6);
+  if (h < 6.4) return 1 - smooth((h - 4.8) / 1.6);
+  return 0;
+}
+const THEME_TINT = { forest: null, tundra: { c: '#d8e4cf', k: .08 }, deep: { c: '#14261b', k: .42 } };
+
+// ------------------------------------------------------------------ 建立世界
+export function createWorld(canvas, opts) {
+  const quality = opts.quality;
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: quality !== 'low', powerPreference: 'high-performance', preserveDrawingBuffer: false });
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.shadowMap.enabled = quality !== 'low'; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  const scene = new THREE.Scene();
+  scene.fog = new THREE.Fog('#cfe8f7', 150, 420);
+  const camera = new THREE.PerspectiveCamera(40, 1, .3, 1400);
+  const hemi = new THREE.HemisphereLight('#e3f2ff', '#cdb991', 1); scene.add(hemi);
+  const sun = new THREE.DirectionalLight('#fff1d6', 2.6); sun.castShadow = true;
+  const sm = opts.mobile ? 1024 : 2048; sun.shadow.mapSize.set(sm, sm);
+  Object.assign(sun.shadow.camera, { left: -42, right: 42, top: 42, bottom: -42, near: 10, far: 220 });
+  sun.shadow.bias = -.0005; sun.shadow.normalBias = .04; scene.add(sun); scene.add(sun.target);
+  const skyO = makeSky(scene), seaO = makeSea(scene, quality), mountains = makeMountains(scene);
+
+  NIGHT.glows.length = 0; ANIM.length = 0;
+  const ids = ['center', 'food', 'craft', 'puzzle', 'sport', 'recycle'];
+  const islands = {}; for (const id of ids) islands[id] = buildIsland(id, scene, quality);
+  const bridges = ['food', 'craft', 'puzzle', 'sport', 'recycle'].map((id) => buildBridge(scene, islands.center, islands[id]));
+  // 夜燈光暈（加法混合 Sprite）＋最多 2 盞 PointLight
+  const glowMat = new THREE.SpriteMaterial({ map: glowTexture(), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0 });
+  const glows = new THREE.Group(); scene.add(glows);
+  scene.updateMatrixWorld(true);
+  return finishWorld({ renderer, scene, camera, hemi, sun, skyO, seaO, mountains, islands, bridges, glowMat, glows, quality, opts });
+}
+
+function finishWorld(W) {
+  const { scene, islands, glowMat, glows } = W;
+  // 把 lamp 材質的每個小方塊當作燈泡位置：依頂點群組計算中心
+  scene.traverse((o) => {
+    if (!o.isMesh || o.material !== lampMat) return;
+    const p = o.geometry.attributes.position, n = p.count;
+    for (let i = 0; i < n; i += 36) {      // 每個方塊 36 個頂點（非索引）
+      const c = new THREE.Vector3(); for (let k = 0; k < 36; k++) c.add(new THREE.Vector3().fromBufferAttribute(p, i + k)); c.multiplyScalar(1 / 36);
+      o.localToWorld(c);
+      const s = new THREE.Sprite(glowMat); s.position.copy(c); s.scale.setScalar(2.4); glows.add(s);
+    }
+  });
+  const pl1 = new THREE.PointLight('#ffcf73', 0, 22, 1.6); pl1.position.set(0, H + 3, 1.5); scene.add(pl1);
+  const pl2 = new THREE.PointLight('#ffcf73', 0, 16, 1.6); pl2.position.copy(islands.center.extras.market).add(new THREE.Vector3(0, 2.5, 0)); scene.add(pl2);
+
+  const state = { hour: 12, n: 0, theme: 'forest', themeK: 0 };
+  W.state = state;
+  W.anim = ANIM;
+  W.setHour = (h) => { state.hour = h; applyTime(); };
+  W.setTheme = (name) => { state.theme = name; applyTime(); };
+  function applyTime() {
+    const s = sample(state.hour), n = nightFactor(state.hour); state.n = n;
+    const tint = THEME_TINT[state.theme];
+    const mix = (c) => (tint ? c.clone().lerp(C(tint.c), tint.k) : c);
+    W.skyO.m.uniforms.top.value.copy(mix(s.top)); W.skyO.m.uniforms.hor.value.copy(mix(s.hor)); W.skyO.m.uniforms.bot.value.copy(mix(s.sea));
+    scene.fog.color.copy(mix(s.fog));
+    W.seaO.m.color.copy(mix(s.sea));
+    W.hemi.color.copy(s.hs); W.hemi.groundColor.copy(s.hg); W.hemi.intensity = s.hi;
+    W.sun.color.copy(s.sun); W.sun.intensity = s.si;
+    W.renderer.toneMappingExposure = s.exp;
+    // 太陽方向：白天由東往西，夜晚改用月光
+    const h = ((state.hour % 24) + 24) % 24, dayArc = (h - 6) / 12 * Math.PI;
+    const up = Math.sin(dayArc);
+    const dir = up > .05 ? new THREE.Vector3(-Math.cos(dayArc) * .8, Math.max(.3, up), .55) : new THREE.Vector3(Math.cos(dayArc) * .6, .75, .45);
+    dir.normalize();
+    W.sun.position.copy(dir).multiplyScalar(90); W.sun.target.position.set(0, 0, 0);
+    W.skyO.sun.position.copy(new THREE.Vector3(-Math.cos(dayArc), Math.sin(dayArc), .45).normalize().multiplyScalar(430));
+    W.skyO.sun.material.opacity = clamp(Math.sin(dayArc) * 3 + .2, 0, 1);
+    W.skyO.moon.position.copy(new THREE.Vector3(Math.cos(dayArc) * .7, .62, -.5).normalize().multiplyScalar(430));
+    W.skyO.moon.material.opacity = n;
+    W.skyO.stars.material.opacity = n * .9;
+    winMat.emissiveIntensity = n * 1.5; lampMat.emissiveIntensity = .1 + n * 2.2;
+    glowMat.opacity = n * .9;
+    pl1.intensity = n * 30; pl2.intensity = n * 22;
+  }
+  applyTime();
+
+  W.resize = (w, h) => { W.renderer.setSize(w, h, false); W.camera.aspect = w / h; W.camera.updateProjectionMatrix(); };
+  W.update = (t, moving) => {
+    W.seaO.uni.uTime.value = t; W.seaO.uni.uAmp.value = moving ? 1 : 0;
+    for (const id in islands) {
+      const I = islands[id];
+      I.foam.material.opacity = moving ? .42 + Math.sin(t * 1.4 + I.seed) * .14 : .5;
+      const s = moving ? 1 + Math.sin(t * 1.4 + I.seed) * .012 : 1; I.foam.scale.set(s, 1, s);
+      if (I.boat) { I.boat.position.y = moving ? .05 + Math.sin(t * 1.3 + I.seed) * .06 : .05; I.boat.rotation.z = moving ? Math.sin(t * 1.1 + I.seed) * .05 : 0; }
+    }
+    if (moving) for (const f of ANIM) f(t);
+  };
+  // 地面高度（漫遊用）：島頂、橋面；不可走則回傳 null
+  W.ground = (x, z) => {
+    for (const id in islands) {
+      const I = islands[id], dx = x - I.pos.x, dz = z - I.pos.z, r = Math.hypot(dx, dz);
+      if (r < I.top(Math.atan2(dz, dx)) * .97) {
+        for (const c of I.colliders) if (Math.hypot(dx - c.x, dz - c.z) < c.r + .25) return null;
+        return H;
+      }
+    }
+    for (const b of W.bridges) {
+      const ax = b.p1.x - b.p0.x, az = b.p1.z - b.p0.z, L2 = ax * ax + az * az;
+      const t = ((x - b.p0.x) * ax + (z - b.p0.z) * az) / L2;
+      if (t < -.04 || t > 1.04) continue;
+      const px = b.p0.x + ax * t, pz = b.p0.z + az * t;
+      if (Math.hypot(x - px, z - pz) < .72) return H + Math.sin(clamp(t, 0, 1) * Math.PI) * .9 + .06;
+    }
+    return null;
+  };
+  return W;
+}

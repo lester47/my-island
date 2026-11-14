@@ -1,0 +1,542 @@
+// 115 鯉魚市集｜介面與流程
+import * as THREE from 'three';
+
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const KEY = 'isleforge.my-island.';
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(KEY + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(KEY + k, JSON.stringify(v)); } catch (e) { /* 私密模式等情況：只是不記住 */ } },
+};
+const Q = new URLSearchParams(location.search);
+const isMobile = () => matchMedia('(max-width: 760px)').matches;
+const pad2 = (n) => String(n).padStart(2, '0');
+const fmtH = (h) => { h = ((h % 24) + 24) % 24; return `${pad2(Math.floor(h))}:${pad2(Math.floor((h % 1) * 60))}`; };
+
+// 吉祥物小鯉魚（示意造型：橘白相間、背小背包、拿市集地圖）
+const MASCOT = `<svg viewBox="0 0 64 64" role="img" aria-label="吉祥物小鯉魚"><g stroke="#7a3b12" stroke-width="1.6" stroke-linejoin="round">
+<path d="M50 30c4-6 10-8 12-6-2 4-2 8 0 12-2 2-8 0-12-6z" fill="#ff8a3d"/>
+<ellipse cx="30" cy="32" rx="22" ry="17" fill="#ff8a3d"/>
+<path d="M22 17c6 3 8 9 6 15-5-1-9-6-10-11z" fill="#fff"/><path d="M38 44c4-3 9-3 12 0-4 3-9 3-12 0z" fill="#fff"/>
+<rect x="31" y="21" width="12" height="13" rx="3" fill="#3f7d3a"/><path d="M33 21v-3a4 4 0 0 1 8 0v3" fill="none"/>
+<path d="M14 40l8-4 6 3 6-3v8l-6 3-6-3-8 4z" fill="#fff6d8"/><path d="M22 36v8M28 39v8" fill="none" stroke-width="1"/>
+</g><circle cx="17" cy="29" r="5" fill="#fff" stroke="#7a3b12" stroke-width="1.4"/><circle cx="18" cy="29.5" r="2.6" fill="#2a1d18"/><circle cx="19" cy="28.4" r=".9" fill="#fff"/>
+<path d="M10 36q3 3 6 0" fill="none" stroke="#7a3b12" stroke-width="1.6" stroke-linecap="round"/><circle cx="22" cy="35" r="2" fill="#ff9e9e" opacity=".8"/></svg>`;
+
+let C = null;            // content.json
+let W = null, L = null, CAM = null;
+const S = {
+  theme: store.get('theme', 'auto'), timeMode: store.get('time', 'auto'), hour: 10, hourShown: 10, autoStart: 0,
+  reduced: store.get('reduce', null), quality: store.get('quality', 'high'),
+  stamps: store.get('stamps', []), bag: store.get('bag', null), open: null, bubble: null, tour: null, walking: false, intro: false,
+};
+if (S.reduced == null) S.reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+if (!S.bag) S.bag = { shell: 3 };
+
+// ------------------------------------------------------------------ 共用小元件
+let toastT = 0;
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 2400); }
+function islandById(id) { return id === 'center' ? C.center : C.islands.find((i) => i.id === id); }
+function colorOf(id) { return id === 'center' ? '#3f7d3a' : islandById(id).dark; }   // 介面用加深色，白字對比 ≥ 4.5
+function openDlg(id) { const d = $(id); if (!d.open) d.showModal(); return d; }
+document.addEventListener('click', (e) => { const b = e.target.closest('[data-close]'); if (b) b.closest('dialog').close(); });
+
+// ------------------------------------------------------------------ 主題（底色）與晝夜
+const THEMES = [['auto', '🌅 自動', null], ['forest', '森林', '#eef3e6'], ['tundra', '苔原', '#dfe8d3'], ['deep', '深林', '#1b2a20']];
+const TIMES = [['day', '☀️ 白天'], ['dusk', '🌇 黃昏'], ['night', '🌙 夜晚'], ['auto', '⏱ 自動流動'], ['real', '🕒 現在時間']];
+const FIXED_H = { day: 11.5, dusk: 18.1, night: 21.5 };
+if (!['day', 'dusk', 'night', 'auto', 'real'].includes(store.get('time', 'auto'))) store.set('time', 'auto');
+const PERIOD_THEME = { day: 'forest', dusk: 'tundra', night: 'deep' };
+function periodOf(h) { h = ((h % 24) + 24) % 24; return h >= 6 && h < 16 ? 'day' : (h >= 16 && h < 19) || (h >= 5 && h < 6) ? 'dusk' : 'night'; }
+const PNAME = { day: '白天', dusk: '黃昏', night: '夜晚' };
+function targetHour(now) {
+  if (S.timeMode === 'real') { const d = new Date(); return d.getHours() + d.getMinutes() / 60; }
+  if (S.timeMode === 'auto') return (9 + (now - S.autoStart) / 150000 * 24) % 24;          // 約 2.5 分鐘一天
+  return FIXED_H[S.timeMode] ?? 11.5;      // 未知的模式一律當白天，不會讓畫面變黑
+}
+function effectiveTheme() { return S.theme === 'auto' ? PERIOD_THEME[periodOf(S.hourShown)] : S.theme; }
+let appliedTheme = null;
+function applyTheme() {
+  const t = effectiveTheme();
+  if (t === appliedTheme) return; appliedTheme = t;
+  document.documentElement.dataset.theme = t;
+  if (W) W.setTheme(t);
+}
+function buildSettings() {
+  $('#themeSeg').innerHTML = THEMES.map(([k, n, c]) => `<button type="button" role="radio" data-k="${k}">${c ? `<span class="sw" style="background:${c}"></span>` : ''}${n}</button>`).join('');
+  $('#timeSeg').innerHTML = TIMES.map(([k, n]) => `<button type="button" role="radio" data-k="${k}">${n}</button>`).join('');
+  $('#themeSeg').addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    S.theme = b.dataset.k; store.set('theme', S.theme);
+    if (S.theme === 'deep') setTime('night');                 // 深色底色預設把光線調成夜晚（之後仍可再切回白天）
+    syncSettings(); applyTheme();
+  });
+  $('#timeSeg').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) setTime(b.dataset.k); });
+  $('#motionBtn').addEventListener('click', () => { S.reduced = !S.reduced; store.set('reduce', S.reduced); syncSettings(); if (CAM) CAM.S.reduced = S.reduced; toast(S.reduced ? '已減少動態：動畫暫停' : '動畫已恢復'); });
+  $('#qualityBtn').addEventListener('click', () => { setQuality(S.quality === 'low' ? 'high' : 'low'); });
+  $('#replayBtn').addEventListener('click', () => { toggleSettings(false); playIntro(true); });
+  $('#shareBtn').addEventListener('click', () => { toggleSettings(false); openShare(); });
+  syncSettings();
+}
+function setTime(k) { S.timeMode = k; store.set('time', k); if (k === 'auto') S.autoStart = performance.now() - ((S.hourShown - 9 + 24) % 24) / 24 * 150000; syncSettings(); }
+function syncSettings() {
+  for (const b of document.querySelectorAll('#themeSeg button')) b.setAttribute('aria-checked', String(b.dataset.k === S.theme));
+  for (const b of document.querySelectorAll('#timeSeg button')) b.setAttribute('aria-checked', String(b.dataset.k === S.timeMode));
+  $('#motionBtn').setAttribute('aria-pressed', String(S.reduced));
+  $('#qualityBtn').setAttribute('aria-pressed', String(S.quality === 'low'));
+}
+function toggleSettings(on) {
+  const p = $('#settings'); on = on == null ? p.hidden : on; p.hidden = !on; $('#setBtn').setAttribute('aria-expanded', String(on));
+  if (on) p.querySelector('button[aria-checked="true"]')?.focus();
+}
+$('#setBtn').addEventListener('click', () => toggleSettings());
+$('#clock').addEventListener('click', () => toggleSettings(true));
+document.addEventListener('pointerdown', (e) => { if (!$('#settings').hidden && !e.target.closest('#settings,#setBtn,#clock')) toggleSettings(false); });
+function updateClock() {
+  const d = new Date();
+  $('#clockNow').textContent = `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+  $('#clockSky').textContent = `天色：${PNAME[periodOf(S.hourShown)]} ${fmtH(S.hourShown)}`;
+}
+
+// ------------------------------------------------------------------ 集章與背包
+const STAMP_IDS = ['center', 'food', 'craft', 'puzzle', 'sport', 'recycle'];
+function stamp(id) {
+  if (S.stamps.includes(id)) return;
+  S.stamps.push(id); store.set('stamps', S.stamps); renderHud();
+  toast(`🏮 蓋章！${islandById(id).name}（${S.stamps.length}/6）`);
+  $('#stampBtn').classList.remove('bump'); void $('#stampBtn').offsetWidth; $('#stampBtn').classList.add('bump');
+  if (S.stamps.length === 6 && !store.get('doneShown', false)) { store.set('doneShown', true); setTimeout(showDone, 900); }
+}
+function showDone() {
+  $('#doneBody').innerHTML = `<div style="display:flex;gap:14px;align-items:center"><span class="mascot" style="width:84px;height:84px">${MASCOT}</span><p style="margin:0;line-height:1.7;font-weight:700">太厲害了！你已經逛完 115 鯉魚市集的六座島，集滿六枚章。<br>小鯉魚幫你把護照收好了，記得也到現場逛逛喔！</p></div><p class="foot">集章紀錄只存在這台裝置的瀏覽器裡。</p><button type="button" class="btn" data-close>好耶！</button>`;
+  openDlg('#doneDlg');
+}
+function renderHud() {
+  const n = Object.values(S.bag).reduce((a, b) => a + b, 0);
+  $('#bagCount').textContent = n; $('#stampCount').textContent = `${S.stamps.length}/6`;
+  for (const id of STAMP_IDS) { const t = tags[id]; if (t) t.querySelector('.st').textContent = S.stamps.includes(id) ? '🏮' : ''; }
+}
+function saveBag() { store.set('bag', S.bag); renderHud(); $('#bagBtn').classList.remove('bump'); void $('#bagBtn').offsetWidth; $('#bagBtn').classList.add('bump'); }
+function openBag() {
+  const items = Object.entries(S.bag).filter(([, v]) => v > 0);
+  $('#bagBody').innerHTML = `<ul class="items">${items.length ? items.map(([k, v]) => `<li><span class="ic" aria-hidden="true">${C.items[k].icon}</span>${C.items[k].name} × ${v}</li>`).join('') : '<li>背包是空的</li>'}</ul>
+    <p class="foot">玩法：撿沙灘上的 🐚 貝殼（每座島一顆，撿完 20 秒會再出現），點島上的居民跟他交換，一路換到最稀有的「💌 島主的明信片」。<br>${esc(C.tradeNote)}</p>
+    <h3 style="margin:10px 0 6px;font-size:15px">交換路線</h3>
+    <ol class="foot" style="margin:0 0 12px;padding-left:20px">${C.trades.filter((t) => t.id !== 't0').map((t) => { const r = C.residents.find((x) => x.trade === t.id); return `<li>${esc(r.name)}（${esc(islandById(r.island).name)}）：${C.items[t.give].icon}${esc(C.items[t.give].name)} → ${C.items[t.get].icon}${esc(C.items[t.get].name)}</li>`; }).join('')}</ol>
+    <button type="button" class="btn ghost" id="bagReset">清空背包（回到 3 個貝殼）</button>`;
+  $('#bagReset').onclick = () => { S.bag = { shell: 3 }; saveBag(); openBag(); toast('背包已清空'); };
+  openDlg('#bagDlg');
+}
+function openStamps() {
+  $('#stampBody').innerHTML = `<p style="margin:0 0 12px">逛過一座島（打開它的介紹）就能蓋一枚章。目前 <b>${S.stamps.length}/6</b>。</p>
+    <div class="stampgrid">${STAMP_IDS.map((id) => { const i = islandById(id); const got = S.stamps.includes(id); return `<div class="stamp ${got ? 'got' : ''}" style="--c:${colorOf(id)}">${got ? '🏮<br>' : ''}${esc(i.name)}${got ? '' : '<br>未蓋章'}</div>`; }).join('')}</div>
+    <p class="foot">集章紀錄存在這台裝置的瀏覽器裡。</p><button type="button" class="btn ghost" id="stampReset">重置集章</button>`;
+  $('#stampReset').onclick = () => { S.stamps = []; store.set('stamps', []); store.set('doneShown', false); renderHud(); openStamps(); toast('集章已重置'); };
+  openDlg('#stampDlg');
+}
+$('#bagBtn').addEventListener('click', openBag);
+$('#stampBtn').addEventListener('click', openStamps);
+
+// ------------------------------------------------------------------ 島嶼面板
+function panelHTML(id) {
+  const I = islandById(id), c = colorOf(id), got = S.stamps.includes(id);
+  const res = C.residents.filter((r) => r.island === id && (id !== 'center' || r.id === 'merchant'));
+  const resHTML = `<div class="p-sec"><h3>島上的人 <span class="badge">示意</span></h3><div class="residents">${res.map((r) => `<div class="res"><b>${esc(r.name)}</b>・${esc(r.job)}<br>「${esc(r.lines[0])}」</div>`).join('')}</div><p class="foot" style="margin-top:6px">${esc(C.residentsNote)}</p></div>`;
+  if (id === 'center') {
+    return `<div class="p-hd" style="--pc:${c};--ptint:#e9f4e4;--pink:#234a20"><p class="eyebrow">★ ${esc(I.role)}</p><h2 id="panelTitle">${esc(I.name)}</h2><button type="button" class="x" data-panel-close aria-label="關閉">✕</button></div>
+      <div class="p-sec"><h3>活動總覽</h3><p class="intro-line">${esc(I.intro)}</p><p style="margin-top:6px">${esc(I.overview)}</p></div>
+      <div class="p-sec"><h3>活動時程表</h3><p>${I.schedule.length ? '' : `⏳ ${esc(I.schedulePending)}`}</p></div>
+      <div class="p-sec"><h3>展區地圖</h3><div class="mapgrid">${C.islands.map((x) => `<button type="button" data-go="${x.id}" style="--c:${x.color}">${x.order}　${esc(x.name)}<br><small>${esc(x.group)}・${x.stalls.length} 攤</small></button>`).join('')}</div></div>
+      <div class="p-sec"><h3>集章進度</h3><div class="stamp-row">🏮 已集 ${S.stamps.length}/6 枚 <button type="button" class="btn ghost" data-stamps>看護照</button></div></div>
+      ${resHTML}`;
+  }
+  return `<div class="p-hd" style="--pc:${c};--ptint:${I.tint};--pink:${I.ink}"><p class="eyebrow">第 ${I.order} 島・${esc(I.group)}</p><h2 id="panelTitle">${esc(I.name)}</h2><button type="button" class="x" data-panel-close aria-label="關閉">✕</button></div>
+    <div class="p-sec" style="--pc:${c}"><h3>展區介紹</h3><p class="intro-line">${esc(I.intro)}</p></div>
+    <div class="p-sec" style="--pc:${c}"><h3>攤位清單（${I.stalls.length} 攤，依攤號排序）</h3>
+      <ol class="stalls">${[...I.stalls].sort((a, b) => a.no - b.no).map((s) => `<li data-no="${s.no}"><span class="num" aria-label="攤號 ${s.no}">${pad2(s.no)}</span><span class="${s.pending ? 'pending' : ''}">${esc(s.name)}</span></li>`).join('')}</ol>
+      <p class="foot" style="margin-top:8px">攤位內容與價格以現場為準。</p></div>
+    <div class="p-sec"><h3>島上地標</h3><p>${esc(I.landmark)}</p></div>
+    ${resHTML}
+    <div class="p-sec"><h3>資料下載</h3><a class="dl" href="${esc(I.download)}" download>📄 下載攤位清單（txt）</a></div>
+    <div class="p-sec"><div class="stamp-row">${got ? '🏮 這座島已蓋章' : '打開介紹就會蓋章'}・目前 ${S.stamps.length}/6 <button type="button" class="btn ghost" data-stamps>看護照</button></div></div>`;
+}
+function showPanel(id, highlightNo) {
+  const p = $('#panel'); p.innerHTML = panelHTML(id); p.hidden = false; S.open = id; stamp(id);
+  p.querySelector('[data-panel-close]').onclick = () => closePanel(true);
+  p.querySelectorAll('[data-go]').forEach((b) => (b.onclick = () => openIsland(b.dataset.go)));
+  p.querySelectorAll('[data-stamps]').forEach((b) => (b.onclick = openStamps));
+  for (const k in tags) tags[k].setAttribute('aria-expanded', String(k === id));
+  if (highlightNo != null) { const li = p.querySelector(`li[data-no="${highlightNo}"]`); if (li) { li.classList.add('hit'); li.scrollIntoView({ block: 'center' }); } }
+  p.focus({ preventScroll: true });
+}
+let panelOpener = null;
+function closePanel(goHome) {
+  if (!S.open) return;
+  const p = $('#panel'); p.hidden = true; S.open = null;
+  for (const k in tags) tags[k].setAttribute('aria-expanded', 'false');
+  if (goHome && CAM && !S.tour && !S.walking) CAM.home();
+  if (panelOpener && document.contains(panelOpener)) panelOpener.focus({ preventScroll: true });
+}
+function openIsland(id, opts = {}) {
+  closeBubble(); toggleSettings(false);
+  if (S.walking) exitWalk(true);
+  if (S.tour) endTour(false);
+  panelOpener = opts.opener || tags[id] || null;
+  if (!W) { showPanel(id, opts.no); return; }
+  $('#panel').hidden = true;
+  CAM.flyToIsland(W.islands[id], () => showPanel(id, opts.no));       // 運鏡結束後才打開面板
+}
+
+// ------------------------------------------------------------------ 地點清單與搜尋
+let filter = '全部';
+function cardHTML(id) {
+  const I = islandById(id), c = colorOf(id);
+  const res = C.residents.filter((r) => r.island === id);
+  const resList = `<details><summary>島上的人與對話（示意角色）</summary>${res.map((r) => `<div class="res" style="margin:6px 0"><b>${esc(r.name)}</b>・${esc(r.job)}<ul style="margin:4px 0 0;padding-left:18px">${r.lines.map((l) => `<li>${esc(l)}</li>`).join('')}</ul></div>`).join('')}</details>`;
+  if (id === 'center') return `<article class="card" style="--c:${c}"><h3>★ ${esc(I.name)} <span class="grp">${esc(I.role)}</span></h3><p>${esc(I.intro)}</p><p>${esc(I.overview)}</p><p>⏳ 時程表：${esc(I.schedulePending)}</p>${resList}<div class="acts"><button type="button" data-open="center">在地圖上看</button></div></article>`;
+  return `<article class="card" style="--c:${c}"><h3><span class="tag" style="position:static;box-shadow:none;--tc:${c};min-height:auto;padding:0;background:none"><span class="no">${I.order}</span></span>${esc(I.name)} <span class="grp">${esc(I.group)}・${I.stalls.length} 攤</span>${S.stamps.includes(id) ? ' 🏮' : ''}</h3>
+    <p>${esc(I.intro)}</p><ol class="stalls" style="--pc:${c}">${[...I.stalls].sort((a, b) => a.no - b.no).map((s) => `<li><span class="num">${pad2(s.no)}</span><span class="${s.pending ? 'pending' : ''}">${esc(s.name)}</span></li>`).join('')}</ol>
+    <p style="margin-top:8px"><b>地標：</b>${esc(I.landmark)}</p>${resList}
+    <div class="acts"><button type="button" data-open="${id}">在地圖上看</button><a href="${esc(I.download)}" download>📄 下載攤位清單</a></div></article>`;
+}
+function renderList() {
+  const groups = ['全部', ...C.islands.map((i) => i.group), '服務台'];
+  $('#filters').innerHTML = groups.map((g) => `<button type="button" aria-pressed="${g === filter}" data-f="${g}">${g}</button>`).join('');
+  const ids = ['center', ...C.islands.map((i) => i.id)].filter((id) => filter === '全部' || (id === 'center' ? filter === '服務台' : islandById(id).group === filter));
+  $('#listBody').innerHTML = ids.map(cardHTML).join('') + `<p class="foot">作者：${esc(C.site.author)}｜${esc(C.site.layoutNote)}｜${esc(C.residentsNote)}吉祥物造型為示意。攤位清單資料來自主辦提供的檔案，可在各島下載。</p>`;
+}
+$('#filters').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { filter = b.dataset.f; renderList(); } });
+$('#listBody').addEventListener('click', (e) => { const b = e.target.closest('[data-open]'); if (b) { $('#listDlg').close(); openIsland(b.dataset.open, { opener: $('#listBtn') }); } });
+function search(q) {
+  q = q.trim().toLowerCase(); const out = $('#searchResults');
+  if (!q) { out.innerHTML = ''; return; }
+  const hits = [];
+  const test = (s) => String(s).toLowerCase().includes(q);
+  if ([C.center.name, C.center.role, C.center.intro, C.center.overview].some(test)) hits.push({ id: 'center', text: `★ ${C.center.name}・${C.center.role}` });
+  for (const I of C.islands) {
+    if ([I.name, I.group, I.intro, I.landmark].some(test)) hits.push({ id: I.id, text: `${I.name}・${I.group}` });
+    for (const s of I.stalls) if (test(s.name) || String(s.no) === q || pad2(s.no) === q) hits.push({ id: I.id, no: s.no, text: `${pad2(s.no)} ${s.name}（${I.name}）` });
+  }
+  for (const r of C.residents) if (test(r.name) || test(r.job)) hits.push({ id: r.island, text: `${r.name}・${r.job}（${islandById(r.island).name}）` });
+  out.innerHTML = hits.length ? hits.slice(0, 20).map((h) => `<button type="button" data-id="${h.id}" ${h.no != null ? `data-no="${h.no}"` : ''} style="--c:${colorOf(h.id)}">${esc(h.text)}</button>`).join('') : `<p class="none">找不到「${esc(q)}」，換個關鍵字試試，例如「餅乾」「迷宮」或攤號「11」。</p>`;
+}
+$('#searchInput').addEventListener('input', (e) => search(e.target.value));
+$('#searchResults').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; $('#listDlg').close(); openIsland(b.dataset.id, { no: b.dataset.no != null ? +b.dataset.no : undefined, opener: $('#searchBtn') }); });
+$('#listBtn').addEventListener('click', () => { renderList(); openDlg('#listDlg'); });
+$('#searchBtn').addEventListener('click', () => { renderList(); openDlg('#listDlg'); $('#searchInput').focus(); });
+
+// ------------------------------------------------------------------ 說明
+function renderHelp() {
+  $('#helpBody').innerHTML = `<div style="display:flex;gap:12px;align-items:flex-start"><span class="mascot" style="width:72px;height:72px">${MASCOT}</span><div><p style="margin:0 0 6px;font-weight:900">嗨！我是小鯉魚，帶你逛 115 鯉魚市集。</p><ul style="margin:0;padding-left:18px;line-height:1.8">${C.help.map((h) => `<li>${esc(h)}</li>`).join('')}</ul></div></div>
+    <p class="foot">小提醒：右上角「⚙️ 設定」可以換底色、白天黑夜、減少動態與低畫質。<br>島嶼配置為示意，非實際場地比例；島上居民、動物與交換小遊戲都是網站上的示意內容。<br>作者：${esc(C.site.author)}</p>`;
+}
+$('#helpBtn').addEventListener('click', () => { renderHelp(); openDlg('#helpDlg'); });
+
+// ------------------------------------------------------------------ 分享卡片
+function openShare() {
+  const url = location.origin + location.pathname + (S.open ? `?island=${S.open}` : '');
+  let img = '';
+  try {
+    const cv = document.createElement('canvas'); cv.width = 1200; cv.height = 630; const x = cv.getContext('2d');
+    if (W) { W.renderer.render(W.scene, W.camera); const g = W.renderer.domElement; const s = Math.max(1200 / g.width, 630 / g.height); x.drawImage(g, (1200 - g.width * s) / 2, (630 - g.height * s) / 2, g.width * s, g.height * s); }
+    else { x.fillStyle = '#eef3e6'; x.fillRect(0, 0, 1200, 630); }
+    const gr = x.createLinearGradient(0, 380, 0, 630); gr.addColorStop(0, 'rgba(20,40,25,0)'); gr.addColorStop(1, 'rgba(20,40,25,.82)'); x.fillStyle = gr; x.fillRect(0, 300, 1200, 330);
+    x.fillStyle = '#fff'; x.font = '900 64px "Noto Sans TC", sans-serif'; x.fillText('115 鯉魚市集', 50, 520);
+    x.font = '700 26px "Noto Sans TC", sans-serif'; x.fillText(C.site.tagline, 52, 566);
+    x.font = '700 22px "Noto Sans TC", sans-serif'; x.fillStyle = '#ffe2a8'; x.fillText(`我已經集了 ${S.stamps.length}/6 枚章${S.open ? `・正在逛 ${islandById(S.open).name}` : ''}`, 52, 604);
+    img = cv.toDataURL('image/png');
+  } catch (e) { img = ''; }
+  $('#shareBody').innerHTML = `${img ? `<img class="share-img" src="${img}" alt="115 鯉魚市集分享卡片預覽">` : '<p>這台裝置無法產生截圖，可以直接分享連結。</p>'}
+    <p style="margin:0 0 10px;word-break:break-all;font-size:14px">${esc(url)}</p>
+    <div class="row">${img ? `<a class="btn" style="display:inline-flex;align-items:center;justify-content:center;text-decoration:none;flex:1" href="${img}" download="115鯉魚市集.png">⬇ 下載圖片</a>` : ''}<button type="button" class="btn ghost" id="copyLink" style="flex:1">🔗 複製連結</button>${navigator.share ? '<button type="button" class="btn ghost" id="nativeShare" style="flex:1">📤 分享</button>' : ''}</div>`;
+  $('#copyLink').onclick = async () => { try { await navigator.clipboard.writeText(url); toast('連結已複製'); } catch (e) { toast('無法自動複製，請手動選取上面的網址'); } };
+  if ($('#nativeShare')) $('#nativeShare').onclick = () => navigator.share({ title: '115 鯉魚市集', text: C.site.tagline, url }).catch(() => {});
+  openDlg('#shareDlg');
+}
+
+// ------------------------------------------------------------------ 3D 標籤（島名＋攤數，避免重疊）
+const tags = {};
+function buildTags() {
+  const box = $('#labels');
+  for (const id of STAMP_IDS) {
+    const I = islandById(id), c = colorOf(id);
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'tag' + (id === 'center' ? ' center' : '');
+    b.style.setProperty('--tc', c); if (I.tint) { b.style.setProperty('--ttint', I.tint); b.style.setProperty('--tink', I.ink); }
+    b.setAttribute('aria-label', id === 'center' ? `${I.name}，${I.role}` : `第 ${I.order} 島 ${I.name}，${I.stalls.length} 攤`);
+    b.setAttribute('aria-expanded', 'false'); b.setAttribute('aria-controls', 'panel');
+    b.innerHTML = id === 'center' ? `<span>★ ${esc(I.name)}</span><span class="ct">服務台</span><span class="st"></span>` : `<span class="no">${I.order}</span><span>${esc(I.name)}</span><span class="ct">${I.stalls.length} 攤</span><span class="st"></span>`;
+    b.addEventListener('click', () => openIsland(id, { opener: b }));
+    box.append(b); tags[id] = b;
+  }
+}
+const _v = new THREE.Vector3();
+function placeTags() {
+  const w = innerWidth, h = innerHeight, rects = [];
+  for (const id of STAMP_IDS) {
+    const I = W.islands[id], t = tags[id];
+    _v.set(I.pos.x, .6, I.pos.z + I.R * 1.12).project(W.camera);
+    const vis = _v.z < 1 && Math.abs(_v.x) < 1.2 && Math.abs(_v.y) < 1.2;
+    t.style.visibility = vis ? 'visible' : 'hidden';
+    const tw = t.offsetWidth || 160, th = t.offsetHeight || 44;
+    rects.push({ t, x: (_v.x + 1) / 2 * w - tw / 2, y: (1 - _v.y) / 2 * h - th / 2, w: tw, h: th, vis });
+  }
+  rects.sort((a, b) => a.y - b.y);
+  for (let i = 0; i < rects.length; i++) for (let j = 0; j < i; j++) {
+    const a = rects[j], b = rects[i];
+    if (!a.vis || !b.vis) continue;
+    if (b.x < a.x + a.w + 4 && b.x + b.w + 4 > a.x && b.y < a.y + a.h + 4) b.y = a.y + a.h + 4;   // 往下推開，不互相重疊
+  }
+  for (const r of rects) r.t.style.transform = `translate(${Math.round(Math.max(4, Math.min(w - r.w - 4, r.x)))}px,${Math.round(r.y)}px)`;
+}
+
+// ------------------------------------------------------------------ 對話泡泡（居民、動物）
+function openBubble(o) {
+  closeBubble();
+  S.bubble = { o, line: 0 };
+  if (o.agent) o.agent.talking = true; if (o.animal) o.animal.talking = true;
+  $('#labels').classList.add('dim');
+  renderBubble(); $('#bubble').hidden = false;
+  $('#bubble').querySelector('button')?.focus({ preventScroll: true });
+}
+function renderBubble(msg) {
+  const B = S.bubble; if (!B) return; const o = B.o, el = $('#bubble');
+  if (o.animal) {
+    const a = o.animal.data;
+    el.innerHTML = `<p class="who">${a.icon} ${esc(a.name)}</p><p class="where">${esc(islandById(o.animal.island.id).name)}</p><p class="say">${esc(a.line)}</p><div class="acts"><button type="button" data-b="x">✕ 關閉</button></div>`;
+  } else {
+    const r = o.agent.data, trade = r.trade ? C.trades.find((t) => t.id === r.trade) : null;
+    const have = trade ? (S.bag[trade.give] || 0) : 0, can = trade && have >= trade.giveQty;
+    el.innerHTML = `<p class="who">${esc(r.name)}<span class="sample">（示意角色）</span></p><p class="where">${esc(r.job)}・${esc(islandById(r.island).name)}</p>
+      <p class="say">${esc(msg || r.lines[B.line % r.lines.length])}</p>
+      <div class="acts"><button type="button" data-b="more">💬 再聊聊</button>${trade ? `<button type="button" class="pri" data-b="trade" ${can ? '' : 'disabled'} aria-describedby="tradeHint">🔁 交易 ${C.items[trade.give].icon}×${trade.giveQty}→${C.items[trade.get].icon}</button>` : ''}<button type="button" data-b="x" aria-label="關閉對話">✕</button></div>
+      ${trade ? `<p class="hint" id="tradeHint">${can ? `用 ${trade.giveQty} 個${esc(C.items[trade.give].name)}換一個${esc(C.items[trade.get].name)}。` : `你的${esc(C.items[trade.give].name)}不夠（${have}/${trade.giveQty}）。提示：${esc(trade.hint)}。`}</p>` : ''}`;
+  }
+  el.querySelectorAll('[data-b]').forEach((b) => (b.onclick = (e) => {
+    e.stopPropagation(); const k = b.dataset.b;
+    if (k === 'x') closeBubble();
+    else if (k === 'more') { B.line++; renderBubble(); el.querySelector('[data-b="more"]')?.focus(); }
+    else if (k === 'trade') doTrade();
+  }));
+}
+function doTrade() {
+  const r = S.bubble.o.agent.data, t = C.trades.find((x) => x.id === r.trade);
+  if ((S.bag[t.give] || 0) < t.giveQty) return;
+  S.bag[t.give] -= t.giveQty; S.bag[t.get] = (S.bag[t.get] || 0) + 1; saveBag();
+  toast(`🔁 換到 ${C.items[t.get].icon} ${C.items[t.get].name}！`);
+  renderBubble(`謝謝你！這個${C.items[t.get].name}給你，好好收著喔！`);
+  if (t.get === 'postcard') setTimeout(() => toast('💌 你換到最稀有的「島主的明信片」了！'), 1600);
+}
+function closeBubble() {
+  if (!S.bubble) return;
+  const o = S.bubble.o; if (o.agent) o.agent.talking = false; if (o.animal) o.animal.talking = false;
+  S.bubble = null; $('#bubble').hidden = true; $('#labels').classList.remove('dim');
+}
+function placeBubble() {
+  if (!S.bubble) return;
+  const p = L.headOf(S.bubble.o).project(W.camera), el = $('#bubble');
+  const x = (p.x + 1) / 2 * innerWidth, y = (1 - p.y) / 2 * innerHeight;
+  const w = el.offsetWidth, half = w / 2;
+  el.style.transform = `translate(${Math.round(Math.max(half + 8, Math.min(innerWidth - half - 8, x)) - half)}px, ${Math.round(Math.max(el.offsetHeight + 70, y) - el.offsetHeight - 14)}px)`;
+}
+
+// ------------------------------------------------------------------ 點擊 3D 畫面
+const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+let down = null;
+function onCanvasDown(e) { down = { x: e.clientX, y: e.clientY }; $('#gl').classList.add('drag'); if (S.tour && !S.tour.paused) pauseTour(true); }
+function onCanvasUp(e) {
+  $('#gl').classList.remove('drag');
+  if (!down) return; const moved = Math.hypot(e.clientX - down.x, e.clientY - down.y); down = null;
+  if (moved > 7 || S.intro || S.walking || (CAM.S.busy && !CAM.S.busy.custom)) return;
+  ndc.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+  ray.setFromCamera(ndc, W.camera);
+  const life = ray.intersectObjects(L.pickables.filter((p) => p.obj.parent && p.obj.parent.visible).map((p) => p.obj), false)[0];
+  let pick = life ? L.pickables.find((p) => p.obj === life.object) : null;
+  if (!pick && (e.pointerType === 'touch' || isMobile())) {   // 手機：用螢幕距離找最近的居民或動物
+    let best = null, bd = 46;
+    for (const p of L.pickables) {
+      if (p.shell || !p.obj.parent.visible) continue;
+      const s = L.headOf(p).project(W.camera); if (s.z > 1) continue;
+      const d = Math.hypot((s.x + 1) / 2 * innerWidth - e.clientX, (1 - s.y) / 2 * innerHeight - e.clientY - 24);
+      if (d < bd) { bd = d; best = p; }
+    }
+    pick = best;
+  }
+  if (pick && pick.shell) { if (performance.now() >= pick.shell.hiddenUntil) { pick.shell.hiddenUntil = performance.now() + 20000; S.bag.shell = (S.bag.shell || 0) + 1; saveBag(); toast('🐚 撿到一個貝殼！+1'); } return; }
+  if (pick) { openBubble(pick); return; }
+  if (S.bubble) { closeBubble(); return; }
+  for (const id of STAMP_IDS) {
+    const hit = ray.intersectObjects(W.islands[id].pick, false)[0];
+    if (hit) { openIsland(id, { opener: tags[id] }); return; }
+  }
+}
+
+// ------------------------------------------------------------------ 自動導覽路線
+const TOUR = ['center', 'food', 'craft', 'puzzle', 'sport', 'recycle'];
+const DWELL = () => (S.reduced ? 8000 : 5000);
+function startTour() {
+  if (!W) return; closeBubble(); closePanel(false); if (S.walking) exitWalk(true);
+  S.tour = { i: 0, paused: false, left: DWELL(), flying: false, last: performance.now() };
+  $('#tour').hidden = false; $('#tourBtn').classList.add('on'); goStation(0);
+}
+function goStation(i) {
+  const T = S.tour; T.i = (i + TOUR.length) % TOUR.length; T.left = DWELL(); T.flying = true;
+  const id = TOUR[T.i], I = islandById(id);
+  $('#tourStep').textContent = `第 ${T.i + 1} 站／共 ${TOUR.length} 站`;
+  $('#tourName').textContent = id === 'center' ? `★ ${I.name}` : `${I.order}　${I.name}`;
+  $('#tourText').textContent = id === 'center' ? `${I.intro}` : `${I.intro}　第一攤：${pad2(I.stalls[0].no)} ${I.stalls[0].name}`;
+  $('#tourBar').style.width = '0%';
+  CAM.flight(CAM.islandView(W.islands[id]), 1800, 10, () => { if (S.tour) { S.tour.flying = false; S.tour.last = performance.now(); } });
+}
+function pauseTour(on) { const T = S.tour; if (!T) return; T.paused = on; $('#tourPause').textContent = on ? '▶ 繼續' : '⏸ 暫停'; $('#tourPause').setAttribute('aria-label', on ? '繼續' : '暫停'); T.last = performance.now(); }
+function stepTour(now) {
+  const T = S.tour; if (!T || T.flying) return;
+  const dt = now - T.last; T.last = now; if (T.paused) return;
+  T.left -= dt; $('#tourBar').style.width = `${Math.min(100, (1 - T.left / DWELL()) * 100)}%`;
+  if (T.left <= 0) { if (T.i === TOUR.length - 1) endTour(true); else goStation(T.i + 1); }
+}
+function endTour(goHome) { if (!S.tour) return; S.tour = null; $('#tour').hidden = true; $('#tourBtn').classList.remove('on'); if (goHome) CAM.home(); }
+$('#tourBtn').addEventListener('click', () => (S.tour ? endTour(true) : startTour()));
+$('#tourPrev').addEventListener('click', () => goStation(S.tour.i - 1));
+$('#tourNext').addEventListener('click', () => { if (S.tour.i === TOUR.length - 1) endTour(true); else goStation(S.tour.i + 1); });
+$('#tourPause').addEventListener('click', () => pauseTour(!S.tour.paused));
+$('#tourEnd').addEventListener('click', () => endTour(true));
+
+// ------------------------------------------------------------------ 地面漫遊
+let hintT = 0;
+function enterWalk() {
+  if (!W) return; closeBubble(); closePanel(false); if (S.tour) endTour(false);
+  S.walking = true; document.body.classList.add('walking'); $('#walkui').hidden = false; $('#walkBtn').classList.add('on');
+  CAM.enterWalk(); const h = $('#walkHint'); h.classList.remove('fade'); clearTimeout(hintT); hintT = setTimeout(() => h.classList.add('fade'), 4500);
+  $('#walkExit').focus({ preventScroll: true });
+}
+function exitWalk(instant) {
+  if (!S.walking) return; S.walking = false; document.body.classList.remove('walking'); $('#walkui').hidden = true; $('#walkBtn').classList.remove('on');
+  for (const k in CAM.walk.keys) CAM.walk.keys[k] = false; for (const k in CAM.walk.pad) CAM.walk.pad[k] = false;
+  CAM.exitWalk(); if (instant) { CAM.setHome(true); CAM.S.busy = null; CAM.controls.enabled = true; }
+}
+$('#walkBtn').addEventListener('click', () => (S.walking ? exitWalk() : enterWalk()));
+$('#walkExit').addEventListener('click', () => exitWalk());
+document.querySelectorAll('.dpad button').forEach((b) => {
+  const on = (v) => (e) => { e.preventDefault(); CAM.walk.pad[b.dataset.d] = v; };
+  b.addEventListener('pointerdown', on(true)); b.addEventListener('pointerup', on(false)); b.addEventListener('pointerleave', on(false)); b.addEventListener('pointercancel', on(false));
+});
+addEventListener('keydown', (e) => {
+  if (e.target.matches('input,textarea')) return;
+  if (S.walking && ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) { CAM.walk.keys[e.code] = true; e.preventDefault(); }
+});
+addEventListener('keyup', (e) => { if (CAM) CAM.walk.keys[e.code] = false; });
+
+// ------------------------------------------------------------------ 開場運鏡
+function playIntro(force) {
+  if (!W) return;
+  if (S.reduced || (!force && store.get('introSeen', false)) || Q.has('nointro')) { CAM.setHome(true); return Promise.resolve(); }
+  return new Promise((res) => {
+    S.intro = true; const ov = $('#intro'); ov.hidden = false; $('.intro-title').classList.remove('show');
+    L.setDeck(1); $('#labels').classList.add('off');
+    const skip = () => CAM.finishIntro();
+    ov.onclick = skip; S.introSkip = skip;
+    CAM.intro(() => {
+      S.intro = false; ov.hidden = true; L.setDeck(0); $('#labels').classList.remove('off'); store.set('introSeen', true); S.introSkip = null; res();
+    });
+  });
+}
+
+// ------------------------------------------------------------------ 全域按鍵
+addEventListener('keydown', (e) => {
+  if (S.intro) { e.preventDefault(); S.introSkip && S.introSkip(); return; }    // 任何按鍵都能跳過開場
+  if (e.key !== 'Escape') return;
+  if (document.querySelector('dialog[open]')) return;                          // 對話框自己處理 Esc
+  if (S.bubble) { closeBubble(); return; }
+  if (S.walking) { exitWalk(); return; }
+  if (S.tour) { endTour(true); return; }
+  if (!$('#settings').hidden) { toggleSettings(false); $('#setBtn').focus(); return; }
+  if (S.open) closePanel(true);
+});
+$('#homeBtn').addEventListener('click', () => { closeBubble(); closePanel(false); if (S.tour) endTour(false); if (S.walking) exitWalk(); else CAM && CAM.home(); });
+
+// ------------------------------------------------------------------ 畫質
+function setQuality(q, auto) {
+  S.quality = q; store.set('quality', q); syncSettings();
+  if (!W) return;
+  W.renderer.shadowMap.enabled = q !== 'low';
+  W.scene.traverse((o) => { if (o.material) { (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => (m.needsUpdate = true)); } });
+  for (const a of L.agents) a.lowHidden = q === 'low' && a.nightHide;
+  W.renderer.setPixelRatio(Math.min(devicePixelRatio, q === 'low' ? 1 : (isMobile() ? 1.5 : 2)));
+  toast(auto ? '畫面有點卡，已自動切換成低畫質' : q === 'low' ? '已切換成低畫質（關閉陰影、減少人物）' : '已切換成高畫質');
+}
+
+// ------------------------------------------------------------------ 文字清單版（沒有 WebGL）
+function textOnly(reason) {
+  document.documentElement.classList.add('nogl'); document.body.classList.add('nogl');
+  const m = document.createElement('main'); m.className = 'fallback'; m.style.cssText = 'position:relative;z-index:16;max-width:860px;margin:0 auto;padding:96px 16px 120px';
+  const ids = ['center', ...C.islands.map((i) => i.id)];
+  m.innerHTML = `<p class="fallback-msg">${esc(reason)}，已改用文字清單版，所有島嶼與攤位內容都在下面。</p>` + ids.map(cardHTML).join('') +
+    `<p class="foot">作者：${esc(C.site.author)}｜${esc(C.site.layoutNote)}｜${esc(C.residentsNote)}</p>`;
+  document.body.append(m);
+  m.addEventListener('click', (e) => { const b = e.target.closest('[data-open]'); if (b) { panelOpener = b; showPanel(b.dataset.open); } });
+}
+function webglOK() { try { const c = document.createElement('canvas'); return !!(c.getContext('webgl2') || c.getContext('webgl')); } catch (e) { return false; } }
+
+// ------------------------------------------------------------------ 啟動
+async function boot() {
+  $('#brandMascot').innerHTML = MASCOT;
+  C = await fetch('data/content.json', { cache: 'no-cache' }).then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); });
+  buildSettings(); renderHud();
+  S.autoStart = performance.now();
+  S.hour = S.hourShown = targetHour(performance.now());
+  if (Q.has('nogl') || !webglOK()) { textOnly(Q.has('nogl') ? '已切換為文字清單版' : '這台裝置無法顯示 3D 畫面'); applyTheme(); updateClock(); setInterval(updateClock, 10000); window.__ready = true; return; }
+  let mods;
+  try {
+    mods = await Promise.all([import('./world.js'), import('./life.js'), import('./cam.js')]);
+    const [{ createWorld }, { createLife }, { createCam }] = mods;
+    const mobile = isMobile();
+    W = createWorld($('#gl'), { quality: S.quality, mobile });
+    W.renderer.setPixelRatio(Math.min(devicePixelRatio, S.quality === 'low' ? 1 : (mobile ? 1.5 : 2)));
+    L = createLife(W, C, { halfPeople: mobile || S.quality === 'low', quality: S.quality });
+    CAM = createCam(W, $('#gl'), { onIntro: (k) => { L.setDeck(k < .3 ? 1 : Math.max(0, 1 - (k - .3) / .25)); if (k > .55) $('.intro-title').classList.add('show'); } });
+    CAM.S.reduced = S.reduced; CAM.S.mobile = mobile;
+  } catch (err) { console.warn(err); textOnly('3D 畫面載入失敗'); window.__ready = true; return; }
+  if (S.quality === 'low') setQuality('low');
+  buildTags();
+  const resize = () => { W.resize(innerWidth, innerHeight); CAM.S.mobile = isMobile(); CAM.limits(); if (!S.open && !S.tour && !S.walking && !CAM.S.busy) CAM.setHome(true); };
+  addEventListener('resize', resize); resize();
+  W.setHour(S.hourShown); applyTheme(); updateClock(); setInterval(updateClock, 10000);
+  const cv = $('#gl');
+  cv.addEventListener('pointerdown', onCanvasDown); cv.addEventListener('pointerup', onCanvasUp);
+  cv.addEventListener('wheel', () => { if (S.tour && !S.tour.paused) pauseTour(true); }, { passive: true });
+  // 在島名標籤上滾動滑鼠，也能縮放 3D 畫面
+  $('#labels').addEventListener('wheel', (e) => { e.preventDefault(); cv.dispatchEvent(new WheelEvent('wheel', e)); }, { passive: false });
+  CAM.controls.addEventListener('start', () => { if (S.tour && !S.tour.paused) pauseTour(true); });
+  if (Q.has('h')) { S.timeMode = 'fixed'; FIXED_H.fixed = +Q.get('h'); S.hour = S.hourShown = +Q.get('h'); W.setHour(S.hourShown); applyTheme(); }
+
+  // 動畫迴圈：分頁看不到時瀏覽器會自動暫停
+  const clock = new THREE.Clock(); let clkN = 0, fpsT = 0, fpsN = 0, slow = 0; const keepQ = Q.has('keepq');
+  function frame(now) {
+    const dt = clock.getDelta(), t = clock.elapsedTime, moving = !S.reduced;
+    // 時段：平滑過渡（減少動態時直接切換）
+    const target = targetHour(now);
+    let d = target - S.hourShown; if (d > 12) d -= 24; if (d < -12) d += 24;
+    S.hourShown = S.reduced || Math.abs(d) < .01 ? target : (S.hourShown + d * Math.min(1, dt * 1.6) + 24) % 24;
+    W.setHour(S.hourShown); applyTheme();
+    if ((clkN = (clkN + 1) % 30) === 0) updateClock();
+    CAM.update(dt);
+    W.update(t, moving);
+    L.update(t, dt, moving, W.state.n, W.camera);
+    for (const a of L.agents) if (a.lowHidden) a.P.g.visible = false;
+    stepTour(now);
+    W.renderer.render(W.scene, W.camera);
+    if (!S.walking) placeTags();
+    placeBubble();
+    // 效能：FPS 連續偏低就自動降級
+    fpsN++; fpsT += dt;
+    if (fpsT > 3) { const fps = fpsN / fpsT; fpsT = 0; fpsN = 0; if (!keepQ && S.quality !== 'low' && t > 8) { slow = fps < 24 ? slow + 1 : 0; if (slow >= 2) setQuality('low', true); } }
+    if (!window.__ready && t > .2) window.__ready = true;
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+  window.__isle = { W, L, CAM, S, THREE };   // 給自動測試讀取狀態用
+  await playIntro(false);
+  const deep = Q.get('island') || location.hash.slice(1);
+  if (deep && islandById(deep)) openIsland(deep);
+}
+boot().catch((err) => { console.error(err); $('#toast').textContent = '網站資料載入失敗，請重新整理頁面。'; $('#toast').classList.add('show'); window.__ready = true; });

@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="zh-Hant-TW" data-theme="forest">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>115 鯉魚市集｜五座六角小島的 3D 市集地圖</title>
+<meta name="description" content="跳上五座六角小島，逛美食、玩手作、闖關挑戰，還能挖二手好物！">
+<meta name="generator" content="IsleForge">
+<meta name="theme-color" content="#3f7d3a">
+<meta property="og:title" content="115 鯉魚市集">
+<meta property="og:description" content="跳上五座六角小島，逛美食、玩手作、闖關挑戰，還能挖二手好物！">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap">
+<link rel="stylesheet" href="styles.css">
+<script type="importmap">{"imports":{"three":"./vendor/three/three.module.js","three/addons/":"./vendor/three/addons/"}}</script>
+</head>
+<body>
+<a class="skip" href="#listBtn">跳到地點清單</a>
+
+<!-- 3D 畫面 -->
+<div class="stage" id="stage">
+  <canvas id="gl" aria-label="115 鯉魚市集 3D 群島地圖，可拖曳旋轉、滾輪縮放，點島看攤位" role="img"></canvas>
+  <div class="labels" id="labels"></div>
+  <div class="bubble" id="bubble" role="dialog" aria-live="polite" hidden></div>
+</div>
+
+<!-- 頂部 -->
+<header class="top">
+  <div class="brand">
+    <span class="mascot" aria-hidden="true" id="brandMascot"></span>
+    <div class="brand-text">
+      <h1>115 鯉魚市集</h1>
+      <p class="tagline">跳上五座六角小島，逛美食、玩手作、闖關挑戰，還能挖二手好物！</p>
+    </div>
+  </div>
+  <nav class="tools" aria-label="主要功能">
+    <button type="button" class="tbtn" id="searchBtn" aria-label="搜尋島嶼與攤位"><span aria-hidden="true">🔍</span><span class="tx">搜尋</span></button>
+    <button type="button" class="tbtn" id="listBtn" aria-label="地點清單"><span aria-hidden="true">📋</span><span class="tx">清單</span></button>
+    <button type="button" class="tbtn" id="tourBtn" aria-label="開始自動導覽"><span aria-hidden="true">▶</span><span class="tx">導覽</span></button>
+    <button type="button" class="tbtn" id="walkBtn" aria-label="地面漫遊，第一人稱走在島上"><span aria-hidden="true">🚶</span><span class="tx">漫遊</span></button>
+    <button type="button" class="tbtn" id="homeBtn" aria-label="回到全景"><span aria-hidden="true">🏝️</span><span class="tx">全景</span></button>
+    <button type="button" class="tbtn" id="setBtn" aria-label="設定：底色、晝夜、減少動態、畫質" aria-expanded="false" aria-controls="settings"><span aria-hidden="true">⚙️</span><span class="tx">設定</span></button>
+    <button type="button" class="tbtn" id="helpBtn" aria-label="操作說明"><span aria-hidden="true">？</span><span class="tx">說明</span></button>
+  </nav>
+</header>
+
+<!-- 設定 -->
+<section class="pop" id="settings" hidden aria-label="設定">
+  <h2 class="pop-h">底色</h2>
+  <div class="seg" id="themeSeg" role="radiogroup" aria-label="底色主題"></div>
+  <h2 class="pop-h">晝夜</h2>
+  <div class="seg" id="timeSeg" role="radiogroup" aria-label="晝夜時段"></div>
+  <div class="row">
+    <button type="button" class="chip" id="motionBtn" aria-pressed="false">🧘 減少動態</button>
+    <button type="button" class="chip" id="qualityBtn" aria-pressed="false">🖥️ 低畫質</button>
+  </div>
+  <div class="row">
+    <button type="button" class="chip" id="replayBtn">🎬 重播開場</button>
+    <button type="button" class="chip" id="shareBtn">📤 分享卡片</button>
+  </div>
+</section>
+
+<!-- 角落：時鐘、背包、集章 -->
+<div class="hud hud-left">
+  <button type="button" class="clock" id="clock" aria-label="目前時間與天色，點一下切換晝夜"><span class="now" id="clockNow">--:--</span><span class="sky" id="clockSky">白天 12:00</span></button>
+</div>
+<div class="hud hud-right">
+  <button type="button" class="hchip" id="bagBtn" aria-label="背包"><span aria-hidden="true">🎒</span><b id="bagCount">0</b></button>
+  <button type="button" class="hchip" id="stampBtn" aria-label="集章進度"><span aria-hidden="true">🏮</span><b id="stampCount">0/6</b></button>
+</div>
+<p class="layout-note">示意配置，非實際場地比例</p>
+
+<!-- 島嶼面板（桌機右側、手機底部抽屜） -->
+<aside class="panel" id="panel" hidden tabindex="-1" aria-labelledby="panelTitle"></aside>
+
+<!-- 導覽卡 -->
+<section class="tour" id="tour" hidden aria-live="polite" aria-label="自動導覽">
+  <div class="tour-meta"><span id="tourStep">第 1 站／共 6 站</span><div class="bar"><i id="tourBar"></i></div></div>
+  <h2 id="tourName"></h2>
+  <p id="tourText"></p>
+  <div class="tour-btns">
+    <button type="button" id="tourPrev" aria-label="上一站">⏮ 上一站</button>
+    <button type="button" id="tourPause" aria-label="暫停">⏸ 暫停</button>
+    <button type="button" id="tourNext" aria-label="下一站">下一站 ⏭</button>
+    <button type="button" id="tourEnd" aria-label="結束導覽">✕ 結束</button>
+  </div>
+</section>
+
+<!-- 漫遊介面 -->
+<section class="walkui" id="walkui" hidden aria-label="地面漫遊">
+  <p class="walk-hint" id="walkHint">WASD 或方向鍵移動、拖曳畫面環顧；按 Esc 或「鳥瞰」回到上空</p>
+  <button type="button" class="walk-exit" id="walkExit">✕ 鳥瞰</button>
+  <div class="dpad" aria-label="方向鍵">
+    <button type="button" data-d="up" aria-label="前進">▲</button>
+    <button type="button" data-d="left" aria-label="向左轉">◀</button>
+    <button type="button" data-d="down" aria-label="後退">▼</button>
+    <button type="button" data-d="right" aria-label="向右轉">▶</button>
+  </div>
+</section>
+
+<!-- 開場標題 -->
+<div class="intro" id="intro" hidden>
+  <div class="intro-title"><h2>115 鯉魚市集</h2><p>跳上五座六角小島，逛美食、玩手作、闖關挑戰，還能挖二手好物！</p></div>
+  <p class="skip-hint">點畫面或按任意鍵跳過</p>
+</div>
+
+<!-- 對話框 -->
+<dialog id="listDlg" class="dlg wide" aria-labelledby="listTitle">
+  <div class="dlg-hd"><h2 id="listTitle">地點清單</h2><button type="button" class="x" data-close aria-label="關閉">✕</button></div>
+  <label class="search"><span aria-hidden="true">🔍</span><input id="searchInput" type="search" placeholder="輸入島名、攤名或攤號，例如：餅乾、11" aria-label="搜尋島嶼與攤位"></label>
+  <div class="filters" id="filters" role="group" aria-label="依分類篩選"></div>
+  <div id="searchResults" class="results" aria-live="polite"></div>
+  <div id="listBody" class="list-body"></div>
+</dialog>
+<dialog id="bagDlg" class="dlg" aria-labelledby="bagTitle">
+  <div class="dlg-hd"><h2 id="bagTitle">🎒 我的背包</h2><button type="button" class="x" data-close aria-label="關閉">✕</button></div>
+  <div id="bagBody"></div>
+</dialog>
+<dialog id="stampDlg" class="dlg" aria-labelledby="stampTitle">
+  <div class="dlg-hd"><h2 id="stampTitle">🏮 集章護照</h2><button type="button" class="x" data-close aria-label="關閉">✕</button></div>
+  <div id="stampBody"></div>
+</dialog>
+<dialog id="shareDlg" class="dlg" aria-labelledby="shareTitle">
+  <div class="dlg-hd"><h2 id="shareTitle">📤 分享卡片</h2><button type="button" class="x" data-close aria-label="關閉">✕</button></div>
+  <div id="shareBody"></div>
+</dialog>
+<dialog id="helpDlg" class="dlg" aria-labelledby="helpTitle">
+  <div class="dlg-hd"><h2 id="helpTitle">怎麼逛？</h2><button type="button" class="x" data-close aria-label="關閉">✕</button></div>
+  <div id="helpBody"></div>
+</dialog>
+<dialog id="doneDlg" class="dlg" aria-labelledby="doneTitle">
+  <div class="dlg-hd"><h2 id="doneTitle">🎉 集章完成！</h2><button type="button" class="x" data-close aria-label="關閉">✕</button></div>
+  <div id="doneBody"></div>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<noscript><p class="noscript">這個網站需要開啟 JavaScript。</p></noscript>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

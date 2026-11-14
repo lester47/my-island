@@ -1,0 +1,333 @@
+{
+  "generator": {
+    "name": "造島工坊 IsleForge",
+    "version": 1,
+    "createdAt": "2026-11-14"
+  },
+  "site": {
+    "title": "115 鯉魚市集",
+    "slug": "my-island",
+    "tagline": "跳上五座六角小島，逛美食、玩手作、闖關挑戰，還能挖二手好物！",
+    "author": "鯉魚國小",
+    "audience": "一般大眾",
+    "language": "zh-TW",
+    "mascot": {
+      "name": "小鯉魚",
+      "description": "若用「小鯉」，可填「橘白相間的 Q 版小鯉魚，背著小背包，拿著市集地圖」"
+    }
+  },
+  "islandType": {
+    "id": "expo",
+    "name": "展覽活動島",
+    "description": "一個展區一座島：作品展示、活動時程、攤位介紹，逛完還能集章打卡。"
+  },
+  "centerIsland": {
+    "name": "AI 總複習大島",
+    "role": "活動服務台",
+    "description": "活動服務台：活動總覽、時程表、展區地圖與集章進度。"
+  },
+  "extraLabel": "展出作品／攤位",
+  "islands": [
+    {
+      "order": 1,
+      "id": "island-01",
+      "name": "美食補給島",
+      "group": "美食小吃",
+      "intro": "吃點心、喝飲料（5 攤）",
+      "points": [
+        "01 大狗堡",
+        "02 自製飲料店",
+        "03 蜜糖小屋",
+        "04 阿逸哥的美食小食堂",
+        "05 靚萱餅乾鋪"
+      ],
+      "extra": "",
+      "link": "",
+      "material": "materials/01_美食補給島/攤位清單.txt",
+      "materials": [
+        "materials/01_美食補給島/攤位清單.txt"
+      ]
+    },
+    {
+      "order": 2,
+      "id": "island-02",
+      "name": "手作創意島",
+      "group": "手作體驗",
+      "intro": "動手做，把作品帶回家（5 攤）",
+      "points": [
+        "06 手作DIY",
+        "07 巧手工坊",
+        "08 自己畫貼紙DIY",
+        "09 吉樂工作室",
+        "20 聖誕DIY製造所"
+      ],
+      "extra": "",
+      "link": "",
+      "material": "materials/02_手作創意島/攤位清單.txt",
+      "materials": [
+        "materials/02_手作創意島/攤位清單.txt"
+      ]
+    },
+    {
+      "order": 3,
+      "id": "island-03",
+      "name": "益智闖關島",
+      "group": "益智遊戲",
+      "intro": "玩迷宮、考記憶、闖關（7 攤）",
+      "points": [
+        "10 名不虛傳GG手",
+        "11 彈珠迷宮",
+        "12 鯉魚Liyu遊戲店",
+        "13 圈圈洞洞",
+        "18 鯉魚記憶王",
+        "21 有吃有玩真好玩",
+        "22 鯉魚麻糬屋"
+      ],
+      "extra": "",
+      "link": "",
+      "material": "materials/03_益智闖關島/攤位清單.txt",
+      "materials": [
+        "materials/03_益智闖關島/攤位清單.txt"
+      ]
+    },
+    {
+      "order": 4,
+      "id": "island-04",
+      "name": "動感挑戰島",
+      "group": "動感遊戲",
+      "intro": "接球、投擲、玩陀螺（5 攤）",
+      "points": [
+        "17 好開心抽抽樂",
+        "23 正反接球王",
+        "24 搖出你的好耳力",
+        "25 丟球者",
+        "26 三二一發射！戰鬥陀螺"
+      ],
+      "extra": "",
+      "link": "",
+      "material": "materials/04_動感挑戰島/攤位清單.txt",
+      "materials": [
+        "materials/04_動感挑戰島/攤位清單.txt"
+      ]
+    },
+    {
+      "order": 5,
+      "id": "island-05",
+      "name": "循環挖寶島",
+      "group": "二手跳蚤",
+      "intro": "逛二手攤，替舊物找新主人（4 攤）",
+      "points": [
+        "14 攤名待確認",
+        "15 夏來寶",
+        "16 廢物市集",
+        "19 哇！茶一點就中"
+      ],
+      "extra": "",
+      "link": "",
+      "material": "materials/05_循環挖寶島/攤位清單.txt",
+      "materials": [
+        "materials/05_循環挖寶島/攤位清單.txt"
+      ]
+    }
+  ],
+  "theme": {
+    "style": "卡通童趣",
+    "font": "黑體",
+    "primary": "#3f7d3a",
+    "accent": "#e3a33b",
+    "backgrounds": [
+      {
+        "name": "森林",
+        "background": "#eef3e6",
+        "default": true
+      },
+      {
+        "name": "苔原",
+        "background": "#dfe8d3",
+        "default": false
+      },
+      {
+        "name": "深林",
+        "background": "#1b2a20",
+        "default": false
+      }
+    ],
+    "autoByTime": {
+      "enabled": true,
+      "day": "森林",
+      "dusk": "苔原",
+      "night": "深林",
+      "spec": "references/theme.md"
+    }
+  },
+  "features": [
+    {
+      "id": "search",
+      "name": "搜尋",
+      "description": "用關鍵字找島嶼與內容"
+    },
+    {
+      "id": "list",
+      "name": "地點清單",
+      "description": "不用 3D 也能讀完所有內容"
+    },
+    {
+      "id": "progress",
+      "name": "探索進度",
+      "description": "記錄看過哪些島（存在瀏覽器）"
+    },
+    {
+      "id": "share",
+      "name": "分享卡片",
+      "description": "產生分享用的截圖或連結"
+    },
+    {
+      "id": "dayNight",
+      "name": "晝夜切換",
+      "description": "白天、黃昏、夜晚光線"
+    },
+    {
+      "id": "reducedMotion",
+      "name": "減少動態",
+      "description": "暫停動畫，保護容易暈眩的人"
+    },
+    {
+      "id": "guidedTour",
+      "name": "自動導覽路線",
+      "description": "按「開始導覽」鏡頭依序飛到每座島並跳出介紹卡，可暫停、上一站、下一站"
+    },
+    {
+      "id": "walkMode",
+      "name": "地面漫遊",
+      "description": "切到第一人稱走在島上與橋上，WASD／方向鍵或畫面方向鍵移動，拖曳環顧"
+    },
+    {
+      "id": "people",
+      "name": "小人物散步",
+      "description": "島上有小人物沿著道路走動，增加生活感"
+    },
+    {
+      "id": "npcTalk",
+      "name": "居民對話與交易",
+      "description": "點居民會停下來揮手聊天，可以用撿到的東西跟居民交換"
+    },
+    {
+      "id": "skyLife",
+      "name": "天空與海的動態",
+      "description": "雲朵飄移、鳥群飛過、帆船繞島、海浪起伏"
+    },
+    {
+      "id": "nightLights",
+      "name": "夜晚燈光",
+      "description": "天黑後路燈、窗戶、市集燈亮起，還有螢火蟲"
+    },
+    {
+      "id": "clock",
+      "name": "即時時鐘",
+      "description": "顯示目前時間與天色"
+    }
+  ],
+  "rpgMode": {
+    "enabled": false
+  },
+  "livingWorld": {
+    "enabled": true,
+    "spec": "references/living-world.md",
+    "residentsPerIsland": 2,
+    "trade": true,
+    "dayNight": [
+      "day",
+      "dusk",
+      "night",
+      "auto",
+      "realtime"
+    ],
+    "sky": [
+      "clouds",
+      "birds",
+      "boats"
+    ],
+    "nightLights": true
+  },
+  "look": {
+    "spec": "references/look-and-feel.md",
+    "shape": {
+      "id": "sea",
+      "name": "海上群島"
+    },
+    "detail": {
+      "level": 3,
+      "name": "精緻",
+      "requirement": "在標準之上：每島再加石板小路、圍籬或花圃、2 個以上小道具（長椅、木箱、告示牌、水井…）；邊緣加草叢與小石頭；材質分 3 層以上色階"
+    },
+    "animals": [
+      {
+        "id": "squirrel",
+        "icon": "🐿️",
+        "name": "松鼠",
+        "where": "land"
+      },
+      {
+        "id": "rabbit",
+        "icon": "🐰",
+        "name": "兔子",
+        "where": "land"
+      },
+      {
+        "id": "duck",
+        "icon": "🦆",
+        "name": "鴨子",
+        "where": "shore"
+      },
+      {
+        "id": "butterfly",
+        "icon": "🦋",
+        "name": "蝴蝶",
+        "where": "air"
+      }
+    ],
+    "extras": [
+      {
+        "id": "flowers",
+        "name": "花田"
+      },
+      {
+        "id": "windmill",
+        "name": "風車"
+      }
+    ],
+    "cinema": {
+      "id": "epic",
+      "name": "電影史詩",
+      "requirement": "開場 4～6 秒：從遠方高空穿過雲層、環繞群島半圈、俯衝拉近再拉遠成全景（可加輕微景深模糊與標題淡入）；點島時鏡頭先拉高、沿弧線繞到島的正面再推近（1.5～2.5 秒）；任何時候點畫面或按 Esc 可以跳過"
+    }
+  },
+  "guestbook": {
+    "enabled": false
+  },
+  "visitCounter": {
+    "enabled": false
+  },
+  "exploreLive": {
+    "enabled": true,
+    "spec": "references/explore-and-live.md",
+    "features": [
+      "guidedTour",
+      "walkMode"
+    ],
+    "liveData": []
+  },
+  "release": {
+    "version": 1,
+    "basedOn": null,
+    "updatedAt": "2026-11-14",
+    "history": [
+      {
+        "version": 1,
+        "date": "2026-11-14",
+        "summary": "第一版"
+      }
+    ]
+  },
+  "publishMaterials": true
+}
