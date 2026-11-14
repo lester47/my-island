@@ -37,6 +37,9 @@ if (!S.bag) S.bag = { shell: 3 };
 let toastT = 0;
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 2400); }
 function islandById(id) { return id === 'center' ? C.center : C.islands.find((i) => i.id === id); }
+const stallsOf = (id) => C.stalls.filter((x) => x.island === id).sort((a, b) => a.no - b.no);   // 攤號是識別碼：攤位跟著自己的資料走
+const stallByNo = (no) => C.stalls.find((x) => x.no === +no);
+const nl = (t) => esc(t).replace(/\n/g, '<br>');
 function colorOf(id) { return id === 'center' ? '#3f7d3a' : islandById(id).dark; }   // 介面用加深色，白字對比 ≥ 4.5
 function openDlg(id) { const d = $(id); if (!d.open) d.showModal(); return d; }
 document.addEventListener('click', (e) => { const b = e.target.closest('[data-close]'); if (b) b.closest('dialog').close(); });
@@ -137,6 +140,39 @@ function openStamps() {
 $('#bagBtn').addEventListener('click', openBag);
 $('#stampBtn').addEventListener('click', openStamps);
 
+// ------------------------------------------------------------------ 攤位詳情（點攤位列展開，同時只開一攤）
+function stallDetailHTML(st) {
+  const N = C.stallNotes, I = islandById(st.island), T = C.stallTypes[I.stallType];
+  if (st.namePending) return `<p class="sd-empty">${esc(N.pendingName)}</p>`;
+  const v = (k) => String(st[k] ?? '').trim(), req = new Set(T.required);
+  const keys = ['intro', ...T.fields.map((f) => f[0])];
+  const any = keys.some((k) => v(k)) || st.photo;
+  let h = `<p class="sd-tags"><span class="badge type">${esc(T.label)}</span>${st.sample ? `<span class="badge">${esc(N.sample)}</span>` : ''}</p>`;
+  if (st.photo) h += `<figure class="sd-photo"><img src="${esc(st.photo)}" alt="${esc(st.photoAlt || st.name)}" loading="lazy" width="640" height="480">${st.photoCaption ? `<figcaption>${esc(st.photoCaption)}</figcaption>` : ''}</figure>`;
+  if (v('intro')) h += `<p class="sd-intro">${nl(v('intro'))}</p>`;
+  else if (st.template) h += `<p class="sd-intro todo">一句介紹：${esc(N.pendingField)}</p>`;
+  const rows = T.fields.map(([k, label]) => v(k) ? `<dt>${esc(label)}</dt><dd>${nl(v(k))}</dd>` : (st.template && req.has(k) ? `<dt>${esc(label)}</dt><dd class="todo">${esc(N.pendingField)}</dd>` : '')).join('');
+  if (rows) h += `<dl class="sd-fields">${rows}</dl>`;
+  if (!any && !st.template) h += `<p class="sd-empty">${esc(N.pendingIntro)}</p>`;
+  return h + `<p class="sd-foot">攤位內容與價格以現場為準。</p>`;
+}
+function stallListHTML(id) {
+  return `<ol class="stalls">${stallsOf(id).map((st) => `<li data-no="${st.no}"><button type="button" class="stall-row" id="sr-${st.no}" aria-expanded="false" aria-controls="sd-${st.no}"><span class="num" aria-hidden="true">${pad2(st.no)}</span><span class="nm ${st.namePending ? 'pending' : ''}"><span class="sr-only">攤號 ${st.no}，</span>${esc(st.name)}</span><span class="chev" aria-hidden="true"></span></button><div class="stall-detail" id="sd-${st.no}" role="region" aria-labelledby="sr-${st.no}" hidden>${stallDetailHTML(st)}</div></li>`).join('')}</ol>`;
+}
+function setStall(no, open, scroll = true) {
+  const p = $('#panel');
+  for (const b of p.querySelectorAll('.stall-row')) {
+    const on = open && b.id === `sr-${no}`;
+    b.setAttribute('aria-expanded', String(on)); b.closest('li').classList.toggle('open', on);
+    $('#' + b.getAttribute('aria-controls')).hidden = !on;
+  }
+  if (open && scroll) { const li = p.querySelector(`li[data-no="${no}"]`); if (li) li.scrollIntoView({ block: 'nearest', behavior: S.reduced ? 'auto' : 'smooth' }); }
+}
+$('#panel').addEventListener('click', (e) => {
+  const b = e.target.closest('.stall-row'); if (!b) return;
+  setStall(b.closest('li').dataset.no, b.getAttribute('aria-expanded') !== 'true');
+});
+
 // ------------------------------------------------------------------ 島嶼面板
 function panelHTML(id) {
   const I = islandById(id), c = colorOf(id), got = S.stamps.includes(id);
@@ -145,20 +181,26 @@ function panelHTML(id) {
   if (id === 'center') {
     return `<div class="p-hd" style="--pc:${c};--ptint:#e9f4e4;--pink:#234a20"><p class="eyebrow">★ ${esc(I.role)}</p><h2 id="panelTitle">${esc(I.name)}</h2><button type="button" class="x" data-panel-close aria-label="關閉">✕</button></div>
       <div class="p-sec"><h3>活動總覽</h3><p class="intro-line">${esc(I.intro)}</p><p style="margin-top:6px">${esc(I.overview)}</p></div>
-      <div class="p-sec"><h3>活動時程表</h3><p>${I.schedule.length ? '' : `⏳ ${esc(I.schedulePending)}`}</p></div>
-      <div class="p-sec"><h3>展區地圖</h3><div class="mapgrid">${C.islands.map((x) => `<button type="button" data-go="${x.id}" style="--c:${x.color}">${x.order}　${esc(x.name)}<br><small>${esc(x.group)}・${x.stalls.length} 攤</small></button>`).join('')}</div></div>
+      <div class="p-sec"><h3>活動資訊</h3>${eventHTML()}</div>
+      <div class="p-sec"><h3>展區地圖</h3><div class="mapgrid">${C.islands.map((x) => `<button type="button" data-go="${x.id}" style="--c:${x.color}">${x.order}　${esc(x.name)}<br><small>${esc(x.group)}・${stallsOf(x.id).length} 攤</small></button>`).join('')}</div></div>
       <div class="p-sec"><h3>集章進度</h3><div class="stamp-row">🏮 已集 ${S.stamps.length}/6 枚 <button type="button" class="btn ghost" data-stamps>看護照</button></div></div>
       ${resHTML}`;
   }
   return `<div class="p-hd" style="--pc:${c};--ptint:${I.tint};--pink:${I.ink}"><p class="eyebrow">第 ${I.order} 島・${esc(I.group)}</p><h2 id="panelTitle">${esc(I.name)}</h2><button type="button" class="x" data-panel-close aria-label="關閉">✕</button></div>
     <div class="p-sec" style="--pc:${c}"><h3>展區介紹</h3><p class="intro-line">${esc(I.intro)}</p></div>
-    <div class="p-sec" style="--pc:${c}"><h3>攤位清單（${I.stalls.length} 攤，依攤號排序）</h3>
-      <ol class="stalls">${[...I.stalls].sort((a, b) => a.no - b.no).map((s) => `<li data-no="${s.no}"><span class="num" aria-label="攤號 ${s.no}">${pad2(s.no)}</span><span class="${s.pending ? 'pending' : ''}">${esc(s.name)}</span></li>`).join('')}</ol>
-      <p class="foot" style="margin-top:8px">攤位內容與價格以現場為準。</p></div>
+    <div class="p-sec" style="--pc:${c}"><h3>攤位清單（${stallsOf(id).length} 攤，依攤號排序）</h3>
+      <p class="foot" style="margin:0 0 8px">點攤位可以展開介紹，再點一次收合。</p>
+      ${stallListHTML(id)}</div>
     <div class="p-sec"><h3>島上地標</h3><p>${esc(I.landmark)}</p></div>
     ${resHTML}
     <div class="p-sec"><h3>資料下載</h3><a class="dl" href="${esc(I.download)}" download>📄 下載攤位清單（txt）</a></div>
     <div class="p-sec"><div class="stamp-row">${got ? '🏮 這座島已蓋章' : '打開介紹就會蓋章'}・目前 ${S.stamps.length}/6 <button type="button" class="btn ghost" data-stamps>看護照</button></div></div>`;
+}
+function eventHTML() {
+  const E = C.center.event, P = E.pending;
+  const sched = E.schedule && E.schedule.length ? `<ol class="sched">${E.schedule.map((x) => `<li><b>${esc(x.time)}</b> ${esc(x.title)}</li>`).join('')}</ol>` : esc(P);
+  return `<dl class="sd-fields ev"><dt>日期</dt><dd>${esc(E.date || P)}</dd><dt>地點</dt><dd>${esc(E.place || P)}</dd><dt>時程</dt><dd>${sched}</dd>
+    <dt>集章方式</dt><dd>${esc(E.stampWeb)}<br>現場集章：${esc(E.stampOnsite || P)}</dd></dl>`;
 }
 function showPanel(id, highlightNo) {
   const p = $('#panel'); p.innerHTML = panelHTML(id); p.hidden = false; S.open = id; stamp(id);
@@ -166,8 +208,11 @@ function showPanel(id, highlightNo) {
   p.querySelectorAll('[data-go]').forEach((b) => (b.onclick = () => openIsland(b.dataset.go)));
   p.querySelectorAll('[data-stamps]').forEach((b) => (b.onclick = openStamps));
   for (const k in tags) tags[k].setAttribute('aria-expanded', String(k === id));
-  if (highlightNo != null) { const li = p.querySelector(`li[data-no="${highlightNo}"]`); if (li) { li.classList.add('hit'); li.scrollIntoView({ block: 'center' }); } }
-  p.focus({ preventScroll: true });
+  if (highlightNo != null && p.querySelector(`li[data-no="${highlightNo}"]`)) {
+    p.querySelector(`li[data-no="${highlightNo}"]`).classList.add('hit');
+    setStall(highlightNo, true); $('#sr-' + highlightNo).focus({ preventScroll: true });
+    p.querySelector(`li[data-no="${highlightNo}"]`).scrollIntoView({ block: 'start' });
+  } else p.focus({ preventScroll: true });
 }
 let panelOpener = null;
 function closePanel(goHome) {
@@ -193,9 +238,9 @@ function cardHTML(id) {
   const I = islandById(id), c = colorOf(id);
   const res = C.residents.filter((r) => r.island === id);
   const resList = `<details><summary>島上的人與對話（示意角色）</summary>${res.map((r) => `<div class="res" style="margin:6px 0"><b>${esc(r.name)}</b>・${esc(r.job)}<ul style="margin:4px 0 0;padding-left:18px">${r.lines.map((l) => `<li>${esc(l)}</li>`).join('')}</ul></div>`).join('')}</details>`;
-  if (id === 'center') return `<article class="card" style="--c:${c}"><h3>★ ${esc(I.name)} <span class="grp">${esc(I.role)}</span></h3><p>${esc(I.intro)}</p><p>${esc(I.overview)}</p><p>⏳ 時程表：${esc(I.schedulePending)}</p>${resList}<div class="acts"><button type="button" data-open="center">在地圖上看</button></div></article>`;
-  return `<article class="card" style="--c:${c}"><h3><span class="tag" style="position:static;box-shadow:none;--tc:${c};min-height:auto;padding:0;background:none"><span class="no">${I.order}</span></span>${esc(I.name)} <span class="grp">${esc(I.group)}・${I.stalls.length} 攤</span>${S.stamps.includes(id) ? ' 🏮' : ''}</h3>
-    <p>${esc(I.intro)}</p><ol class="stalls" style="--pc:${c}">${[...I.stalls].sort((a, b) => a.no - b.no).map((s) => `<li><span class="num">${pad2(s.no)}</span><span class="${s.pending ? 'pending' : ''}">${esc(s.name)}</span></li>`).join('')}</ol>
+  if (id === 'center') return `<article class="card" style="--c:${c}"><h3>★ ${esc(I.name)} <span class="grp">${esc(I.role)}</span></h3><p>${esc(I.intro)}</p><p>${esc(I.overview)}</p>${eventHTML()}${resList}<div class="acts"><button type="button" data-open="center">在地圖上看</button></div></article>`;
+  return `<article class="card" style="--c:${c}"><h3><span class="tag" style="position:static;box-shadow:none;--tc:${c};min-height:auto;padding:0;background:none"><span class="no">${I.order}</span></span>${esc(I.name)} <span class="grp">${esc(I.group)}・${stallsOf(id).length} 攤</span>${S.stamps.includes(id) ? ' 🏮' : ''}</h3>
+    <p>${esc(I.intro)}</p><ol class="stalls" style="--pc:${c}">${stallsOf(id).map((st) => `<li><button type="button" class="stall-row" data-open="${id}" data-no="${st.no}"><span class="num" aria-hidden="true">${pad2(st.no)}</span><span class="nm ${st.namePending ? 'pending' : ''}"><span class="sr-only">攤號 ${st.no}，</span>${esc(st.name)}</span><span class="go" aria-hidden="true">看介紹 ›</span></button></li>`).join('')}</ol>
     <p style="margin-top:8px"><b>地標：</b>${esc(I.landmark)}</p>${resList}
     <div class="acts"><button type="button" data-open="${id}">在地圖上看</button><a href="${esc(I.download)}" download>📄 下載攤位清單</a></div></article>`;
 }
@@ -206,21 +251,25 @@ function renderList() {
   $('#listBody').innerHTML = ids.map(cardHTML).join('') + `<p class="foot">作者：${esc(C.site.author)}｜${esc(C.site.layoutNote)}｜${esc(C.residentsNote)}吉祥物造型為示意。攤位清單資料來自主辦提供的檔案，可在各島下載。</p>`;
 }
 $('#filters').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { filter = b.dataset.f; renderList(); } });
-$('#listBody').addEventListener('click', (e) => { const b = e.target.closest('[data-open]'); if (b) { $('#listDlg').close(); openIsland(b.dataset.open, { opener: $('#listBtn') }); } });
+$('#listBody').addEventListener('click', (e) => { const b = e.target.closest('[data-open]'); if (b) { $('#listDlg').close(); openIsland(b.dataset.open, { opener: $('#listBtn'), no: b.dataset.no != null ? +b.dataset.no : undefined }); } });
 function search(q) {
   q = q.trim().toLowerCase(); const out = $('#searchResults');
   if (!q) { out.innerHTML = ''; return; }
   const hits = [];
   const test = (s) => String(s).toLowerCase().includes(q);
   if ([C.center.name, C.center.role, C.center.intro, C.center.overview].some(test)) hits.push({ id: 'center', text: `★ ${C.center.name}・${C.center.role}` });
-  for (const I of C.islands) {
-    if ([I.name, I.group, I.intro, I.landmark].some(test)) hits.push({ id: I.id, text: `${I.name}・${I.group}` });
-    for (const s of I.stalls) if (test(s.name) || String(s.no) === q || pad2(s.no) === q) hits.push({ id: I.id, no: s.no, text: `${pad2(s.no)} ${s.name}（${I.name}）` });
+  // 攤號或攤名完全相同的排最前面，按 Enter 就直接開啟並展開那一攤
+  for (const st of C.stalls) {
+    const exact = String(st.no) === q || pad2(st.no) === q || st.name.toLowerCase() === q;
+    if (exact || test(st.name) || [st.intro, st.items, st.takeaway, st.rules].some((x) => x && test(x))) hits.push({ id: st.island, no: st.no, exact, text: `${pad2(st.no)} ${st.name}（${islandById(st.island).name}）` });
   }
+  for (const I of C.islands) if ([I.name, I.group, I.intro, I.landmark].some(test)) hits.push({ id: I.id, text: `${I.name}・${I.group}` });
+  hits.sort((a, b) => (b.exact ? 1 : 0) - (a.exact ? 1 : 0));
   for (const r of C.residents) if (test(r.name) || test(r.job)) hits.push({ id: r.island, text: `${r.name}・${r.job}（${islandById(r.island).name}）` });
-  out.innerHTML = hits.length ? hits.slice(0, 20).map((h) => `<button type="button" data-id="${h.id}" ${h.no != null ? `data-no="${h.no}"` : ''} style="--c:${colorOf(h.id)}">${esc(h.text)}</button>`).join('') : `<p class="none">找不到「${esc(q)}」，換個關鍵字試試，例如「餅乾」「迷宮」或攤號「11」。</p>`;
+  out.innerHTML = hits.length ? hits.slice(0, 20).map((h, i) => `<button type="button" data-id="${h.id}" ${h.no != null ? `data-no="${h.no}"` : ''} style="--c:${colorOf(h.id)}">${esc(h.text)}${i === 0 && h.no != null ? '<small class="enter">按 Enter 直接開啟</small>' : ''}</button>`).join('') : `<p class="none">找不到「${esc(q)}」，換個關鍵字試試，例如「餅乾」「迷宮」或攤號「11」。</p>`;
 }
 $('#searchInput').addEventListener('input', (e) => search(e.target.value));
+$('#searchInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); $('#searchResults button')?.click(); } });
 $('#searchResults').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; $('#listDlg').close(); openIsland(b.dataset.id, { no: b.dataset.no != null ? +b.dataset.no : undefined, opener: $('#searchBtn') }); });
 $('#listBtn').addEventListener('click', () => { renderList(); openDlg('#listDlg'); });
 $('#searchBtn').addEventListener('click', () => { renderList(); openDlg('#listDlg'); $('#searchInput').focus(); });
@@ -262,9 +311,9 @@ function buildTags() {
     const I = islandById(id), c = colorOf(id);
     const b = document.createElement('button'); b.type = 'button'; b.className = 'tag' + (id === 'center' ? ' center' : '');
     b.style.setProperty('--tc', c); if (I.tint) { b.style.setProperty('--ttint', I.tint); b.style.setProperty('--tink', I.ink); }
-    b.setAttribute('aria-label', id === 'center' ? `${I.name}，${I.role}` : `第 ${I.order} 島 ${I.name}，${I.stalls.length} 攤`);
+    b.setAttribute('aria-label', id === 'center' ? `${I.name}，${I.role}` : `第 ${I.order} 島 ${I.name}，${stallsOf(id).length} 攤`);
     b.setAttribute('aria-expanded', 'false'); b.setAttribute('aria-controls', 'panel');
-    b.innerHTML = id === 'center' ? `<span>★ ${esc(I.name)}</span><span class="ct">服務台</span><span class="st"></span>` : `<span class="no">${I.order}</span><span>${esc(I.name)}</span><span class="ct">${I.stalls.length} 攤</span><span class="st"></span>`;
+    b.innerHTML = id === 'center' ? `<span>★ ${esc(I.name)}</span><span class="ct">服務台</span><span class="st"></span>` : `<span class="no">${I.order}</span><span>${esc(I.name)}</span><span class="ct">${stallsOf(id).length} 攤</span><span class="st"></span>`;
     b.addEventListener('click', () => openIsland(id, { opener: b }));
     box.append(b); tags[id] = b;
   }
@@ -383,7 +432,7 @@ function goStation(i) {
   const id = TOUR[T.i], I = islandById(id);
   $('#tourStep').textContent = `第 ${T.i + 1} 站／共 ${TOUR.length} 站`;
   $('#tourName').textContent = id === 'center' ? `★ ${I.name}` : `${I.order}　${I.name}`;
-  $('#tourText').textContent = id === 'center' ? `${I.intro}` : `${I.intro}　第一攤：${pad2(I.stalls[0].no)} ${I.stalls[0].name}`;
+  $('#tourText').textContent = id === 'center' ? `${I.intro}` : `${I.intro}　第一攤：${pad2(stallsOf(id)[0].no)} ${stallsOf(id)[0].name}`;
   $('#tourBar').style.width = '0%';
   CAM.flight(CAM.islandView(W.islands[id]), 1800, 10, () => { if (S.tour) { S.tour.flying = false; S.tour.last = performance.now(); } });
 }
@@ -473,7 +522,8 @@ function textOnly(reason) {
   m.innerHTML = `<p class="fallback-msg">${esc(reason)}，已改用文字清單版，所有島嶼與攤位內容都在下面。</p>` + ids.map(cardHTML).join('') +
     `<p class="foot">作者：${esc(C.site.author)}｜${esc(C.site.layoutNote)}｜${esc(C.residentsNote)}</p>`;
   document.body.append(m);
-  m.addEventListener('click', (e) => { const b = e.target.closest('[data-open]'); if (b) { panelOpener = b; showPanel(b.dataset.open); } });
+  m.addEventListener('click', (e) => { const b = e.target.closest('[data-open]'); if (b) { panelOpener = b; showPanel(b.dataset.open, b.dataset.no != null ? +b.dataset.no : undefined); } });
+  const dst = Q.get('stall') && stallByNo(Q.get('stall')); if (dst) showPanel(dst.island, dst.no);
 }
 function webglOK() { try { const c = document.createElement('canvas'); return !!(c.getContext('webgl2') || c.getContext('webgl')); } catch (e) { return false; } }
 
@@ -536,7 +586,8 @@ async function boot() {
   requestAnimationFrame(frame);
   window.__isle = { W, L, CAM, S, THREE };   // 給自動測試讀取狀態用
   await playIntro(false);
-  const deep = Q.get('island') || location.hash.slice(1);
-  if (deep && islandById(deep)) openIsland(deep);
+  const deep = Q.get('island') || location.hash.slice(1), dst = Q.get('stall') && stallByNo(Q.get('stall'));
+  if (dst) openIsland(dst.island, { no: dst.no });
+  else if (deep && islandById(deep)) openIsland(deep);
 }
 boot().catch((err) => { console.error(err); $('#toast').textContent = '網站資料載入失敗，請重新整理頁面。'; $('#toast').classList.add('show'); window.__ready = true; });

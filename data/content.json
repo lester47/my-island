@@ -12,13 +12,19 @@
   },
   "center": {
     "id": "center",
-    "name": "AI 總複習大島",
+    "name": "鯉魚市集服務台",
     "role": "活動服務台",
-    "intro": "活動服務台：活動總覽、時程表、展區地圖與集章進度。",
+    "intro": "活動服務台：活動日期、地點、時程表、展區地圖與集章方式都在這裡。",
     "overview": "五座主題小島、共 26 個攤位：美食、手作、益智、動感、二手，逛完每一島就能蓋一枚章。",
-    "schedule": [],
-    "schedulePending": "活動日期、時間與地點待主辦公布。",
-    "landmark": "活動服務台涼亭、三面鯉魚旗、風車、花田與市集攤位"
+    "landmark": "活動服務台涼亭、三面鯉魚旗、風車、花田與市集攤位",
+    "event": {
+      "pending": "待主辦公布",
+      "date": "",
+      "place": "",
+      "schedule": [],
+      "stampWeb": "在這個網站上，打開一座島的介紹就會蓋一枚章，服務台加五座展區共 6 枚，集滿就完成。",
+      "stampOnsite": ""
+    }
   },
   "islands": [
     {
@@ -34,28 +40,7 @@
       "ink": "#8a3e0b",
       "landmark": "橘白條紋點心攤，招牌是一杯巨大的果汁",
       "download": "downloads/stalls-01.txt",
-      "stalls": [
-        {
-          "no": 1,
-          "name": "大狗堡"
-        },
-        {
-          "no": 2,
-          "name": "自製飲料店"
-        },
-        {
-          "no": 3,
-          "name": "蜜糖小屋"
-        },
-        {
-          "no": 4,
-          "name": "阿逸哥的美食小食堂"
-        },
-        {
-          "no": 5,
-          "name": "靚萱餅乾鋪"
-        }
-      ]
+      "stallType": "food"
     },
     {
       "id": "craft",
@@ -70,28 +55,7 @@
       "ink": "#4b2a86",
       "landmark": "紫色手作帳篷，前面立著巨型剪刀與調色盤",
       "download": "downloads/stalls-02.txt",
-      "stalls": [
-        {
-          "no": 6,
-          "name": "手作DIY"
-        },
-        {
-          "no": 7,
-          "name": "巧手工坊"
-        },
-        {
-          "no": 8,
-          "name": "自己畫貼紙DIY"
-        },
-        {
-          "no": 9,
-          "name": "吉樂工作室"
-        },
-        {
-          "no": 20,
-          "name": "聖誕DIY製造所"
-        }
-      ]
+      "stallType": "craft"
     },
     {
       "id": "puzzle",
@@ -106,36 +70,7 @@
       "ink": "#164c85",
       "landmark": "木製彈珠迷宮與拼圖拱門",
       "download": "downloads/stalls-03.txt",
-      "stalls": [
-        {
-          "no": 10,
-          "name": "名不虛傳GG手"
-        },
-        {
-          "no": 11,
-          "name": "彈珠迷宮"
-        },
-        {
-          "no": 12,
-          "name": "鯉魚Liyu遊戲店"
-        },
-        {
-          "no": 13,
-          "name": "圈圈洞洞"
-        },
-        {
-          "no": 18,
-          "name": "鯉魚記憶王"
-        },
-        {
-          "no": 21,
-          "name": "有吃有玩真好玩"
-        },
-        {
-          "no": 22,
-          "name": "鯉魚麻糬屋"
-        }
-      ]
+      "stallType": "game"
     },
     {
       "id": "sport",
@@ -150,28 +85,7 @@
       "ink": "#8e2323",
       "landmark": "沙包投擲洞洞板與陀螺擂台",
       "download": "downloads/stalls-04.txt",
-      "stalls": [
-        {
-          "no": 17,
-          "name": "好開心抽抽樂"
-        },
-        {
-          "no": 23,
-          "name": "正反接球王"
-        },
-        {
-          "no": 24,
-          "name": "搖出你的好耳力"
-        },
-        {
-          "no": 25,
-          "name": "丟球者"
-        },
-        {
-          "no": 26,
-          "name": "三二一發射！戰鬥陀螺"
-        }
-      ]
+      "stallType": "game"
     },
     {
       "id": "recycle",
@@ -186,25 +100,7 @@
       "ink": "#1e5d2a",
       "landmark": "交換小屋、舊書櫃與循環標誌",
       "download": "downloads/stalls-05.txt",
-      "stalls": [
-        {
-          "no": 14,
-          "name": "攤名待確認",
-          "pending": true
-        },
-        {
-          "no": 15,
-          "name": "夏來寶"
-        },
-        {
-          "no": 16,
-          "name": "廢物市集"
-        },
-        {
-          "no": 19,
-          "name": "娃！茶一點就中"
-        }
-      ]
+      "stallType": "secondhand"
     }
   ],
   "residents": [
@@ -571,5 +467,275 @@
     "點島上的居民可以聊天；撿沙灘上的貝殼，可以跟居民交換小東西。",
     "按「導覽」會自動帶你逛一圈；按「漫遊」可以走在島上和橋上。",
     "逛過一座島就會蓋一枚章，集滿六枚有驚喜。"
-  ]
+  ],
+  "stalls": [
+    {
+      "no": 1,
+      "name": "大狗堡",
+      "island": "food"
+    },
+    {
+      "no": 2,
+      "name": "自製飲料店",
+      "island": "food"
+    },
+    {
+      "no": 3,
+      "name": "蜜糖小屋",
+      "island": "food"
+    },
+    {
+      "no": 4,
+      "name": "阿逸哥的美食小食堂",
+      "island": "food"
+    },
+    {
+      "no": 5,
+      "name": "靚萱餅乾鋪",
+      "island": "food",
+      "template": true,
+      "photo": "assets/stalls/stall-05.webp",
+      "photoAlt": "插畫：女孩捧著一盤巧克力豆餅乾",
+      "photoCaption": "示意圖，非攤位實拍；請攤主提供商品照片"
+    },
+    {
+      "no": 6,
+      "name": "手作DIY",
+      "island": "craft"
+    },
+    {
+      "no": 7,
+      "name": "巧手工坊",
+      "island": "craft"
+    },
+    {
+      "no": 8,
+      "name": "自己畫貼紙DIY",
+      "island": "craft",
+      "template": true,
+      "photo": "assets/stalls/stall-08.webp",
+      "photoAlt": "插畫：男孩用剪刀剪出黃色星星，旁邊有星星燈籠與膠水",
+      "photoCaption": "示意圖，非攤位實拍；請攤主提供作品照片"
+    },
+    {
+      "no": 9,
+      "name": "吉樂工作室",
+      "island": "craft"
+    },
+    {
+      "no": 10,
+      "name": "名不虛傳GG手",
+      "island": "puzzle"
+    },
+    {
+      "no": 11,
+      "name": "彈珠迷宮",
+      "island": "puzzle",
+      "template": true,
+      "intro": "把彈珠從起點引導到終點。",
+      "sample": true,
+      "photo": "assets/stalls/stall-11.webp",
+      "photoAlt": "插畫：木製彈珠迷宮，迷宮裡有幾顆玻璃彈珠和紅色拱門",
+      "photoCaption": "示意圖，非攤位實拍；請攤主提供遊戲道具照片"
+    },
+    {
+      "no": 12,
+      "name": "鯉魚Liyu遊戲店",
+      "island": "puzzle"
+    },
+    {
+      "no": 13,
+      "name": "圈圈洞洞",
+      "island": "puzzle"
+    },
+    {
+      "no": 14,
+      "name": "攤名待確認",
+      "island": "recycle",
+      "namePending": true
+    },
+    {
+      "no": 15,
+      "name": "夏來寶",
+      "island": "recycle"
+    },
+    {
+      "no": 16,
+      "name": "廢物市集",
+      "island": "recycle"
+    },
+    {
+      "no": 17,
+      "name": "好開心抽抽樂",
+      "island": "sport"
+    },
+    {
+      "no": 18,
+      "name": "鯉魚記憶王",
+      "island": "puzzle"
+    },
+    {
+      "no": 19,
+      "name": "娃！茶一點就中",
+      "island": "recycle"
+    },
+    {
+      "no": 20,
+      "name": "聖誕DIY製造所",
+      "island": "craft"
+    },
+    {
+      "no": 21,
+      "name": "有吃有玩真好玩",
+      "island": "puzzle"
+    },
+    {
+      "no": 22,
+      "name": "鯉魚麻糬屋",
+      "island": "puzzle"
+    },
+    {
+      "no": 23,
+      "name": "正反接球王",
+      "island": "sport"
+    },
+    {
+      "no": 24,
+      "name": "搖出你的好耳力",
+      "island": "sport"
+    },
+    {
+      "no": 25,
+      "name": "丟球者",
+      "island": "sport"
+    },
+    {
+      "no": 26,
+      "name": "三二一發射！戰鬥陀螺",
+      "island": "sport"
+    }
+  ],
+  "stallTypes": {
+    "food": {
+      "label": "美食攤",
+      "fields": [
+        [
+          "items",
+          "主打品項"
+        ],
+        [
+          "allergens",
+          "過敏原"
+        ],
+        [
+          "price",
+          "費用"
+        ],
+        [
+          "notes",
+          "注意事項"
+        ]
+      ],
+      "required": [
+        "intro",
+        "items",
+        "allergens"
+      ]
+    },
+    "craft": {
+      "label": "手作攤",
+      "fields": [
+        [
+          "takeaway",
+          "能帶走的成品"
+        ],
+        [
+          "steps",
+          "製作步驟"
+        ],
+        [
+          "duration",
+          "每輪時間"
+        ],
+        [
+          "price",
+          "費用"
+        ],
+        [
+          "age",
+          "適合年齡"
+        ],
+        [
+          "notes",
+          "注意事項"
+        ]
+      ],
+      "required": [
+        "intro",
+        "takeaway",
+        "duration"
+      ]
+    },
+    "game": {
+      "label": "遊戲攤",
+      "fields": [
+        [
+          "rules",
+          "玩法"
+        ],
+        [
+          "clear",
+          "過關條件"
+        ],
+        [
+          "duration",
+          "每輪時間"
+        ],
+        [
+          "price",
+          "費用"
+        ],
+        [
+          "age",
+          "適合年齡"
+        ],
+        [
+          "notes",
+          "注意事項"
+        ]
+      ],
+      "required": [
+        "intro",
+        "rules",
+        "clear"
+      ]
+    },
+    "secondhand": {
+      "label": "二手攤",
+      "fields": [
+        [
+          "items",
+          "販售物品"
+        ],
+        [
+          "price",
+          "費用"
+        ],
+        [
+          "notes",
+          "注意事項"
+        ]
+      ],
+      "required": [
+        "intro",
+        "items"
+      ]
+    }
+  },
+  "stallNotes": {
+    "pendingIntro": "攤位介紹待補",
+    "pendingField": "待攤主填寫",
+    "sample": "示範文案，正式內容請攤主確認",
+    "pendingName": "攤名待確認，介紹待主辦公布"
+  }
 }
