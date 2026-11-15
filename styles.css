@@ -52,7 +52,7 @@ h1 { margin: 0; font-size: 22px; font-weight: 900; letter-spacing: .06em; color:
 html[data-theme="deep"] h1 { color: #9fd99a; }
 .tagline { margin: 1px 0 0; font-size: 13px; color: var(--muted); font-weight: 500; }
 .tools { display: flex; gap: 6px; }
-.tbtn { min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; gap: 6px; padding: 0 14px; border: 0; border-radius: 999px; background: var(--surface); color: var(--ink);
+.tbtn { white-space: nowrap; min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; gap: 6px; padding: 0 14px; border: 0; border-radius: 999px; background: var(--surface); color: var(--ink);
   font-weight: 700; font-size: 14px; box-shadow: 0 2px 0 var(--line), var(--shadow); transition: transform .15s; }
 .tbtn:hover { transform: translateY(-1px); }
 .tbtn[aria-pressed="true"], .tbtn.on { background: var(--primary); color: var(--primary-ink); }
@@ -252,7 +252,7 @@ html[data-theme="deep"] .stamp.got { color: var(--ink); }
   .bubble { width: 270px; }
   .dlg { max-height: calc(100vh - 20px); }
 }
-@media (min-width: 761px) and (max-width: 1100px) {
+@media (min-width: 761px) and (max-width: 1279px) {
   .tagline { display: none; }
   .tbtn .tx { display: none; }
   .tbtn { padding: 0; width: 46px; justify-content: center; }
