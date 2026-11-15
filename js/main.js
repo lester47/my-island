@@ -142,13 +142,14 @@ $('#stampBtn').addEventListener('click', openStamps);
 
 // ------------------------------------------------------------------ 攤位詳情（點攤位列展開，同時只開一攤）
 function stallDetailHTML(st) {
-  const N = C.stallNotes, I = islandById(st.island), T = C.stallTypes[I.stallType];
-  if (st.namePending) return `<p class="sd-empty">${esc(N.pendingName)}</p>`;
+  const N = C.stallNotes, I = islandById(st.island), T = C.stallTypes[st.type || I.stallType];
   const v = (k) => String(st[k] ?? '').trim(), req = new Set(T.required);
   const keys = ['intro', ...T.fields.map((f) => f[0])];
   const any = keys.some((k) => v(k)) || st.photo;
+  const photo = st.photo ? `<div class="stall-photo"><img src="${esc(st.photo + (C.assetVersion ? `?v=${C.assetVersion}` : ''))}" alt="${esc(st.photoAlt || st.name)}" loading="lazy" decoding="async" width="1774" height="887"></div>${st.photoCaption ? `<p class="stall-photo-cap">${esc(st.photoCaption)}</p>` : ''}` : '';
+  if (st.namePending) return photo + `<p class="sd-empty">${esc(N.pendingName)}</p>`;
   let h = `<p class="sd-tags"><span class="badge type">${esc(T.label)}</span>${st.sample ? `<span class="badge">${esc(N.sample)}</span>` : ''}</p>`;
-  if (st.photo) h += `<div class="stall-photo"><img src="${esc(st.photo + (C.assetVersion ? `?v=${C.assetVersion}` : ''))}" alt="${esc(st.photoAlt || st.name)}" loading="lazy" decoding="async" width="1774" height="887"></div>${st.photoCaption ? `<p class="stall-photo-cap">${esc(st.photoCaption)}</p>` : ''}`;
+  h += photo;
   if (v('intro')) h += `<p class="sd-intro">${nl(v('intro'))}</p>`;
   else if (st.template) h += `<p class="sd-intro todo">一句介紹：${esc(N.pendingField)}</p>`;
   const rows = T.fields.map(([k, label]) => v(k) ? `<dt>${esc(label)}</dt><dd>${nl(v(k))}</dd>` : (st.template && req.has(k) ? `<dt>${esc(label)}</dt><dd class="todo">${esc(N.pendingField)}</dd>` : '')).join('');

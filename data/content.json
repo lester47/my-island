@@ -1,5 +1,5 @@
 {
-  "assetVersion": "20261115g",
+  "assetVersion": "20261115h",
   "site": {
     "title": "115 鯉魚市集",
     "tagline": "跳上五座六角小島，逛美食、玩手作、闖關挑戰，還能挖二手好物！",
@@ -222,7 +222,7 @@
       "trade": "t9",
       "lines": [
         "循環挖寶島：逛二手攤，替舊物找新主人！",
-        "這裡有夏來寶、廢物市集、娃！茶一點就中。",
+        "這裡有二手跳蚤市場、夏來寶、廢物市集，還有哇！茶一點就中。",
         "14 號攤的攤名還在確認中，到現場看看吧。",
         "舊東西換個主人，就能繼續被好好使用。"
       ]
@@ -481,7 +481,9 @@
       "island": "food",
       "photo": "assets/stalls/stall-01-v2.png",
       "photoAlt": "插畫：女孩捧著淋了番茄醬和芥末的熱狗堡，男孩在橘白條紋棚的攤位後比讚，桌上有香腸和醬料瓶",
-      "photoCaption": "示意插畫，非攤位實拍"
+      "photoCaption": "示意插畫，非攤位實拍",
+      "desc": "販售熱狗堡，適合逛市集時當點心。",
+      "sample": true
     },
     {
       "no": 2,
@@ -489,7 +491,9 @@
       "island": "food",
       "photo": "assets/stalls/stall-02-v2.png",
       "photoAlt": "插畫：男孩把水果茶從壺裡倒進杯子，女孩在旁邊扶著杯子，桌上有一籃鳳梨、柳橙、葡萄等水果",
-      "photoCaption": "示意插畫，非攤位實拍"
+      "photoCaption": "示意插畫，非攤位實拍",
+      "desc": "販售自製飲料，口味以現場供應為準。",
+      "sample": true
     },
     {
       "no": 3,
@@ -497,7 +501,9 @@
       "island": "food",
       "photo": "assets/stalls/stall-03-v2.png",
       "photoAlt": "插畫：兩個小朋友站在蜂巢裝飾的小木屋攤位兩旁，屋裡擺著杯子蛋糕、鬆餅和一罐蜂蜜",
-      "photoCaption": "示意插畫，非攤位實拍"
+      "photoCaption": "示意插畫，非攤位實拍",
+      "desc": "販售甜點與小零食，歡迎到攤位挑選。",
+      "sample": true
     },
     {
       "no": 4,
@@ -505,16 +511,19 @@
       "island": "food",
       "photo": "assets/stalls/stall-04-v2.png",
       "photoAlt": "插畫：男孩在藍格子桌巾的攤位上夾炸物，女孩端著一盤點心，桌上擺著幾盤小吃和春捲",
-      "photoCaption": "示意插畫，非攤位實拍"
+      "photoCaption": "示意插畫，非攤位實拍",
+      "desc": "販售市集小吃，當日品項以攤位公告為準。",
+      "sample": true
     },
     {
       "no": 5,
       "name": "靚萱餅乾鋪",
       "island": "food",
-      "template": true,
       "photo": "assets/stalls/stall-05-v2.png",
       "photoAlt": "插畫：女孩和男孩一起端著一整盤巧克力豆餅乾",
-      "photoCaption": "示意插畫，非攤位實拍"
+      "photoCaption": "示意插畫，非攤位實拍",
+      "desc": "販售餅乾，歡迎到攤位看看有哪些口味。",
+      "sample": true
     },
     {
       "no": 6,
@@ -522,7 +531,10 @@
       "island": "craft",
       "photo": "assets/stalls/stall-06-v2.png",
       "photoAlt": "插畫：男孩用剪刀剪黃色色紙，女孩拿著彩色紙風車花，桌上有色紙、膠水和蠟筆",
-      "photoCaption": "示意插畫，非攤位實拍"
+      "photoCaption": "示意插畫，非攤位實拍",
+      "rules": "選擇材料，依攤主示範組合與裝飾。",
+      "clear": "完成一件手作作品。",
+      "sample": true
     },
     {
       "no": 7,
@@ -530,16 +542,21 @@
       "island": "craft",
       "photo": "assets/stalls/stall-07-v2.png",
       "photoAlt": "插畫：男孩用針線縫小熊臉的不織布吊飾，女孩在旁邊幫忙，桌上有不織布、剪刀和毛線球",
-      "photoCaption": "示意插畫，非攤位實拍"
+      "photoCaption": "示意插畫，非攤位實拍",
+      "rules": "運用攤位提供的材料，做出自己的小作品。",
+      "clear": "依示範完成作品的主要造型。",
+      "sample": true
     },
     {
       "no": 8,
       "name": "自己畫貼紙DIY",
       "island": "craft",
-      "template": true,
       "photo": "assets/stalls/stall-08-v2.png",
       "photoAlt": "插畫：兩個小朋友用彩色筆畫貼紙，紙上有星星、愛心、小貓、花和兔子圖案",
-      "photoCaption": "示意插畫，非攤位實拍"
+      "photoCaption": "示意插畫，非攤位實拍",
+      "rules": "在空白貼紙上畫出喜歡的圖案，再上色。",
+      "clear": "完成至少一張自畫貼紙。",
+      "sample": true
     },
     {
       "no": 9,
@@ -547,7 +564,10 @@
       "island": "craft",
       "photo": "assets/stalls/stall-09-v2.png",
       "photoAlt": "插畫：兩個小朋友在掛著三角旗的工作室裡，用黏土捏彩虹和小房子",
-      "photoCaption": "示意插畫，非攤位實拍"
+      "photoCaption": "示意插畫，非攤位實拍",
+      "rules": "挑選材料，跟著攤主示範製作並裝飾作品。",
+      "clear": "完成一件現場指定的作品。",
+      "sample": true
     },
     {
       "no": 10,
@@ -555,18 +575,21 @@
       "island": "puzzle",
       "photo": "assets/stalls/stall-10-v2.png",
       "photoAlt": "插畫：兩個小朋友在彈珠台遊戲盒前舉手歡呼，盒裡有彩色圓圈目標和一顆白球",
-      "photoCaption": "示意插畫，非攤位實拍"
+      "photoCaption": "示意插畫，非攤位實拍",
+      "rules": "依攤主示範操作道具，挑戰指定目標。",
+      "clear": "達成攤主指定的目標。",
+      "sample": true
     },
     {
       "no": 11,
       "name": "彈珠迷宮",
       "island": "puzzle",
-      "template": true,
-      "intro": "把彈珠從起點引導到終點。",
       "sample": true,
       "photo": "assets/stalls/stall-11-v2.png",
       "photoAlt": "插畫：兩個穿制服的小朋友跪在藍色地毯上玩木製彈珠迷宮，男孩指著迷宮裡的藍色彈珠，迷宮一端有藍屋頂小屋，另一端有紅色拱門",
-      "photoCaption": "示意插畫，非攤位實拍"
+      "photoCaption": "示意插畫，非攤位實拍",
+      "rules": "操控彈珠沿迷宮路線，從起點走到終點。",
+      "clear": "讓彈珠抵達終點。"
     },
     {
       "no": 12,
@@ -574,7 +597,10 @@
       "island": "puzzle",
       "photo": "assets/stalls/stall-12-v2.png",
       "photoAlt": "插畫：紅白條紋棚的桌遊攤，男孩和女孩坐在桌邊玩棋盤遊戲，架上擺著各式桌遊盒，旁邊有小黑板",
-      "photoCaption": "示意插畫，非攤位實拍"
+      "photoCaption": "示意插畫，非攤位實拍",
+      "rules": "挑選現場提供的遊戲，依攤主說明完成一輪。",
+      "clear": "達成所選遊戲的指定目標。",
+      "sample": true
     },
     {
       "no": 13,
@@ -582,16 +608,20 @@
       "island": "puzzle",
       "photo": "assets/stalls/stall-13-v2.png",
       "photoAlt": "插畫：女孩拿著彩色圈圈對準木板上的洞，男孩蹲在旁邊加油，籃子裡裝著更多圈圈",
-      "photoCaption": "示意插畫，非攤位實拍"
+      "photoCaption": "示意插畫，非攤位實拍",
+      "rules": "站在指定線後，把圈圈投向洞洞板的目標區。",
+      "clear": "至少一次投中指定目標。",
+      "sample": true
     },
     {
       "no": 14,
-      "name": "攤名待確認",
+      "name": "二手跳蚤市場",
       "island": "recycle",
-      "namePending": true,
       "photo": "assets/stalls/stall-14-v2.png",
       "photoAlt": "插畫：二手攤桌上擺著書本、玩具車、魔術方塊，旁邊有兔子和恐龍布偶，兩個小朋友在攤位後招呼",
-      "photoCaption": "示意插畫，非攤位實拍"
+      "photoCaption": "示意插畫，非攤位實拍",
+      "desc": "販售二手物品，歡迎看看有哪些還能繼續使用的好物。",
+      "sample": true
     },
     {
       "no": 15,
@@ -599,7 +629,9 @@
       "island": "recycle",
       "photo": "assets/stalls/stall-15-v2.png",
       "photoAlt": "插畫：男孩蹲著看一台舊相機，女孩坐著翻書，木箱裡有黑膠唱片、小熊布偶和鬧鐘",
-      "photoCaption": "示意插畫，非攤位實拍"
+      "photoCaption": "示意插畫，非攤位實拍",
+      "desc": "二手挖寶攤，歡迎挑選中意的物品。",
+      "sample": true
     },
     {
       "no": 16,
@@ -607,7 +639,9 @@
       "island": "recycle",
       "photo": "assets/stalls/stall-16-v2.png",
       "photoAlt": "插畫：二手攤上有掛著衣服的衣架、電風扇、鍋子、烤麵包機和摺好的毛巾，兩個小朋友在旁邊招手",
-      "photoCaption": "示意插畫，非攤位實拍"
+      "photoCaption": "示意插畫，非攤位實拍",
+      "desc": "販售整理過的二手物件，讓用得到的人把它們帶回家。",
+      "sample": true
     },
     {
       "no": 17,
@@ -615,7 +649,10 @@
       "island": "sport",
       "photo": "assets/stalls/stall-17-v2.png",
       "photoAlt": "插畫：女孩把手伸進印著星星的紅色抽獎箱，男孩在旁邊期待，桌上擺著小禮物盒",
-      "photoCaption": "示意插畫，非攤位實拍"
+      "photoCaption": "示意插畫，非攤位實拍",
+      "rules": "從抽獎盒抽出一張籤，依籤上的結果對獎。",
+      "clear": "完成抽籤並核對結果。",
+      "sample": true
     },
     {
       "no": 18,
@@ -623,15 +660,22 @@
       "island": "puzzle",
       "photo": "assets/stalls/stall-18-v2.png",
       "photoAlt": "插畫：兩個小朋友在格子桌上翻記憶卡牌，卡片上有蘋果、小熊和星星，背後掛著草莓與向日葵的配對圖",
-      "photoCaption": "示意插畫，非攤位實拍"
+      "photoCaption": "示意插畫，非攤位實拍",
+      "rules": "每次翻開兩張牌，記住位置並找出相同圖案。",
+      "clear": "配對成功至少一組。",
+      "sample": true
     },
     {
       "no": 19,
-      "name": "娃！茶一點就中",
+      "name": "哇！茶一點就中",
       "island": "recycle",
       "photo": "assets/stalls/stall-19-v2.png",
       "photoAlt": "插畫：男孩和女孩在擺滿植物的攤位喝茶，桌上有一壺茶、幾個茶杯和一籃茶葉",
-      "photoCaption": "示意插畫，非攤位實拍"
+      "photoCaption": "示意插畫，非攤位實拍",
+      "rules": "站在指定線後，把遊戲道具投向茶杯造型的目標。",
+      "clear": "至少一次投中指定目標。",
+      "sample": true,
+      "type": "game"
     },
     {
       "no": 20,
@@ -639,7 +683,10 @@
       "island": "craft",
       "photo": "assets/stalls/stall-20-v2.png",
       "photoAlt": "插畫：聖誕布置的攤位，兩個小朋友做星星和雪花吊飾，旁邊有聖誕樹、襪子和聖誕老人裝飾",
-      "photoCaption": "示意插畫，非攤位實拍"
+      "photoCaption": "示意插畫，非攤位實拍",
+      "rules": "使用提供的材料，製作並裝飾一件聖誕小物。",
+      "clear": "完成一件聖誕手作。",
+      "sample": true
     },
     {
       "no": 21,
@@ -647,7 +694,10 @@
       "island": "puzzle",
       "photo": "assets/stalls/stall-21-v2.png",
       "photoAlt": "插畫：男孩握拳歡呼，女孩拿著骰子，桌上有棋盤遊戲、一盤點心和一杯珍珠奶茶",
-      "photoCaption": "示意插畫，非攤位實拍"
+      "photoCaption": "示意插畫，非攤位實拍",
+      "rules": "依攤主說明完成一輪小遊戲，也可到攤位選購點心。",
+      "clear": "達成當輪遊戲的指定目標。",
+      "sample": true
     },
     {
       "no": 22,
@@ -655,7 +705,10 @@
       "island": "puzzle",
       "photo": "assets/stalls/stall-22-v2.png",
       "photoAlt": "插畫：兩個小朋友端著一盤彩色麻糬，攤位掛著紅燈籠，旁邊有蒸籠和梅花盆栽",
-      "photoCaption": "示意插畫，非攤位實拍"
+      "photoCaption": "示意插畫，非攤位實拍",
+      "desc": "販售麻糬，口味與供應數量以現場為準。",
+      "sample": true,
+      "type": "food"
     },
     {
       "no": 23,
@@ -663,7 +716,10 @@
       "island": "sport",
       "photo": "assets/stalls/stall-23-v2.png",
       "photoAlt": "插畫：男孩和女孩在攤位前的草地上互相拋接一顆球",
-      "photoCaption": "示意插畫，非攤位實拍"
+      "photoCaption": "示意插畫，非攤位實拍",
+      "rules": "依指示切換正手、反手，接住來球。",
+      "clear": "正手與反手各成功接住一次。",
+      "sample": true
     },
     {
       "no": 24,
@@ -671,23 +727,36 @@
       "island": "sport",
       "photo": "assets/stalls/stall-24-v2.png",
       "photoAlt": "插畫：男孩和女孩各拿著一個裝了豆子的小罐子搖晃聆聽聲音，桌上排著多個彩色罐子",
-      "photoCaption": "示意插畫，非攤位實拍"
+      "photoCaption": "示意插畫，非攤位實拍",
+      "rules": "搖一搖不同的容器，聽聲音並找出一樣的一組。",
+      "clear": "正確配對至少一組。",
+      "sample": true
     },
     {
       "no": 25,
       "name": "丟球者",
-      "island": "sport"
+      "island": "sport",
+      "rules": "站在指定線後，把球投進目標籃或洞口。",
+      "clear": "至少投進一球。",
+      "sample": true
     },
     {
       "no": 26,
       "name": "三二一發射！戰鬥陀螺",
-      "island": "sport"
+      "island": "sport",
+      "rules": "倒數後把陀螺發射到擂台，與對手同場較量。",
+      "clear": "讓自己的陀螺比對手轉得更久。",
+      "sample": true
     }
   ],
   "stallTypes": {
     "food": {
       "label": "美食攤",
       "fields": [
+        [
+          "desc",
+          "販售說明"
+        ],
         [
           "items",
           "主打品項"
@@ -705,15 +774,19 @@
           "注意事項"
         ]
       ],
-      "required": [
-        "intro",
-        "items",
-        "allergens"
-      ]
+      "required": []
     },
     "craft": {
       "label": "手作攤",
       "fields": [
+        [
+          "rules",
+          "玩法"
+        ],
+        [
+          "clear",
+          "完成條件"
+        ],
         [
           "takeaway",
           "能帶走的成品"
@@ -739,11 +812,7 @@
           "注意事項"
         ]
       ],
-      "required": [
-        "intro",
-        "takeaway",
-        "duration"
-      ]
+      "required": []
     },
     "game": {
       "label": "遊戲攤",
@@ -773,15 +842,15 @@
           "注意事項"
         ]
       ],
-      "required": [
-        "intro",
-        "rules",
-        "clear"
-      ]
+      "required": []
     },
     "secondhand": {
       "label": "二手攤",
       "fields": [
+        [
+          "desc",
+          "販售說明"
+        ],
         [
           "items",
           "販售物品"
@@ -795,16 +864,13 @@
           "注意事項"
         ]
       ],
-      "required": [
-        "intro",
-        "items"
-      ]
+      "required": []
     }
   },
   "stallNotes": {
     "pendingIntro": "攤位介紹待補",
     "pendingField": "待攤主填寫",
-    "sample": "示範文案，正式內容請攤主確認",
+    "sample": "擬寫文案，以現場公告為準",
     "pendingName": "攤名待確認，介紹待主辦公布"
   }
 }
