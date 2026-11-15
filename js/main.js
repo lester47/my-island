@@ -148,7 +148,7 @@ function stallDetailHTML(st) {
   const keys = ['intro', ...T.fields.map((f) => f[0])];
   const any = keys.some((k) => v(k)) || st.photo;
   let h = `<p class="sd-tags"><span class="badge type">${esc(T.label)}</span>${st.sample ? `<span class="badge">${esc(N.sample)}</span>` : ''}</p>`;
-  if (st.photo) h += `<figure class="sd-photo"><img src="${esc(st.photo + (C.assetVersion ? `?v=${C.assetVersion}` : ""))}" alt="${esc(st.photoAlt || st.name)}" loading="lazy" width="1280" height="640">${st.photoCaption ? `<figcaption>${esc(st.photoCaption)}</figcaption>` : ''}</figure>`;
+  if (st.photo) h += `<div class="stall-photo"><img src="${esc(st.photo + (C.assetVersion ? `?v=${C.assetVersion}` : ''))}" alt="${esc(st.photoAlt || st.name)}" loading="lazy" decoding="async" width="1774" height="887"></div>${st.photoCaption ? `<p class="stall-photo-cap">${esc(st.photoCaption)}</p>` : ''}`;
   if (v('intro')) h += `<p class="sd-intro">${nl(v('intro'))}</p>`;
   else if (st.template) h += `<p class="sd-intro todo">一句介紹：${esc(N.pendingField)}</p>`;
   const rows = T.fields.map(([k, label]) => v(k) ? `<dt>${esc(label)}</dt><dd>${nl(v(k))}</dd>` : (st.template && req.has(k) ? `<dt>${esc(label)}</dt><dd class="todo">${esc(N.pendingField)}</dd>` : '')).join('');
@@ -157,7 +157,7 @@ function stallDetailHTML(st) {
   return h + `<p class="sd-foot">攤位內容與價格以現場為準。</p>`;
 }
 function stallListHTML(id) {
-  return `<ol class="stalls">${stallsOf(id).map((st) => `<li data-no="${st.no}"><button type="button" class="stall-row" id="sr-${st.no}" aria-expanded="false" aria-controls="sd-${st.no}"><span class="num" aria-hidden="true">${pad2(st.no)}</span><span class="nm ${st.namePending ? 'pending' : ''}"><span class="sr-only">攤號 ${st.no}，</span>${esc(st.name)}</span><span class="chev" aria-hidden="true"></span></button><div class="stall-detail" id="sd-${st.no}" role="region" aria-labelledby="sr-${st.no}" hidden>${stallDetailHTML(st)}</div></li>`).join('')}</ol>`;
+  return `<ol class="stalls">${stallsOf(id).map((st) => `<li data-no="${st.no}"><button type="button" class="stall-row" id="sr-${st.no}" aria-expanded="false" aria-controls="sd-${st.no}"><span class="num" aria-hidden="true">${pad2(st.no)}</span><span class="nm ${st.namePending ? 'pending' : ''}"><span class="sr-only">攤號 ${st.no}，</span>${esc(st.name)}</span><span class="chev" aria-hidden="true"></span></button><div class="stall-detail stall-detail-body" id="sd-${st.no}" role="region" aria-labelledby="sr-${st.no}" hidden>${stallDetailHTML(st)}</div></li>`).join('')}</ol>`;
 }
 function setStall(no, open, scroll = true) {
   const p = $('#panel');

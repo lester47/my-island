@@ -109,9 +109,12 @@ html[data-theme="deep"] .p-hd { background: var(--surface2); color: var(--ink); 
 .stall-detail { padding: 2px 14px 14px; }
 .sd-tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px !important; }
 .badge.type { background: var(--pc, var(--primary)); color: #fff; }
-.sd-photo { margin: 0 0 10px; }
-.sd-photo img { display: block; width: 100%; height: auto; aspect-ratio: 2 / 1; object-fit: contain; border-radius: 12px; background: var(--surface2); }
-.sd-photo figcaption { margin-top: 4px; font-size: 12px; color: var(--muted); }
+.stalls li { min-width: 0; }
+.stall-detail-body { min-width: 0; }
+.stall-photo { box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; margin: 0; aspect-ratio: 2 / 1; border-radius: 12px; overflow: hidden; background: var(--surface2); }
+.stall-photo > img { display: block; width: 100%; height: 100%; object-fit: contain; object-position: center; }
+.stall-photo-cap { margin: 4px 0 10px; font-size: 12px; color: var(--muted); }
+.stall-photo:not(:has(+ .stall-photo-cap)) { margin-bottom: 10px; }
 .sd-intro { font-size: 16px; font-weight: 700; margin: 0 0 8px !important; }
 .sd-fields { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; margin: 0 0 8px; font-size: 15px; line-height: 1.6; }
 .sd-fields dt { font-weight: 700; color: var(--muted); white-space: nowrap; }

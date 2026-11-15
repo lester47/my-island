@@ -1,5 +1,5 @@
 {
-  "assetVersion": "20261115c",
+  "assetVersion": "20261115e",
   "site": {
     "title": "115 鯉魚市集",
     "tagline": "跳上五座六角小島，逛美食、玩手作、闖關挑戰，還能挖二手好物！",
@@ -540,7 +540,7 @@
       "template": true,
       "intro": "把彈珠從起點引導到終點。",
       "sample": true,
-      "photo": "assets/stalls/stall-11.webp",
+      "photo": "assets/stalls/stall-11-v2.png",
       "photoAlt": "插畫：兩個穿制服的小朋友跪在藍色地毯上玩木製彈珠迷宮，男孩指著迷宮裡的藍色彈珠，迷宮一端有藍屋頂小屋，另一端有紅色拱門",
       "photoCaption": "示意插畫，非攤位實拍"
     },
