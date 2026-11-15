@@ -1,7 +1,7 @@
 // 生活感：居民、送貨員、商人、路人、動物、雲、鳥群、帆船、螢火蟲、貝殼
 import * as THREE from 'three';
-import { TAU, clamp, lerp, rng, mat, GEO, glowTexture, C } from './kit.js';
-import { H } from './world.js';
+import { TAU, clamp, lerp, rng, mat, GEO, glowTexture, C } from './kit.js?v=20261115j';
+import { H } from './world.js?v=20261115j';
 
 const SKIN = ['#ffd9b8', '#f2c49b', '#e0ad84', '#ffe3c8'];
 const SHIRT = ['#e8762b', '#8a5cd0', '#2f7fd1', '#dc4848', '#3e9b4f', '#e3a33b', '#f2f2f2', '#4fb3b0'];
@@ -173,6 +173,36 @@ export function createLife(W, content, opts) {
     g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
     scene.add(g); boats.push({ g, a: i * Math.PI + .6, rad: 56 + i * 10, sp: .022 - i * .006 });
   }
+  // 鯉魚帆船：船身是一條紅白錦鯉，背鰭當帆，尾鰭在船尾翹起
+  {
+    const g = new THREE.Group(), red = mat('#e4532c'), white = mat('#fbf3e6'), gold = mat('#f2b33d'), dark = mat('#2a211c');
+    const body = new THREE.Mesh(new THREE.SphereGeometry(1, 12, 8), red); body.scale.set(1.15, .72, 2.5); body.position.y = .35; g.add(body);
+    const belly = new THREE.Mesh(new THREE.SphereGeometry(1, 12, 8, 0, TAU, Math.PI * .55, Math.PI * .45), white); belly.scale.set(1.17, .74, 2.52); belly.position.y = .35; g.add(belly);
+    const head = new THREE.Mesh(new THREE.SphereGeometry(1, 12, 8), white); head.scale.set(.95, .66, .95); head.position.set(0, .5, 1.95); g.add(head);
+    const cap = new THREE.Mesh(new THREE.SphereGeometry(1, 10, 6, 0, TAU, 0, Math.PI * .5), red); cap.scale.set(.6, .45, .55); cap.position.set(0, .72, 1.7); g.add(cap);   // 頭頂紅斑（丹頂）
+    for (const sx of [-1, 1]) {
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(1, 8, 6), white); eye.scale.setScalar(.2); eye.position.set(sx * .72, .66, 2.25); g.add(eye);
+      const pupil = new THREE.Mesh(new THREE.SphereGeometry(1, 8, 6), dark); pupil.scale.setScalar(.11); pupil.position.set(sx * .84, .68, 2.31); g.add(pupil);
+      const wh = new THREE.Mesh(new THREE.CylinderGeometry(.03, .02, 1, 5), gold); wh.scale.y = .9; wh.position.set(sx * .4, .3, 2.95); wh.rotation.set(Math.PI / 2.6, 0, sx * .5); g.add(wh);   // 鬚
+      const fin = new THREE.Mesh(new THREE.ConeGeometry(.5, 1, 4), red); fin.scale.set(.5, 1.1, .12); fin.position.set(sx * 1.1, .2, 1.1); fin.rotation.set(.6, 0, sx * 1.9); g.add(fin);   // 胸鰭
+      for (let k = 0; k < 3; k++) { const sc = new THREE.Mesh(new THREE.SphereGeometry(1, 8, 4, 0, Math.PI), gold); sc.scale.set(.28, .2, .05); sc.position.set(sx * 1.08, .55, .7 - k * .7); sc.rotation.y = sx * Math.PI / 2; g.add(sc); }   // 金色鱗片
+    }
+    const mouth = new THREE.Mesh(new THREE.TorusGeometry(.2, .07, 6, 12), red); mouth.position.set(0, .45, 2.9); g.add(mouth);
+    // 尾鰭：兩片扇形，向上翹
+    const tail = new THREE.Shape(); tail.moveTo(0, 0); tail.quadraticCurveTo(.9, .5, 1.5, 1.3); tail.quadraticCurveTo(1.0, .9, .6, .95); tail.quadraticCurveTo(.4, .5, 0, 0);
+    for (const sy of [1, -.55]) { const t = new THREE.Mesh(new THREE.ShapeGeometry(tail), mat('#e86a3c', { side: THREE.DoubleSide })); t.rotation.y = Math.PI / 2; t.scale.set(1, sy, 1); t.position.set(0, .62, -2.2); g.add(t); }
+    // 桅杆與背鰭帆（前緣高、後緣成波浪狀）
+    const mast = new THREE.Mesh(GEO.cyl6, mat('#8d5d35')); mast.scale.set(.1, 4.2, .1); mast.position.set(0, 2.6, .55); g.add(mast);
+    const fin = new THREE.Shape(); fin.moveTo(0, 0); fin.lineTo(0, 3.6); fin.quadraticCurveTo(.9, 3.3, 1.5, 2.6);
+    for (let k = 0; k < 4; k++) { const y0 = 2.6 - k * .62; fin.quadraticCurveTo(1.95 - k * .05, y0 - .2, 1.6 - k * .05, y0 - .62); }
+    fin.lineTo(0, 0);
+    const sail = new THREE.Mesh(new THREE.ShapeGeometry(fin), mat('#fbf3e6', { side: THREE.DoubleSide })); sail.rotation.y = -Math.PI / 2; sail.position.set(.04, .95, .45); g.add(sail);
+    const band = new THREE.Mesh(new THREE.ShapeGeometry(fin), mat('#e4532c', { side: THREE.DoubleSide })); band.rotation.y = -Math.PI / 2; band.scale.set(.42, .42, 1); band.position.set(.06, 2.3, .45); g.add(band);   // 帆上的紅色鰭紋
+    const flag = new THREE.Mesh(GEO.box, gold); flag.scale.set(.03, .32, .55); flag.position.set(0, 4.85, .25); g.add(flag);
+    g.scale.setScalar(1.15);
+    g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+    scene.add(g); boats.push({ g, a: 3.95, rad: 44, sp: .018, carp: true });
+  }
   // 螢火蟲
   const nFly = low ? 40 : 90, flyPos = new Float32Array(nFly * 3), flyBase = [];
   const ids = Object.keys(islands);
@@ -293,7 +323,7 @@ export function createLife(W, content, opts) {
     for (const b of boats) {
       if (moving) b.a += b.sp * dt;
       b.g.position.set(Math.cos(b.a) * b.rad, moving ? Math.sin(t * 1.2 + b.rad) * .12 : 0, Math.sin(b.a) * b.rad);
-      b.g.rotation.set(0, -b.a + Math.PI, moving ? Math.sin(t * .9 + b.rad) * .07 : 0);
+      b.g.rotation.set(0, -b.a, moving ? Math.sin(t * .9 + b.rad) * .07 : 0);
     }
     flies.material.opacity = night * .95; flies.visible = night > .05;
     if (flies.visible) { for (let i = 0; i < nFly; i++) { const [x, y, z, p] = flyBase[i]; const tt = moving ? t : 0; flyPos[i * 3] = x + Math.sin(tt * .5 + p) * .8; flyPos[i * 3 + 1] = y + Math.sin(tt * .9 + p * 2) * .35; flyPos[i * 3 + 2] = z + Math.cos(tt * .4 + p) * .8; } flyGeo.attributes.position.needsUpdate = true; }

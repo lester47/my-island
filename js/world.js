@@ -1,6 +1,7 @@
 // 3D 世界：天空、海、遠山、島嶼與地標、橋、日夜光影
 import * as THREE from 'three';
-import { TAU, clamp, lerp, smooth, rng, loopNoise, mat, Builder, GEO, glowTexture, C } from './kit.js';
+import { TAU, clamp, lerp, smooth, rng, loopNoise, mat, Builder, GEO, glowTexture, C } from './kit.js?v=20261115j';
+import { makeScenery } from './scenery.js?v=20261115j';
 
 export const H = 1.75;               // 島頂草地高度
 const SEG = 72;                      // 海岸線分段（6 的倍數，六角轉角落在頂點上）
@@ -533,7 +534,7 @@ function makeSky(scene) {
 }
 function makeSea(scene, quality) {
   const seg = quality === 'low' ? 70 : 140;
-  const geo = new THREE.PlaneGeometry(700, 700, seg, seg); geo.rotateX(-Math.PI / 2);
+  const geo = new THREE.PlaneGeometry(900, 900, seg, seg); geo.rotateX(-Math.PI / 2);
   const m = new THREE.MeshStandardMaterial({ color: '#3fa6c9', flatShading: true, roughness: .38, metalness: .04, transparent: true, opacity: .96 });
   const uni = { uTime: { value: 0 }, uAmp: { value: 1 } };
   m.onBeforeCompile = (sh) => {
@@ -545,15 +546,6 @@ function makeSea(scene, quality) {
   };
   const sea = new THREE.Mesh(geo, m); sea.receiveShadow = true; sea.position.y = -.05; scene.add(sea);
   return { sea, m, uni };
-}
-function makeMountains(scene) {
-  const B = new Builder(), r = rng(57);
-  for (let i = 0; i < 46; i++) {
-    const a = i / 46 * TAU + r() * .08, d = 230 + r() * 50, h = 22 + r() * 40, w = 30 + r() * 40;
-    B.add(new THREE.ConeGeometry(.5, 1, 7), i % 3 ? '#6f9f86' : '#5d8f78', Math.cos(a) * d, h / 2 - 3, Math.sin(a) * d, 0, r() * 3, 0, w, h, w * .8);
-    if (i % 2) B.add(new THREE.ConeGeometry(.5, 1, 6), '#7fae92', Math.cos(a + .03) * (d - 18), h * .3, Math.sin(a + .03) * (d - 18), 0, r() * 3, 0, w * .9, h * .7, w * .7);
-  }
-  const m = B.build(MAT_FOR, false); scene.add(m); return m;
 }
 
 // ------------------------------------------------------------------ 時段（白天／黃昏／夜晚）
@@ -594,14 +586,14 @@ export function createWorld(canvas, opts) {
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.shadowMap.enabled = quality !== 'low'; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   const scene = new THREE.Scene();
-  scene.fog = new THREE.Fog('#cfe8f7', 150, 420);
-  const camera = new THREE.PerspectiveCamera(40, 1, .3, 1400);
+  scene.fog = new THREE.Fog('#cfe8f7', 200, 760);
+  const camera = new THREE.PerspectiveCamera(46, 1, .3, 1400);
   const hemi = new THREE.HemisphereLight('#e3f2ff', '#cdb991', 1); scene.add(hemi);
   const sun = new THREE.DirectionalLight('#fff1d6', 2.6); sun.castShadow = true;
   const sm = opts.mobile ? 1024 : 2048; sun.shadow.mapSize.set(sm, sm);
   Object.assign(sun.shadow.camera, { left: -42, right: 42, top: 42, bottom: -42, near: 10, far: 220 });
   sun.shadow.bias = -.0005; sun.shadow.normalBias = .04; scene.add(sun); scene.add(sun.target);
-  const skyO = makeSky(scene), seaO = makeSea(scene, quality), mountains = makeMountains(scene);
+  const skyO = makeSky(scene), seaO = makeSea(scene, quality), scenery = makeScenery(scene, { quality, mobile: !!opts.mobile });
 
   NIGHT.glows.length = 0; ANIM.length = 0;
   const ids = ['center', 'food', 'craft', 'puzzle', 'sport', 'recycle'];
@@ -611,7 +603,7 @@ export function createWorld(canvas, opts) {
   const glowMat = new THREE.SpriteMaterial({ map: glowTexture(), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0 });
   const glows = new THREE.Group(); scene.add(glows);
   scene.updateMatrixWorld(true);
-  return finishWorld({ renderer, scene, camera, hemi, sun, skyO, seaO, mountains, islands, bridges, glowMat, glows, quality, opts });
+  return finishWorld({ renderer, scene, camera, hemi, sun, skyO, seaO, scenery, islands, bridges, glowMat, glows, quality, opts });
 }
 
 function finishWorld(W) {
@@ -658,12 +650,14 @@ function finishWorld(W) {
     winMat.emissiveIntensity = n * 1.5; lampMat.emissiveIntensity = .1 + n * 2.2;
     glowMat.opacity = n * .9;
     pl1.intensity = n * 30; pl2.intensity = n * 22;
+    W.scenery.setNight(n);
   }
   applyTime();
 
   W.resize = (w, h) => { W.renderer.setSize(w, h, false); W.camera.aspect = w / h; W.camera.updateProjectionMatrix(); };
   W.update = (t, moving) => {
     W.seaO.uni.uTime.value = t; W.seaO.uni.uAmp.value = moving ? 1 : 0;
+    W.scenery.update(t, moving);
     for (const id in islands) {
       const I = islands[id];
       I.foam.material.opacity = moving ? .42 + Math.sin(t * 1.4 + I.seed) * .14 : .5;

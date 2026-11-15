@@ -1,8 +1,9 @@
 // 鏡頭：拖曳旋轉縮放、回到全景、點島飛近（電影史詩運鏡）、開場、導覽、地面漫遊
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { TAU, clamp, lerp, easeInOut, smooth } from './kit.js';
-import { H } from './world.js';
+import { TAU, clamp, lerp, easeInOut, smooth } from './kit.js?v=20261115j';
+import { H } from './world.js?v=20261115j';
+import { SHORE } from './scenery.js?v=20261115j';
 
 export function createCam(W, canvas, hooks) {
   const camera = W.camera;
@@ -15,10 +16,11 @@ export function createCam(W, canvas, hooks) {
   canvas.addEventListener('pointerdown', (e) => downIds.add(e.pointerId));
   addEventListener('pointerup', (e) => { if (downIds.has(e.pointerId) && e.target !== canvas) canvas.dispatchEvent(new PointerEvent('pointerup', e)); downIds.delete(e.pointerId); }, true);
   addEventListener('pointercancel', (e) => { if (downIds.has(e.pointerId) && e.target !== canvas) canvas.dispatchEvent(new PointerEvent('pointercancel', e)); downIds.delete(e.pointerId); }, true);
-  const HOME_T = new THREE.Vector3(0, 1, 2);
+  const HOME_T = new THREE.Vector3(0, 8, -6);           // 全景注視點略高、略後，讓上方露出遠山稜線
   const S = { busy: null, mode: 'orbit', reduced: false, mobile: false };
 
-  const ELEV_D = THREE.MathUtils.degToRad(33), ELEV_M = THREE.MathUtils.degToRad(52);
+  const ELEV_D = THREE.MathUtils.degToRad(15), ELEV_M = THREE.MathUtils.degToRad(24);
+  const RH = SHORE - 34;                                  // 鏡頭水平距離上限：永遠在湖面上，看不到山的底面與斷邊
   let ELEV = ELEV_D;
   const PTS = [];
   for (const id in W.islands) { const I = W.islands[id]; for (let a = 0; a < 8; a++) PTS.push(new THREE.Vector3(I.pos.x + Math.cos(a / 8 * TAU) * I.R * 1.2, a % 2 ? 0 : 4, I.pos.z + Math.sin(a / 8 * TAU) * I.R * 1.2)); }
@@ -26,7 +28,7 @@ export function createCam(W, canvas, hooks) {
   function homeDist() {
     // 實際投影所有島的外框，找出剛好看得到全部島（含標籤）的距離
     probe.fov = camera.fov; probe.aspect = camera.aspect; probe.near = .5; probe.far = 2000; probe.updateProjectionMatrix();
-    const top = S.mobile ? .62 : .8, bot = S.mobile ? -.5 : -.78;
+    const top = S.mobile ? .3 : .26, bot = S.mobile ? -.6 : -.84;
     for (let d = 40; d < 260; d += 3) {
       probe.position.copy(sphPos(HOME_T, d, 0, ELEV)); probe.lookAt(HOME_T); probe.updateMatrixWorld();
       if (PTS.every((p) => { const v = p.clone().project(probe); return Math.abs(v.x) < .94 && v.y < top && v.y > bot; })) return d;
@@ -60,7 +62,7 @@ export function createCam(W, canvas, hooks) {
     const th = F.a.theta + F.dth * e;
     camera.position.copy(t).add(new THREE.Vector3().setFromSphericalCoords(rad, clamp(phi, .12, 1.45), th));
     controls.target.copy(t); camera.lookAt(t);
-    if (k >= 1) { S.busy = null; controls.enabled = S.mode === 'orbit'; controls.update(); F.done && F.done(); }
+    if (k >= 1) { S.busy = null; controls.enabled = S.mode === 'orbit'; const dmp = controls.enableDamping; controls.enableDamping = false; controls.update(); controls.target.copy(F.to.t); camera.position.copy(F.to.p); controls.update(); controls.enableDamping = dmp; F.done && F.done(); }   // 清掉拖曳殘留的慣性，停在正確位置
   }
 
   function islandView(I) {
@@ -134,6 +136,19 @@ export function createCam(W, canvas, hooks) {
     }
     placeWalk();
   }
+  // 拖曳到低角度又拉遠時，把鏡頭抬高，水平距離不超過 RH
+  const _sp = new THREE.Spherical();
+  function clampReach() {
+    const off = camera.position.clone().sub(controls.target);
+    _sp.setFromVector3(off);
+    const tx = controls.target.x, tz = controls.target.z;
+    for (let k = 0; k < 8; k++) {
+      const p = controls.target.clone().add(new THREE.Vector3().setFromSpherical(_sp));
+      if (Math.hypot(p.x, p.z) <= RH) { if (k) { camera.position.copy(p); camera.lookAt(controls.target); } return; }
+      _sp.phi = Math.max(.05, _sp.phi * .9);
+    }
+    camera.position.copy(controls.target.clone().add(new THREE.Vector3().setFromSpherical(_sp))); camera.lookAt(controls.target);
+  }
   let look = null;
   canvas.addEventListener('pointerdown', (e) => { if (S.mode === 'walk') { look = { x: e.clientX, y: e.clientY, yaw: walk.yaw, pitch: walk.pitch }; } });
   addEventListener('pointermove', (e) => { if (look && S.mode === 'walk') { walk.yaw = look.yaw - (e.clientX - look.x) * .005; walk.pitch = clamp(look.pitch - (e.clientY - look.y) * .004, -.9, .6); } });
@@ -145,6 +160,7 @@ export function createCam(W, canvas, hooks) {
     if (S.busy) { stepFlight(); return; }
     controls.enableDamping = !S.reduced;
     controls.update();
+    clampReach();
   }
   return { controls, S, walk, setHome, flyToIsland, home, intro, finishIntro, enterWalk, exitWalk, update, islandView, flight, limits };
 }

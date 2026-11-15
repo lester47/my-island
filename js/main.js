@@ -538,7 +538,7 @@ async function boot() {
   if (Q.has('nogl') || !webglOK()) { textOnly(Q.has('nogl') ? '已切換為文字清單版' : '這台裝置無法顯示 3D 畫面'); applyTheme(); updateClock(); setInterval(updateClock, 10000); window.__ready = true; return; }
   let mods;
   try {
-    mods = await Promise.all([import('./world.js'), import('./life.js'), import('./cam.js')]);
+    mods = await Promise.all([import('./world.js?v=20261115j'), import('./life.js?v=20261115j'), import('./cam.js?v=20261115j')]);
     const [{ createWorld }, { createLife }, { createCam }] = mods;
     const mobile = isMobile();
     W = createWorld($('#gl'), { quality: S.quality, mobile });
