@@ -1,9 +1,9 @@
 // 鏡頭：拖曳旋轉縮放、回到全景、點島飛近（電影史詩運鏡）、開場、導覽、地面漫遊
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { TAU, clamp, lerp, easeInOut, smooth } from './kit.js?v=20261115t';
-import { H } from './world.js?v=20261115t';
-import { SHORE } from './scenery.js?v=20261115t';
+import { TAU, clamp, lerp, easeInOut, smooth } from './kit.js?v=20261115u';
+import { H } from './world.js?v=20261115u';
+import { SHORE } from './scenery.js?v=20261115u';
 
 export function createCam(W, canvas, hooks) {
   const camera = W.camera;
@@ -40,29 +40,35 @@ export function createCam(W, canvas, hooks) {
   function setHome(instant = true) {
     limits();
     const d = homeDist();
-    if (instant) { controls.target.copy(HOME_T); camera.position.copy(sphPos(HOME_T, d, 0, ELEV)); controls.update(); }
+    if (instant) { S.follow = null; controls.target.copy(HOME_T); camera.position.copy(sphPos(HOME_T, d, 0, ELEV)); controls.update(); }
     return { t: HOME_T.clone(), p: sphPos(HOME_T, d, 0, ELEV) };
   }
 
   // 沿弧線補間：位置以球座標內插，可加「拉高」
-  function flight(to, ms, lift = 0, done) {
+  // follow：目標會移動時（鯉魚號），傳入一個取得目前錨點的函式，飛行中與抵達後都跟著它平移
+  function flight(to, ms, lift = 0, done, follow) {
+    S.follow = null;
     const from = { t: controls.target.clone(), p: camera.position.clone() };
-    if (S.reduced || ms <= 0) { controls.target.copy(to.t); camera.position.copy(to.p); controls.update(); S.busy = null; done && done(); return; }
+    const fol = follow ? { fn: follow, a0: follow().clone() } : null;
+    const arrive = () => { if (fol) S.follow = { fn: fol.fn, last: fol.fn().clone() }; };
+    if (fol && (S.reduced || ms <= 0)) { const dv = fol.fn().clone().sub(fol.a0); to = { t: to.t.clone().add(dv), p: to.p.clone().add(dv) }; }
+    if (S.reduced || ms <= 0) { controls.target.copy(to.t); camera.position.copy(to.p); controls.update(); S.busy = null; arrive(); done && done(); return; }
     const a = new THREE.Spherical().setFromVector3(from.p.clone().sub(from.t)), b = new THREE.Spherical().setFromVector3(to.p.clone().sub(to.t));
     let dth = b.theta - a.theta; while (dth > Math.PI) dth -= TAU; while (dth < -Math.PI) dth += TAU;
-    S.busy = { from, to, a, b, dth, t0: performance.now(), ms: S.mobile ? ms * .7 : ms, lift, done };
+    S.busy = { from, to, a, b, dth, t0: performance.now(), ms: S.mobile ? ms * .7 : ms, lift, done, fol, arrive };
     controls.enabled = false;
   }
   function stepFlight() {
     const F = S.busy; if (!F || F.custom) return;
     const k = clamp((performance.now() - F.t0) / F.ms, 0, 1), e = easeInOut(k);
-    const t = F.from.t.clone().lerp(F.to.t, e);
+    const dv = F.fol ? F.fol.fn().clone().sub(F.fol.a0) : null;
+    const t = F.from.t.clone().lerp(F.to.t, e); if (dv) t.addScaledVector(dv, e);
     const rad = lerp(F.a.radius, F.b.radius, e) + Math.sin(k * Math.PI) * F.lift;
     const phi = lerp(F.a.phi, F.b.phi, e) - Math.sin(k * Math.PI) * (F.lift ? .32 : 0);
     const th = F.a.theta + F.dth * e;
     camera.position.copy(t).add(new THREE.Vector3().setFromSphericalCoords(rad, clamp(phi, .12, 1.45), th));
     controls.target.copy(t); camera.lookAt(t);
-    if (k >= 1) { S.busy = null; controls.enabled = S.mode === 'orbit'; const dmp = controls.enableDamping; controls.enableDamping = false; controls.update(); controls.target.copy(F.to.t); camera.position.copy(F.to.p); controls.update(); controls.enableDamping = dmp; F.done && F.done(); }   // 清掉拖曳殘留的慣性，停在正確位置
+    if (k >= 1) { S.busy = null; controls.enabled = S.mode === 'orbit'; const dmp = controls.enableDamping; controls.enableDamping = false; controls.update(); controls.target.copy(F.to.t); camera.position.copy(F.to.p); if (dv) { controls.target.add(dv); camera.position.add(dv); } controls.update(); controls.enableDamping = dmp; F.arrive(); F.done && F.done(); }   // 清掉拖曳殘留的慣性，停在正確位置
   }
 
   function islandView(I) {
@@ -72,6 +78,13 @@ export function createCam(W, canvas, hooks) {
     return { t, p: sphPos(t, d, az, THREE.MathUtils.degToRad(34)) };
   }
   function flyToIsland(I, done) { flight(islandView(I), 2000, 16, done); }
+  // 鯉魚號：從船的外側斜上方看，距離比島近一點
+  function boatView(anchor) {
+    const az = Math.atan2(anchor.x, anchor.z) * .6;
+    const t = anchor.clone().setY(2.2);
+    return { t, p: sphPos(t, 19, az, THREE.MathUtils.degToRad(30)) };
+  }
+  function flyToBoat(anchorFn, done) { flight(boatView(anchorFn()), 1800, 10, done, anchorFn); }
   function home(done) { const h = setHome(false); flight({ t: h.t, p: h.p }, 1400, 6, done); }
 
   // ------------------------------------------------------------ 開場運鏡（4～6 秒，可跳過）
@@ -109,12 +122,13 @@ export function createCam(W, canvas, hooks) {
 
   // ------------------------------------------------------------ 地面漫遊（第一人稱）
   const walk = { yaw: 0, pitch: -.05, keys: {}, pad: {}, pos: new THREE.Vector3() };
-  function enterWalk() {
-    S.mode = 'walk'; controls.enabled = false; S.busy = null;
-    walk.pos.set(0, H, 7.4); walk.yaw = Math.PI; walk.pitch = -.05;      // 從中央島出發，面向服務台
+  function enterWalk(at) {
+    S.mode = 'walk'; controls.enabled = false; S.busy = null; S.follow = null;
+    if (at) { walk.pos.copy(at.pos); walk.yaw = at.yaw; walk.pitch = -.08; }   // 指定起點（例如登上鯉魚號）
+    else { walk.pos.set(0, H, 7.4); walk.yaw = Math.PI; walk.pitch = -.05; }   // 從中央島出發，面向服務台
     placeWalk();
   }
-  function exitWalk(done) { S.mode = 'orbit'; const h = setHome(false); flight({ t: h.t, p: h.p }, 1400, 0, done); }
+  function exitWalk(done) { S.mode = 'orbit'; S.follow = null; const h = setHome(false); flight({ t: h.t, p: h.p }, 1400, 0, done); }
   function placeWalk() {
     const eye = walk.pos.clone().setY(walk.pos.y + 1.05);
     camera.position.copy(eye);
@@ -174,9 +188,10 @@ export function createCam(W, canvas, hooks) {
     if (S.introStep) { S.introStep(); return; }
     if (S.mode === 'walk') { stepWalk(dt); return; }
     if (S.busy) { stepFlight(); return; }
+    if (S.follow) { const a = S.follow.fn(); const dv = a.clone().sub(S.follow.last); S.follow.last.copy(a); controls.target.add(dv); camera.position.add(dv); }
     controls.enableDamping = !S.reduced;
     controls.update();
     clampReach();
   }
-  return { controls, S, walk, setHome, flyToIsland, home, intro, finishIntro, enterWalk, exitWalk, update, islandView, flight, limits };
+  return { controls, S, walk, setHome, flyToIsland, home, intro, finishIntro, enterWalk, exitWalk, update, islandView, flight, limits, flyToBoat };
 }

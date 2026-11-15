@@ -330,3 +330,12 @@ select.pp-in { width: auto; max-width: 160px; }
 .guide .gd ul, .guide .gd ol { margin: 0; padding: 0 14px 10px 34px; line-height: 1.7; }
 .guide .gd li + li { margin-top: 4px; }
 .guide .gd .chal-btns { padding: 0 12px 12px; margin-top: 0; }
+
+/* 鯉魚號：可點選的「船島」 */
+.tag.boat .no { background: var(--tc); font-size: 16px; }
+.boat-stat { margin: 0 0 4px; font-weight: 700; line-height: 1.6; }
+.boat-how { margin: 0; padding-left: 20px; line-height: 1.7; }
+.boat-how li + li { margin-top: 4px; }
+.tag.boat .dir { display: none; font-size: 14px; color: var(--tc); line-height: 1; }
+.tag.boat.edge .dir { display: inline-block; }
+.tag.boat.edge { opacity: .92; }

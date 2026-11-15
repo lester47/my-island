@@ -1,7 +1,7 @@
 // 生活感：居民、送貨員、商人、路人、動物、雲、鳥群、帆船、螢火蟲、貝殼
 import * as THREE from 'three';
-import { TAU, clamp, lerp, rng, mat, GEO, glowTexture, C } from './kit.js?v=20261115t';
-import { H, PIER_Y } from './world.js?v=20261115t';
+import { TAU, clamp, lerp, rng, mat, GEO, glowTexture, C } from './kit.js?v=20261115u';
+import { H, PIER_Y } from './world.js?v=20261115u';
 
 const SKIN = ['#ffd9b8', '#f2c49b', '#e0ad84', '#ffe3c8'];
 const SHIRT = ['#e8762b', '#8a5cd0', '#2f7fd1', '#dc4848', '#3e9b4f', '#e3a33b', '#f2f2f2', '#4fb3b0'];
@@ -365,6 +365,24 @@ export function createLife(W, content, opts) {
     (x, z) => { if (CARP.gangK < .95) return null; const { a, l } = pier.along(x, z); if (Math.abs(a - pier.SLIP) > .4 || l < pier.PW - .45 || l > pier.PW + pier.GANG) return null; /* 和棧道重疊一段，接縫不卡 */ return PIER_Y + .22 * clamp((l - pier.PW) / pier.GANG, 0, 1); },
     (x, z) => { invM.copy(CARP.g.matrixWorld).invert(); const p = tmpV.set(x, CARP.g.position.y, z).applyMatrix4(invM); if (p.z < -2.6 || p.z > -1.45 || p.x < -1.12 || p.x > .95) return null; return CARP.g.position.y + (p.x < -.68 ? .54 : .3) * BS; },
   );
+  // 給介面用：船的位置（鏡頭跟隨）、目前航程、登船位置
+  CARP.anchor = () => CARP.g.position;
+  CARP.status = () => {
+    const C0 = CARP, sp = 3.2, loopT = C0.len / sp;
+    const seated = C0.all.filter((x) => x.mode === 'seat').length;
+    let eta = 0, leave = 0;
+    if (C0.phase === 'dock') leave = Math.max(0, 25.2 - C0.t);
+    else if (C0.phase === 'depart') eta = 6 - C0.t + loopT + 13;
+    else if (C0.phase === 'loop') eta = (1 - C0.u) * loopT + 13;
+    else if (C0.phase === 'pivot') eta = 4 - C0.t + 9;
+    else eta = 9 - C0.t;
+    return { phase: C0.phase, docked: C0.phase === 'dock', gang: C0.gangK > .95, seated, eta: Math.ceil(eta), leave: Math.ceil(leave), u: C0.u };
+  };
+  CARP.boardSpot = () => {
+    const p = CARP.g.localToWorld(new THREE.Vector3(.2, 0, -2.0));
+    const h = W.ground(p.x, p.z); p.y = h == null ? CARP.g.position.y + .3 * BS : h;
+    return { pos: p, yaw: CARP.g.rotation.y };
+  };
   W.onBoat = (x, z) => { invM.copy(CARP.g.matrixWorld).invert(); const p = tmpV.set(x, CARP.g.position.y, z).applyMatrix4(invM); return p.z > -2.7 && p.z < -1.4 && p.x > -1.2 && p.x < 1.0; };
 
   // 螢火蟲
