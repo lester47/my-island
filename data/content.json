@@ -1,5 +1,5 @@
 {
-  "assetVersion": "20261115e",
+  "assetVersion": "20261115f",
   "site": {
     "title": "115 鯉魚市集",
     "tagline": "跳上五座六角小島，逛美食、玩手作、闖關挑戰，還能挖二手好物！",
@@ -478,60 +478,84 @@
     {
       "no": 1,
       "name": "大狗堡",
-      "island": "food"
+      "island": "food",
+      "photo": "assets/stalls/stall-01-v2.png",
+      "photoAlt": "插畫：女孩捧著淋了番茄醬和芥末的熱狗堡，男孩在橘白條紋棚的攤位後比讚，桌上有香腸和醬料瓶",
+      "photoCaption": "示意插畫，非攤位實拍"
     },
     {
       "no": 2,
       "name": "自製飲料店",
-      "island": "food"
+      "island": "food",
+      "photo": "assets/stalls/stall-02-v2.png",
+      "photoAlt": "插畫：男孩把水果茶從壺裡倒進杯子，女孩在旁邊扶著杯子，桌上有一籃鳳梨、柳橙、葡萄等水果",
+      "photoCaption": "示意插畫，非攤位實拍"
     },
     {
       "no": 3,
       "name": "蜜糖小屋",
-      "island": "food"
+      "island": "food",
+      "photo": "assets/stalls/stall-03-v2.png",
+      "photoAlt": "插畫：兩個小朋友站在蜂巢裝飾的小木屋攤位兩旁，屋裡擺著杯子蛋糕、鬆餅和一罐蜂蜜",
+      "photoCaption": "示意插畫，非攤位實拍"
     },
     {
       "no": 4,
       "name": "阿逸哥的美食小食堂",
-      "island": "food"
+      "island": "food",
+      "photo": "assets/stalls/stall-04-v2.png",
+      "photoAlt": "插畫：男孩在藍格子桌巾的攤位上夾炸物，女孩端著一盤點心，桌上擺著幾盤小吃和春捲",
+      "photoCaption": "示意插畫，非攤位實拍"
     },
     {
       "no": 5,
       "name": "靚萱餅乾鋪",
       "island": "food",
       "template": true,
-      "photo": "assets/stalls/stall-05.webp",
-      "photoAlt": "插畫：女孩捧著一盤巧克力豆餅乾",
-      "photoCaption": "示意圖，非攤位實拍；請攤主提供商品照片"
+      "photo": "assets/stalls/stall-05-v2.png",
+      "photoAlt": "插畫：女孩和男孩一起端著一整盤巧克力豆餅乾",
+      "photoCaption": "示意插畫，非攤位實拍"
     },
     {
       "no": 6,
       "name": "手作DIY",
-      "island": "craft"
+      "island": "craft",
+      "photo": "assets/stalls/stall-06-v2.png",
+      "photoAlt": "插畫：男孩用剪刀剪黃色色紙，女孩拿著彩色紙風車花，桌上有色紙、膠水和蠟筆",
+      "photoCaption": "示意插畫，非攤位實拍"
     },
     {
       "no": 7,
       "name": "巧手工坊",
-      "island": "craft"
+      "island": "craft",
+      "photo": "assets/stalls/stall-07-v2.png",
+      "photoAlt": "插畫：男孩用針線縫小熊臉的不織布吊飾，女孩在旁邊幫忙，桌上有不織布、剪刀和毛線球",
+      "photoCaption": "示意插畫，非攤位實拍"
     },
     {
       "no": 8,
       "name": "自己畫貼紙DIY",
       "island": "craft",
       "template": true,
-      "photo": "assets/stalls/stall-08.webp",
-      "photoAlt": "插畫：男孩用剪刀剪出黃色星星，旁邊有星星燈籠與膠水",
-      "photoCaption": "示意圖，非攤位實拍；請攤主提供作品照片"
+      "photo": "assets/stalls/stall-08-v2.png",
+      "photoAlt": "插畫：兩個小朋友用彩色筆畫貼紙，紙上有星星、愛心、小貓、花和兔子圖案",
+      "photoCaption": "示意插畫，非攤位實拍"
     },
     {
       "no": 9,
       "name": "吉樂工作室",
-      "island": "craft"
+      "island": "craft",
+      "photo": "assets/stalls/stall-09-v2.png",
+      "photoAlt": "插畫：兩個小朋友在掛著三角旗的工作室裡，用黏土捏彩虹和小房子",
+      "photoCaption": "示意插畫，非攤位實拍"
     },
     {
       "no": 10,
       "name": "名不虛傳GG手",
-      "island": "puzzle"
+      "island": "puzzle",
+      "photo": "assets/stalls/stall-10-v2.png",
+      "photoAlt": "插畫：兩個小朋友在彈珠台遊戲盒前舉手歡呼，盒裡有彩色圓圈目標和一顆白球",
+      "photoCaption": "示意插畫，非攤位實拍"
     },
     {
       "no": 11,
