@@ -1,9 +1,9 @@
 // 鏡頭：拖曳旋轉縮放、回到全景、點島飛近（電影史詩運鏡）、開場、導覽、地面漫遊
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { TAU, clamp, lerp, easeInOut, smooth } from './kit.js?v=20261115r';
-import { H } from './world.js?v=20261115r';
-import { SHORE } from './scenery.js?v=20261115r';
+import { TAU, clamp, lerp, easeInOut, smooth } from './kit.js?v=20261115s';
+import { H } from './world.js?v=20261115s';
+import { SHORE } from './scenery.js?v=20261115s';
 
 export function createCam(W, canvas, hooks) {
   const camera = W.camera;
@@ -121,7 +121,21 @@ export function createCam(W, canvas, hooks) {
     const dir = new THREE.Vector3(Math.sin(walk.yaw) * Math.cos(walk.pitch), Math.sin(walk.pitch), Math.cos(walk.yaw) * Math.cos(walk.pitch));
     camera.lookAt(eye.clone().add(dir));
   }
+  const _l = new THREE.Vector3(), _inv = new THREE.Matrix4(), _q0 = new THREE.Quaternion(), _q1 = new THREE.Quaternion(), _v = new THREE.Vector3();
   function stepWalk(dt) {
+    // 站在鯉魚號船尾時，跟著船一起移動、轉向
+    const bm = W.boatMove; W.boatMove = null;
+    if (bm && W.onBoat) {
+      _inv.copy(bm.from).invert(); _l.copy(walk.pos).applyMatrix4(_inv);
+      if (W.onBoat(walk.pos.x, walk.pos.z) || (_l.z > -2.7 && _l.z < -1.4 && _l.x > -1.2 && _l.x < 1.0)) {
+        const np = _l.clone().applyMatrix4(bm.to);
+        bm.from.decompose(_v, _q0, _v.clone()); bm.to.decompose(_v, _q1, _v.clone());
+        const y0 = new THREE.Euler().setFromQuaternion(_q0, 'YXZ').y, y1 = new THREE.Euler().setFromQuaternion(_q1, 'YXZ').y;
+        let dy = y1 - y0; while (dy > Math.PI) dy -= TAU; while (dy < -Math.PI) dy += TAU;
+        walk.pos.x = np.x; walk.pos.z = np.z; walk.yaw += dy;
+        const h = W.ground(walk.pos.x, walk.pos.z); if (h != null) walk.pos.y = h;
+      }
+    }
     const k = walk.keys, p = walk.pad;
     const fwd = (k.KeyW || k.ArrowUp || p.up ? 1 : 0) - (k.KeyS || k.ArrowDown || p.down ? 1 : 0);
     const turn = (k.ArrowLeft || p.left ? 1 : 0) - (k.ArrowRight || p.right ? 1 : 0);

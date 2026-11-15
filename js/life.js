@@ -1,7 +1,7 @@
 // 生活感：居民、送貨員、商人、路人、動物、雲、鳥群、帆船、螢火蟲、貝殼
 import * as THREE from 'three';
-import { TAU, clamp, lerp, rng, mat, GEO, glowTexture, C } from './kit.js?v=20261115r';
-import { H } from './world.js?v=20261115r';
+import { TAU, clamp, lerp, rng, mat, GEO, glowTexture, C } from './kit.js?v=20261115s';
+import { H, PIER_Y } from './world.js?v=20261115s';
 
 const SKIN = ['#ffd9b8', '#f2c49b', '#e0ad84', '#ffe3c8'];
 const SHIRT = ['#e8762b', '#8a5cd0', '#2f7fd1', '#dc4848', '#3e9b4f', '#e3a33b', '#f2f2f2', '#4fb3b0'];
@@ -172,7 +172,7 @@ export function createLife(W, content, opts) {
     const sail = new THREE.Mesh(new THREE.ShapeGeometry(shape), mat('#fbf7ee', { side: THREE.DoubleSide })); sail.position.set(.06, .8, -.2); sail.rotation.y = -Math.PI / 2; g.add(sail);
     const flag = new THREE.Mesh(GEO.box, mat('#e3a33b')); flag.scale.set(.03, .3, .5); flag.position.set(0, 4.35, -.25); g.add(flag);
     g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
-    scene.add(g); boats.push({ g, a: i * Math.PI + .6, rad: 56 + i * 10, sp: .022 - i * .006 });
+    scene.add(g); boats.push({ g, a: i * Math.PI + .6, rad: 60 + i * 10, sp: .022 - i * .006 });
   }
   // 鯉魚帆船：船身是一條紅白錦鯉做成的敞篷船，船艙裡三排長椅坐滿小朋友；背鰭當帆，尾鰭在船尾翹起
   {
@@ -212,9 +212,11 @@ export function createLife(W, content, opts) {
         for (const l of P.legs) l.rotation.x = -Math.PI / 2 + .25;                        // 坐著，腳往前伸
         P.arms[0].rotation.z = -.15; P.arms[1].rotation.z = .15;
         P.g.rotation.y = (kr() - .5) * .5;
-        g.add(P.g); kids.push({ P, ph: kr() * TAU, waver: ki === 0 || ki === 4 || ki === 6 }); ki++;
+        g.add(P.g); kids.push({ P, ph: kr() * TAU, waver: ki === 0 || ki === 4 || ki === 6, mode: 'seat', seat: { pos: P.g.position.clone(), ry: P.g.rotation.y, sc: P.g.scale.x } }); ki++;
       }
     }
+    // 船尾左舷內側的小木階（從碼頭跳板跨過船緣，踩這一階下到甲板）
+    { const step = new THREE.Mesh(GEO.box, wood); step.scale.set(.42, .24, .7); step.position.set(-.86, .42, -2.0); g.add(step); }
     // 桅杆在船頭後方，背鰭帆往後展開罩在小朋友上方
     const mast = new THREE.Mesh(GEO.cyl6, mat('#8d5d35')); mast.scale.set(.1, 5.4, .1); mast.position.set(0, 3.0, 1.95); g.add(mast);
     const fin = new THREE.Shape(); fin.moveTo(0, 0); fin.lineTo(0, 3.4); fin.quadraticCurveTo(.9, 3.1, 1.6, 2.4);
@@ -241,8 +243,130 @@ export function createLife(W, content, opts) {
     }
     g.scale.setScalar(1.3);
     g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
-    scene.add(g); boats.push({ g, a: 3.95, rad: 46, sp: .016, carp: true, kids });
+    scene.add(g); boats.push({ g, a: 3.95, rad: 46, sp: .016, carp: true, kids, kr });
   }
+  // ------------------------------------------------------------ 鯉魚號：停靠益智闖關島的鯉魚號碼頭，小朋友上下船；繞群島一圈再倒退入泊
+  const CARP = boats.find((b) => b.carp), pier = W.pier, BS = 1.3;
+  {
+    const d = pier.d, sv = pier.s, berth = pier.berth.pos.clone();
+    const R = berth.clone().addScaledVector(d, 10), R2 = berth.clone().addScaledVector(d, 13), Q = R.clone().addScaledVector(sv, 6);
+    const aR = Math.atan2(R.z, R.x), pts = [R, R2];
+    for (const da of [22, 48, 74, 100, 126, 152, 178, 204, 230, 256, 282, 308, 330]) { const a = aR + da * Math.PI / 180; pts.push(new THREE.Vector3(Math.cos(a) * 44, 0, Math.sin(a) * 44)); }
+    pts.push(Q, R.clone());
+    const curve = new THREE.CatmullRomCurve3(pts, false, 'centripetal'), len = curve.getLength();
+    Object.assign(CARP, { phase: 'dock', t: 0, u: 0, yaw0: 0, R, berth, curve, len, gangK: 0, cycle: 0, prevM: new THREE.Matrix4() });
+    CARP.g.scale.setScalar(BS);
+    // 在碼頭上等船的 3 位小朋友
+    const KWS = PERSON_SCALE * .92 * BS;
+    CARP.waiting = pier.queue.map((q, i) => {
+      const P = makePerson(CARP.kr, false, { shirt: ['#f6f6f2', '#9fd3f5', '#ffd36b'][i], hat: false }); P.g.remove(P.hit);
+      P.g.scale.setScalar(KWS); P.g.position.copy(q); scene.add(P.g); P.g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+      return { P, mode: 'queue', q: i, ph: CARP.kr() * TAU };
+    });
+    CARP.groups = [[5, 6, 4], [0, 1, 3], [2, 5, 6], [4, 0, 1], [3, 2, 5]];
+    CARP.all = CARP.kids.concat(CARP.waiting);           // 船上 7 位＋碼頭等候 3 位，輪流上下船
+  }
+  const tmpV = new THREE.Vector3();
+  const boatLocal = (x, y, z) => CARP.g.localToWorld(new THREE.Vector3(x, y, z));
+  const lane = (k) => pier.s.clone().multiplyScalar(k);
+  // 一條上下船的路：座位 → 船尾走道 → 內側木階 → 跳板 → 棧道 → 階梯 → 島頂等候點
+  function shorePath(seatPos, qi, off) {
+    const E = pier.E, d = pier.d, sv = pier.s, P = [];
+    P.push(boatLocal(seatPos.x, .3, seatPos.z), boatLocal(seatPos.x * .4, .3, -1.95), boatLocal(-.86, .54, -2.0));
+    P.push(E.clone().addScaledVector(d, pier.SLIP + off * .5).addScaledVector(sv, pier.PW + pier.GANG - .05).setY(PIER_Y + .22));
+    P.push(E.clone().addScaledVector(d, pier.SLIP + off * .5).addScaledVector(sv, pier.PW - .25).setY(PIER_Y));
+    P.push(E.clone().addScaledVector(d, pier.SLIP - .6).add(lane(off)).setY(PIER_Y));
+    P.push(E.clone().addScaledVector(d, pier.ST1 + .15).add(lane(off)).setY(PIER_Y));
+    P.push(E.clone().addScaledVector(d, pier.ST0 + .1).add(lane(off)).setY(H));
+    P.push(pier.queue[qi].clone());
+    return P;
+  }
+  function seatKid(k, si) {
+    const seat = CARP.kids[si].seatDef || CARP.kids[si].seat;
+    CARP.g.add(k.P.g); k.P.g.position.copy(seat.pos); k.P.g.rotation.set(0, seat.ry, 0); k.P.g.scale.setScalar(seat.sc);
+    for (const l of k.P.legs) l.rotation.x = -Math.PI / 2 + .25; k.P.arms[0].rotation.set(0, 0, -.15); k.P.arms[1].rotation.set(0, 0, .15);
+    k.mode = 'seat'; k.si = si;
+  }
+  function startWalk(k, path, done) { if (k.P.g.parent !== scene) scene.attach(k.P.g); k.mode = 'walk'; k.path = path; k.seg = 0; k.segT = 0; k.done = done; }
+  function stepWalker(k, t, dt) {
+    const a = k.path[k.seg], b = k.path[k.seg + 1];
+    if (!b) { const f = k.done; k.done = null; f && f(); return; }
+    const L = Math.max(.01, a.distanceTo(b)); k.segT += dt * 1.05 / L;
+    if (k.segT >= 1) { k.seg++; k.segT = 0; return; }
+    k.P.g.position.lerpVectors(a, b, k.segT); faceTo(k.P.g, a, b); poseWalk(k.P, t);
+  }
+  // 依目前的座位安排：每位乘客記住自己的座位
+  CARP.kids.forEach((k, i) => { k.seatDef = { pos: k.seat.pos.clone(), ry: k.seat.ry, sc: k.seat.sc }; k.si = i; });
+  CARP.seatOf = CARP.kids.map((k) => k);          // 座位 i 上目前坐的是誰
+  function dockEvents(t) {
+    const C0 = CARP, grp = C0.groups[C0.cycle % C0.groups.length];
+    // 下船：這一輪的 3 個座位依序起身
+    grp.forEach((si, i) => {
+      const k = C0.seatOf[si]; if (!k || k.mode !== 'seat' || k.leftCycle === C0.cycle) return;
+      if (t < 1.8 + i * 1.4) return;
+      k.leftCycle = C0.cycle; C0.seatOf[si] = null;
+      const path = shorePath(C0.kids[si].seatDef.pos, i, .3);
+      startWalk(k, path, () => { k.mode = 'queue'; k.q = i; poseIdle(k.P); faceTo(k.P.g, k.P.g.position, C0.berth); C0.nextWaiting = C0.nextWaiting || []; C0.nextWaiting[i] = k; });
+    });
+    // 上船：等候的 3 位依序走上船，坐進空位
+    C0.waiting.forEach((k, i) => {
+      if (k.mode !== 'queue' || t < 8 + i * 1.4) return;
+      const si = grp[i]; const path = shorePath(C0.kids[si].seatDef.pos, k.q, -.3).reverse();
+      startWalk(k, path, () => { seatKid(k, si); C0.seatOf[si] = k; k.leftCycle = C0.cycle; });   // 剛上船的這一輪不會再下船
+    });
+  }
+  function carpUpdate(t, dt, moving) {
+    const C0 = CARP, g = C0.g;
+    C0.prevM.copy(g.matrixWorld);
+    if (moving) C0.t += dt;
+    const k = (dur) => clamp(C0.t / dur, 0, 1);
+    let pos = C0.berth, yaw = pier.berth.yaw, docked = false;
+    if (C0.phase === 'dock') {
+      docked = true;
+      C0.gangK = clamp((C0.t - .3) / 1, 0, 1) * (1 - clamp((C0.t - 24) / 1, 0, 1));
+      if (moving) dockEvents(C0.t);
+      const busy = C0.kids.some((x) => x.mode === 'walk') || C0.waiting.some((x) => x.mode === 'walk');
+      if (C0.t > 25.2 && !busy && C0.waiting.every((x) => x.mode === 'seat')) {
+        C0.waiting = (C0.nextWaiting || []).filter(Boolean); C0.nextWaiting = []; C0.cycle++;
+        C0.phase = 'depart'; C0.t = 0;
+      } else if (C0.t > 24 && busy) C0.t = 23.9;                       // 還有人在走：等他們走完再收跳板
+    } else if (C0.phase === 'depart') {
+      const e = k(6) * k(6); pos = C0.berth.clone().lerp(C0.R, e);
+      if (C0.t >= 6) { C0.phase = 'loop'; C0.t = 0; C0.u = 0; }
+    } else if (C0.phase === 'loop') {
+      if (moving) C0.u = Math.min(1, C0.u + 3.2 * dt / C0.len);
+      pos = C0.curve.getPointAt(C0.u); const tg = C0.curve.getTangentAt(C0.u); yaw = Math.atan2(tg.x, tg.z);
+      if (C0.u >= 1) { C0.phase = 'pivot'; C0.t = 0; C0.yaw0 = yaw; }
+    } else if (C0.phase === 'pivot') {
+      pos = C0.R; let dy = pier.berth.yaw - C0.yaw0; while (dy > Math.PI) dy -= TAU; while (dy < -Math.PI) dy += TAU;
+      yaw = C0.yaw0 + dy * (k(4) * k(4) * (3 - 2 * k(4)));
+      if (C0.t >= 4) { C0.phase = 'back'; C0.t = 0; }
+    } else if (C0.phase === 'back') {
+      const e = 1 - (1 - k(9)) ** 2; pos = C0.R.clone().lerp(C0.berth, e);
+      if (C0.t >= 9) { C0.phase = 'dock'; C0.t = 0; }
+    }
+    const bob = moving ? Math.sin(t * 1.2 + 46) * (docked ? .03 : .1) : 0;
+    g.position.set(pos.x, bob, pos.z);
+    g.rotation.set(0, yaw, moving && !docked ? Math.sin(t * .9 + 46) * .05 : 0);
+    g.updateMatrixWorld(true);
+    W.boatMove = { from: C0.prevM.clone(), to: g.matrixWorld.clone() };
+    // 跳板：停靠時放下，其他時候收起
+    pier.plank.rotation.z = lerp(1.35, Math.atan2(.22, pier.GANG), C0.gangK);
+    // 小朋友
+    for (const x of C0.all) {
+      if (x.mode === 'walk') { if (moving) stepWalker(x, t, dt); }
+      else if (x.mode === 'seat') { const w = moving ? Math.sin(t * 6 + x.ph) : 0; x.P.head.rotation.z = moving ? Math.sin(t * 1.3 + x.ph) * .12 : 0; if (x.waver) x.P.arms[1].rotation.z = moving ? 2.4 + w * .4 : .15; }
+      else if (x.mode === 'queue') { poseIdle(x.P); if (moving && C0.phase !== 'dock') x.P.arms[1].rotation.z = 2.4 + Math.sin(t * 6 + x.ph) * .4; }
+    }
+  }
+  // 漫遊時可以走的面：跳板（停靠時）、船尾甲板與內側木階（隨船移動）
+  const invM = new THREE.Matrix4();
+  W.surfaces.push(
+    (x, z) => { if (CARP.gangK < .95) return null; const { a, l } = pier.along(x, z); if (Math.abs(a - pier.SLIP) > .4 || l < pier.PW - .45 || l > pier.PW + pier.GANG) return null; /* 和棧道重疊一段，接縫不卡 */ return PIER_Y + .22 * clamp((l - pier.PW) / pier.GANG, 0, 1); },
+    (x, z) => { invM.copy(CARP.g.matrixWorld).invert(); const p = tmpV.set(x, CARP.g.position.y, z).applyMatrix4(invM); if (p.z < -2.6 || p.z > -1.45 || p.x < -1.12 || p.x > .95) return null; return CARP.g.position.y + (p.x < -.68 ? .54 : .3) * BS; },
+  );
+  W.onBoat = (x, z) => { invM.copy(CARP.g.matrixWorld).invert(); const p = tmpV.set(x, CARP.g.position.y, z).applyMatrix4(invM); return p.z > -2.7 && p.z < -1.4 && p.x > -1.2 && p.x < 1.0; };
+
   // 螢火蟲
   const nFly = low ? 40 : 90, flyPos = new Float32Array(nFly * 3), flyBase = [];
   const ids = Object.keys(islands);
@@ -360,11 +484,12 @@ export function createLife(W, content, opts) {
       f.g.rotation.y = -f.a + Math.PI;
       for (const b of f.birds) { const w = moving ? Math.sin(t * 8 + b.ph) * .6 : .1; b.wings[0].rotation.z = w; b.wings[1].rotation.z = -w; }
     }
+    carpUpdate(t, dt, moving);
     for (const b of boats) {
+      if (b.carp) continue;
       if (moving) b.a += b.sp * dt;
       b.g.position.set(Math.cos(b.a) * b.rad, moving ? Math.sin(t * 1.2 + b.rad) * .12 : 0, Math.sin(b.a) * b.rad);
       b.g.rotation.set(0, -b.a, moving ? Math.sin(t * .9 + b.rad) * .07 : 0);
-      if (b.kids) for (const k of b.kids) { const w = moving ? Math.sin(t * 6 + k.ph) : 0; k.P.head.rotation.z = moving ? Math.sin(t * 1.3 + k.ph) * .12 : 0; if (k.waver) k.P.arms[1].rotation.z = moving ? 2.4 + w * .4 : .15; }
     }
     flies.material.opacity = night * .95; flies.visible = night > .05;
     if (flies.visible) { for (let i = 0; i < nFly; i++) { const [x, y, z, p] = flyBase[i]; const tt = moving ? t : 0; flyPos[i * 3] = x + Math.sin(tt * .5 + p) * .8; flyPos[i * 3 + 1] = y + Math.sin(tt * .9 + p * 2) * .35; flyPos[i * 3 + 2] = z + Math.cos(tt * .4 + p) * .8; } flyGeo.attributes.position.needsUpdate = true; }
@@ -384,7 +509,7 @@ export function createLife(W, content, opts) {
   }
 
   return {
-    agents, animals, shells, pickables, deck, deckMat, update,
+    agents, animals, shells, pickables, deck, deckMat, update, carp: CARP,
     setDeck(op) { deckMat.opacity = op; deck.visible = op > .01; },
     headOf(o) { // 對話泡泡的位置
       if (o.agent) return o.agent.P.g.position.clone().add(new THREE.Vector3(0, 1.5 * PERSON_SCALE + .55, 0));

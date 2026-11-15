@@ -1,7 +1,7 @@
 // 3D 世界：天空、海、遠山、島嶼與地標、橋、日夜光影
 import * as THREE from 'three';
-import { TAU, clamp, lerp, smooth, rng, loopNoise, mat, Builder, GEO, glowTexture, C } from './kit.js?v=20261115r';
-import { makeScenery } from './scenery.js?v=20261115r';
+import { TAU, clamp, lerp, smooth, rng, loopNoise, mat, Builder, GEO, glowTexture, C } from './kit.js?v=20261115s';
+import { makeScenery } from './scenery.js?v=20261115s';
 
 export const H = 1.75;               // 島頂草地高度
 const SEG = 72;                      // 海岸線分段（6 的倍數，六角轉角落在頂點上）
@@ -508,7 +508,10 @@ function buildIsland(id, scene, quality) {
   ({ food: landmarkFood, craft: landmarkCraft, puzzle: landmarkPuzzle, sport: landmarkSport, recycle: landmarkRecycle, center: landmarkCenter })[id](B, lmGroup, P, info.extras);
   info.colliders.push({ x: 0, z: isC ? 0 : -.3, r: isC ? 3.0 : 2.6 });
   if (isC) { info.colliders.push({ x: info.extras.windmill.x, z: info.extras.windmill.z, r: 1.2 }, { x: 7.0, z: 4.3, r: 2.0 }, { x: 3.6, z: -2.6, r: .4 }); }
-  stonePath(B, P, info.ring, rand, bridgeAngles, L.R, L.seed, isC ? 1.1 : .95);
+  // 益智闖關島西側是「鯉魚號碼頭」：石板小路、物件與草叢都要讓出通往碼頭的路
+  const pierA = id === 'puzzle' ? bridgeAngles[0] + Math.PI : null; info.pierA = pierA;
+  const corridorA = pierA == null ? bridgeAngles : [...bridgeAngles, pierA];
+  stonePath(B, P, info.ring, rand, corridorA, L.R, L.seed, isC ? 1.1 : .95);
   // 外圈物件：避開橋的方向與正面標籤區
   const items = OUTER[id];
   const startA = bridgeAngles[0];
@@ -516,7 +519,7 @@ function buildIsland(id, scene, quality) {
   items.forEach((it, i) => {
     let a = startA + .55 + i / items.length * (TAU - 1.1);
     if (isC) a = startA + .38 + i / items.length * TAU;
-    if (bridgeAngles.some((b) => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b))) < .3)) a += .32;
+    if (corridorA.some((b) => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b))) < .3)) a += .32;
     const edge = shapeR(a, L.seed) * L.R;
     const r = it.startsWith('house') ? edge * .76 : it === 'fence' || it === 'bed' ? edge * .8 : edge * .82;
     if (isC && Math.hypot(Math.cos(a) * r - 7.0, Math.sin(a) * r - 4.3) < 2.6) return;            // 讓出花田
@@ -525,7 +528,7 @@ function buildIsland(id, scene, quality) {
     // 讓出每座橋的通道：物件外緣離橋的中線至少 1.1（玩家肩寬＋一點餘裕），不夠就往旁邊挪，挪不開就不放
     const [kind, arg] = it.split(':');
     const rad = { house: 1.7, treeR: 1.0, treeP: .95, bed: 1.25, fence: 1.45, bench: .75, crate: .75, sign: .45, well: .95, lamp: .35, bush: .65 }[kind] || .8;
-    const blocksBridge = (aa) => bridgeAngles.some((b) => { const d = Math.atan2(Math.sin(aa - b), Math.cos(aa - b)); return Math.cos(d) > 0 && Math.abs(Math.sin(d)) * r < rad + 1.1; });
+    const blocksBridge = (aa) => corridorA.some((b) => { const d = Math.atan2(Math.sin(aa - b), Math.cos(aa - b)); return Math.cos(d) > 0 && Math.abs(Math.sin(d)) * r < rad + 1.1; });
     if (blocksBridge(a)) { let ok = false; for (let k = 1; k <= 12 && !ok; k++) for (const sg of [1, -1]) { if (!blocksBridge(a + sg * k * .05)) { a += sg * k * .05; ok = true; break; } } if (!ok) return; }
     const x = Math.cos(a) * r, z = Math.sin(a) * r, face = -a - Math.PI / 2;
     B.push(x, H, z, face);
@@ -544,9 +547,9 @@ function buildIsland(id, scene, quality) {
   });
   // 草地上的小石頭與邊緣草叢
   rocks(B, rand, isC ? 8 : 5, .66, .74, L.seed, L.R);
-  edgeGreens(B, rand, L, bridgeAngles);
+  edgeGreens(B, rand, L, corridorA);
   // 碼頭與小船（背向中央島的一側）
-  const dockA = bridgeAngles[0] + (isC ? Math.PI / 5 : Math.PI);
+  const dockA = bridgeAngles[0] + (isC ? Math.PI / 5 : Math.PI) + (pierA != null ? -1.3 : 0);   // 益智島的小船挪到旁邊，讓出鯉魚號碼頭
   const boatAt = dock(B, L, dockA);
   const statics = B.build(MAT_FOR, true); group.add(statics); info.pick.push(...statics.children);
   const boat = rowBoat(isC ? '#2f7fd1' : (P.main || '#2f7fd1')); boat.position.set(boatAt.x, .05, boatAt.z); boat.rotation.y = boatAt.ry; group.add(boat);
@@ -558,6 +561,66 @@ function buildIsland(id, scene, quality) {
   info.top = (th) => shapeR(th, L.seed) * L.R * .95;
   info.walk = walkGrid(info, group, [terr, foam, boat]);
   return info;
+}
+
+// ------------------------------------------------------------------ 鯉魚號碼頭（益智闖關島西側）：階梯從島頂走下去，木棧道伸進湖裡
+export const PIER_Y = .8, GANG = 1.65;           // 棧道高度、跳板長度
+function buildPier(scene, I) {
+  const A = I.pierA, d = new THREE.Vector3(Math.cos(A), 0, Math.sin(A)), s = new THREE.Vector3(Math.sin(A), 0, -Math.cos(A));
+  const rTop = I.top(A), E = I.pos.clone().addScaledVector(d, rTop);
+  const ST0 = -.5, ST1 = 2.4, P1 = 10.5, PW = .9;               // 沿 d 的距離：階梯 ST0→ST1，棧道 ST1→P1，半寬 PW
+  const B = new Builder();
+  B.push(E.x, 0, E.z, Math.atan2(d.x, d.z));                    // 區域座標：+z 沿碼頭往外，+x 朝 s（停船那一側）
+  // 階梯（10 階）＋兩側扶手
+  const nSt = 10;
+  for (let i = 0; i < nSt; i++) { const t = (i + .5) / nSt, z = ST0 + (ST1 - ST0) * t, y = H + (PIER_Y - H) * t; B.add(GEO.box, i % 2 ? WOOD : WOOD3, 0, y - .06, z, 0, 0, 0, 1.5, .12, (ST1 - ST0) / nSt + .02); B.add(GEO.box, WOOD2, 0, (y + PIER_Y) / 2 - .3, z, 0, 0, 0, 1.3, Math.max(.1, y - PIER_Y + .3), .2); }
+  for (const x of [-.78, .78]) { for (let i = 0; i <= 2; i++) { const t = i / 2, z = ST0 + (ST1 - ST0) * t, y = H + (PIER_Y - H) * t; B.add(GEO.box, WOOD2, x, y + .35, z, 0, 0, 0, .1, .7, .1); }
+    const len = Math.hypot(ST1 - ST0, H - PIER_Y); B.add(GEO.box, WOOD, x, (H + PIER_Y) / 2 + .68, (ST0 + ST1) / 2, Math.atan2(H - PIER_Y, ST1 - ST0), 0, 0, .08, .08, len); }
+  // 木棧道
+  const n = Math.round((P1 - ST1) / .42);
+  for (let i = 0; i < n; i++) B.add(GEO.box, i % 2 ? WOOD : WOOD3, 0, PIER_Y - .06, ST1 + (i + .5) * (P1 - ST1) / n, 0, 0, 0, PW * 2, .12, (P1 - ST1) / n - .03);
+  for (let z = ST1 + .3; z <= P1; z += 1.6) for (const x of [-PW + .1, PW - .1]) B.add(GEO.cyl6, WOOD2, x, PIER_Y / 2 - .4, z, 0, 0, 0, .18, PIER_Y + .9, .18);
+  // 欄杆：只有北側與末端（南側要停船）
+  for (let z = ST1; z <= P1; z += 1.2) B.add(GEO.box, WOOD2, -PW + .05, PIER_Y + .35, z, 0, 0, 0, .08, .7, .08);
+  B.add(GEO.box, WOOD, -PW + .05, PIER_Y + .68, (ST1 + P1) / 2, 0, 0, 0, .07, .07, P1 - ST1);
+  for (const x of [-.6, 0, .6]) B.add(GEO.box, WOOD2, x, PIER_Y + .35, P1 - .05, 0, 0, 0, .08, .7, .08);
+  B.add(GEO.box, WOOD, 0, PIER_Y + .68, P1 - .05, 0, 0, 0, PW * 2, .07, .07);
+  // 繫船柱
+  for (const z of [ST1 + 1.0, ST1 + 3.2, P1 - .8]) { B.add(GEO.cyl8, '#4a4f57', PW - .2, PIER_Y + .18, z, 0, 0, 0, .22, .36, .22); B.add(GEO.cyl8, '#4a4f57', PW - .2, PIER_Y + .38, z, 0, 0, 0, .3, .06, .3); }
+  // 碼頭燈
+  B.add(GEO.cyl6, '#3b3f46', -PW + .1, PIER_Y + 1.1, ST1 + .2, 0, 0, 0, .08, 2.2, .08); B.add(GEO.box, 'lamp', -PW + .1, PIER_Y + 2.25, ST1 + .2, 0, 0, 0, .22, .22, .22);
+  NIGHT.glows.push(new THREE.Vector3(-PW + .1, PIER_Y + 2.25, ST1 + .2).applyMatrix4(B.m));
+  B.pop();
+  const g = B.build(MAT_FOR, true); scene.add(g);
+  // 招牌「鯉魚號碼頭」
+  const cv = document.createElement('canvas'); cv.width = 512; cv.height = 128; const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
+  const draw = () => { const x = cv.getContext('2d'); x.fillStyle = '#fbf3e6'; x.fillRect(0, 0, 512, 128); x.strokeStyle = '#c73a1f'; x.lineWidth = 10; x.strokeRect(5, 5, 502, 118);
+    x.fillStyle = '#c73a1f'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.font = "900 70px 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', 'Noto Sans CJK TC', sans-serif"; x.fillText('鯉魚號碼頭', 256, 68); tex.needsUpdate = true; };
+  draw(); if (document.fonts && document.fonts.ready) document.fonts.ready.then(draw);
+  const sign = new THREE.Group();
+  const board = new THREE.Mesh(new THREE.PlaneGeometry(2.2, .55), new THREE.MeshStandardMaterial({ map: tex, roughness: .8 })); board.position.y = 2.3; sign.add(board);
+  const back = board.clone(); back.rotation.y = Math.PI; sign.add(back);
+  for (const x of [-1.0, 1.0]) { const post = new THREE.Mesh(GEO.cyl6, mat(WOOD2)); post.scale.set(.1, 2.6, .1); post.position.set(x, 1.3, 0); sign.add(post); }
+  sign.position.copy(E).addScaledVector(d, ST1 + .1).setY(PIER_Y); sign.rotation.y = Math.atan2(s.x, s.z) + Math.PI / 2; sign.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+  scene.add(sign);
+  // 跳板：一端鉸在棧道南緣，停船時放下
+  const SLIP = ST1 + 4.6 - 2.6, gangPivot = E.clone().addScaledVector(d, SLIP).addScaledVector(s, PW).setY(PIER_Y);
+  const gang = new THREE.Group(); gang.position.copy(gangPivot); gang.rotation.y = Math.atan2(d.x, d.z);
+  const plank = new THREE.Group(); gang.add(plank);
+  { const pb = new Builder(); pb.add(GEO.box, WOOD3, GANG / 2, .02, 0, 0, 0, 0, GANG, .08, .9); for (let k = 0; k < 4; k++) pb.add(GEO.box, WOOD2, .2 + k * .42, .08, 0, 0, 0, 0, .06, .04, .9); for (const z of [-.45, .45]) pb.add(GEO.box, WOOD, GANG / 2, .4, z, 0, 0, 0, GANG, .05, .05); plank.add(pb.build(MAT_FOR, true)); }
+  scene.add(gang);
+  // 停船位置：船中心在棧道南側，船頭朝外（d）
+  const berth = { pos: E.clone().addScaledVector(d, ST1 + 4.6).addScaledVector(s, PW + .85 + 2.05), yaw: Math.atan2(d.x, d.z) };   // 胸鰭也不碰到棧道
+  // 等船的位置（島頂、階梯上方）
+  const queue = [-.75, 0, .75].map((k) => { const q = E.clone().addScaledVector(d, -1.4).addScaledVector(s, k); q.y = H;
+    for (let i = 0; i < 12 && I.walk.clear(q.x - I.pos.x, q.z - I.pos.z) < .3; i++) q.addScaledVector(d, -.25); return q; });
+  // 可走面：階梯（由島頂斜下到棧道）、棧道
+  const along = (x, z) => { const dx = x - E.x, dz = z - E.z; return { a: dx * d.x + dz * d.z, l: dx * s.x + dz * s.z }; };
+  const surfaces = [
+    (x, z) => { const { a, l } = along(x, z); if (a < ST0 - .1 || a > ST1 || Math.abs(l) > .6) return null; return H + (PIER_Y - H) * clamp((a - ST0) / (ST1 - ST0), 0, 1); },
+    (x, z) => { const { a, l } = along(x, z); if (a < ST1 - .05 || a > P1 - .3 || Math.abs(l) > PW - .25) return null; return PIER_Y; },
+  ];
+  return { E, d, s, ST0, ST1, P1, PW, SLIP, GANG, gang, plank, berth, queue, surfaces, along };
 }
 
 // ------------------------------------------------------------------ 橋
@@ -673,11 +736,12 @@ export function createWorld(canvas, opts) {
   const ids = ['center', 'food', 'craft', 'puzzle', 'sport', 'recycle'];
   const islands = {}; for (const id of ids) islands[id] = buildIsland(id, scene, quality);
   const bridges = ['food', 'craft', 'puzzle', 'sport', 'recycle'].map((id) => buildBridge(scene, islands.center, islands[id]));
+  const pier = buildPier(scene, islands.puzzle);
   // 夜燈光暈（加法混合 Sprite）＋最多 2 盞 PointLight
   const glowMat = new THREE.SpriteMaterial({ map: glowTexture(), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0 });
   const glows = new THREE.Group(); scene.add(glows);
   scene.updateMatrixWorld(true);
-  return finishWorld({ renderer, scene, camera, hemi, sun, skyO, seaO, scenery, islands, bridges, glowMat, glows, quality, opts });
+  return finishWorld({ renderer, scene, camera, hemi, sun, skyO, seaO, scenery, islands, bridges, pier, surfaces: [...pier.surfaces], glowMat, glows, quality, opts });
 }
 
 function finishWorld(W) {
@@ -754,6 +818,7 @@ function finishWorld(W) {
       const px = b.p0.x + ax * t, pz = b.p0.z + az * t;
       if (Math.hypot(x - px, z - pz) < .72) return H + Math.sin(clamp(t, 0, 1) * Math.PI) * .9 + .06;
     }
+    for (const f of W.surfaces) { const h = f(x, z); if (h != null) return h; }   // 碼頭、階梯、跳板、船尾甲板
     return null;
   };
   return W;
