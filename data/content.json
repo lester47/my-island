@@ -1,5 +1,5 @@
 {
-  "assetVersion": "20261115h",
+  "assetVersion": "20261115i",
   "site": {
     "title": "115 鯉魚市集",
     "tagline": "跳上五座六角小島，逛美食、玩手作、闖關挑戰，還能挖二手好物！",
@@ -738,7 +738,10 @@
       "island": "sport",
       "rules": "站在指定線後，把球投進目標籃或洞口。",
       "clear": "至少投進一球。",
-      "sample": true
+      "sample": true,
+      "photo": "assets/stalls/stall-25-v2.png",
+      "photoAlt": "插畫：男孩把一顆彩色球丟向前方，女孩在對面握拳加油，中間的籃子裡裝滿彩色球",
+      "photoCaption": "示意插畫，非攤位實拍"
     },
     {
       "no": 26,
@@ -746,7 +749,10 @@
       "island": "sport",
       "rules": "倒數後把陀螺發射到擂台，與對手同場較量。",
       "clear": "讓自己的陀螺比對手轉得更久。",
-      "sample": true
+      "sample": true,
+      "photo": "assets/stalls/stall-26-v2.png",
+      "photoAlt": "插畫：男孩和女孩各拿著發射器，跪在圓形擂台兩邊，擂台裡有兩顆戰鬥陀螺正在旋轉",
+      "photoCaption": "示意插畫，非攤位實拍"
     }
   ],
   "stallTypes": {
