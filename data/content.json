@@ -1,5 +1,5 @@
 {
-  "assetVersion": "20261115j",
+  "assetVersion": "20261115m",
   "site": {
     "title": "115 鯉魚市集",
     "tagline": "跳上五座六角小島，逛美食、玩手作、闖關挑戰，還能挖二手好物！",
@@ -683,7 +683,7 @@
       "island": "craft",
       "type": "food",
       "desc": "縣女童軍愛心義賣爆米花，所得做公益、獻愛心，鼓勵大家一起來參加！",
-      "photo": "assets/stalls/stall-20-v3.png",
+      "photo": "assets/stalls/stall-20-v2.png",
       "photoAlt": "插畫：紫白條紋棚的爆米花攤，攤台上有爆米花機和一籃爆米花，桌巾上有紅色愛心，兩位穿制服的女童軍各捧著一桶爆米花",
       "photoCaption": "示意插畫，非攤位實拍"
     },
