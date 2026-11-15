@@ -1,7 +1,7 @@
 // 生活感：居民、送貨員、商人、路人、動物、雲、鳥群、帆船、螢火蟲、貝殼
 import * as THREE from 'three';
-import { TAU, clamp, lerp, rng, mat, GEO, glowTexture, C } from './kit.js?v=20261115k';
-import { H } from './world.js?v=20261115k';
+import { TAU, clamp, lerp, rng, mat, GEO, glowTexture, C } from './kit.js?v=20261115q';
+import { H } from './world.js?v=20261115q';
 
 const SKIN = ['#ffd9b8', '#f2c49b', '#e0ad84', '#ffe3c8'];
 const SHIRT = ['#e8762b', '#8a5cd0', '#2f7fd1', '#dc4848', '#3e9b4f', '#e3a33b', '#f2f2f2', '#4fb3b0'];
@@ -66,7 +66,8 @@ export function createLife(W, content, opts) {
   const r = rng(115);
   const low = !!opts.halfPeople, lowA = opts.quality === 'low';
   const agents = [], pickables = [];
-  const ringPos = (I, ang, rad = I.ring) => new THREE.Vector3(I.pos.x + Math.cos(ang) * rad, H, I.pos.z + Math.sin(ang) * rad);
+  // 散步路線：沿環狀小路，但每個角度的半徑由可走範圍決定（不會穿過房子或地標）
+  const ringPos = (I, ang, rad = I.walk.radAt(ang)) => new THREE.Vector3(I.pos.x + Math.cos(ang) * rad, H, I.pos.z + Math.sin(ang) * rad);
 
   // 島民：每座島 2 位，沿石板環狀小路散步
   const resById = Object.fromEntries(content.residents.map((x) => [x.id, x]));
@@ -103,10 +104,10 @@ export function createLife(W, content, opts) {
     // 中央島：市集 → 沿環走到橋的方向 → 走到橋頭
     const ba = b.a; let d = Math.atan2(Math.sin(ba - ma), Math.cos(ba - ma));
     for (let i = 0; i <= 8; i++) pts.push(ringPos(C0, ma + d * i / 8));
-    for (let rr = C0.ring + .8; rr < C0.top(ba) * .95; rr += .8) pts.push(new THREE.Vector3(Math.cos(ba) * rr, H, Math.sin(ba) * rr));
+    for (let rr = C0.walk.radAt(ba) + .8; rr < C0.top(ba) * .95; rr += .8) pts.push(new THREE.Vector3(Math.cos(ba) * rr, H, Math.sin(ba) * rr));
     for (let i = 0; i <= 14; i++) { const t = i / 14; const p = b.p0.clone().lerp(b.p1, t); p.y = H + Math.sin(t * Math.PI) * .9 + .06; pts.push(p); }
     const ia = ba + Math.PI;
-    for (let rr = I.top(ia) * .92; rr > I.ring; rr -= .8) pts.push(new THREE.Vector3(I.pos.x + Math.cos(ia) * rr, H, I.pos.z + Math.sin(ia) * rr));
+    for (let rr = I.top(ia) * .92; rr > I.walk.radAt(ia); rr -= .8) pts.push(new THREE.Vector3(I.pos.x + Math.cos(ia) * rr, H, I.pos.z + Math.sin(ia) * rr));
     pts.push(ringPos(I, ia));
     return pts;
   }
@@ -222,6 +223,22 @@ export function createLife(W, content, opts) {
     const sail = new THREE.Mesh(new THREE.ShapeGeometry(fin), mat('#fbf3e6', { side: THREE.DoubleSide })); sail.rotation.y = Math.PI / 2; sail.position.set(0, 2.05, 1.92); g.add(sail);
     const band = new THREE.Mesh(new THREE.ShapeGeometry(fin), mat('#e4532c', { side: THREE.DoubleSide })); band.rotation.y = Math.PI / 2; band.scale.set(.42, .42, 1); band.position.set(.02, 3.45, 1.9); g.add(band);
     const flag = new THREE.Mesh(GEO.box, gold); flag.scale.set(.03, .32, .55); flag.position.set(0, 5.85, 1.7); g.add(flag);
+    // 船帆上的直書「鯉魚號」（兩面各一片，從哪一側看都是正字）
+    const nameCv = document.createElement('canvas'); nameCv.width = 128; nameCv.height = 352;
+    const nameTex = new THREE.CanvasTexture(nameCv); nameTex.colorSpace = THREE.SRGBColorSpace; nameTex.anisotropy = 4;
+    const drawName = () => {
+      const x = nameCv.getContext('2d'); x.clearRect(0, 0, 128, 352);
+      x.fillStyle = '#c73a1f'; x.textAlign = 'center'; x.textBaseline = 'middle';
+      x.font = "900 92px 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', 'Noto Sans CJK TC', sans-serif";
+      ['鯉', '魚', '號'].forEach((ch, i) => x.fillText(ch, 64, 62 + i * 112));
+      nameTex.needsUpdate = true;
+    };
+    drawName(); if (document.fonts && document.fonts.ready) document.fonts.ready.then(drawName);
+    const nameMat = new THREE.MeshBasicMaterial({ map: nameTex, transparent: true, depthWrite: false });
+    for (const sx of [1, -1]) {
+      const pl = new THREE.Mesh(new THREE.PlaneGeometry(.62, 1.7), nameMat);
+      pl.position.set(sx * .035, 3.45, 1.12); pl.rotation.y = sx * Math.PI / 2; pl.renderOrder = 3; g.add(pl);
+    }
     g.scale.setScalar(1.3);
     g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
     scene.add(g); boats.push({ g, a: 3.95, rad: 46, sp: .016, carp: true, kids });
@@ -278,9 +295,9 @@ export function createLife(W, content, opts) {
         if (isNight && I.extras.house) { // 夜晚：走回房子附近
           const ha = Math.atan2(I.extras.house.z, I.extras.house.x);
           const d = Math.atan2(Math.sin(ha - a.ang), Math.cos(ha - a.ang));
-          if (Math.abs(d) > .08) { a.ang += Math.sign(d) * dt * .9 / I.ring; poseWalk(P, t); } else poseIdle(P);
+          if (Math.abs(d) > .08) { a.ang += Math.sign(d) * dt * .9 / I.walk.radAt(a.ang); poseWalk(P, t); } else poseIdle(P);
         } else if (a.mode === 'walk') {
-          a.ang += a.dir * dt * .9 / I.ring; a.timer -= dt; poseWalk(P, t);
+          a.ang += a.dir * dt * .9 / I.walk.radAt(a.ang); a.timer -= dt; poseWalk(P, t);
           if (a.timer < 0) { a.mode = r() < .3 ? 'wave' : 'idle'; a.timer = 1 + r() * 3; }
         } else {
           a.timer -= dt; if (a.mode === 'wave') poseWave(P, t); else poseIdle(P);
@@ -316,7 +333,7 @@ export function createLife(W, content, opts) {
         continue;
       }
       const shore = a.kind === 'duck';
-      const rad = shore ? I.top(a.ang) * 1.13 : I.ring + .9;
+      const rad = shore ? I.top(a.ang) * 1.13 : I.walk.radAt(a.ang);
       const asleep = isNight;
       if (!a.talking && moving && !asleep) {
         if (a.mode === 'walk') { a.ang += a.dir * dt * (shore ? .5 : .7) / rad; a.timer -= dt; if (a.timer < 0 && !shore) { a.mode = 'look'; a.timer = 1 + r() * 2.5; } }

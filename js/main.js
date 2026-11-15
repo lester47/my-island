@@ -42,7 +42,7 @@ const stallByNo = (no) => C.stalls.find((x) => x.no === +no);
 const nl = (t) => esc(t).replace(/\n/g, '<br>');
 function colorOf(id) { return id === 'center' ? '#3f7d3a' : islandById(id).dark; }   // 介面用加深色，白字對比 ≥ 4.5
 function openDlg(id) { const d = $(id); if (!d.open) d.showModal(); return d; }
-document.addEventListener('click', (e) => { const b = e.target.closest('[data-close]'); if (b) b.closest('dialog').close(); });
+document.addEventListener('click', (e) => { const b = e.target instanceof Element && e.target.closest('[data-close]'); if (b) b.closest('dialog').close(); });
 
 // ------------------------------------------------------------------ 主題（底色）與晝夜
 const THEMES = [['auto', '🌅 自動', null], ['forest', '森林', '#eef3e6'], ['tundra', '苔原', '#dfe8d3'], ['deep', '深林', '#1b2a20']];
@@ -137,6 +137,252 @@ function openStamps() {
   $('#stampReset').onclick = () => { S.stamps = []; store.set('stamps', []); store.set('doneShown', false); renderHud(); openStamps(); toast('集章已重置'); };
   openDlg('#stampDlg');
 }
+
+// ------------------------------------------------------------------ 我的闖關護照（首版：本機自我登記）
+// 與六枚逛島章分開：逛島章＝看過島；闖關紀錄＝玩家完成攤位活動後自己按「登記完成」。
+// 獨立且含活動識別的 localStorage 鍵；讀到空值或壞資料時從空護照開始，不影響其他功能。
+const PKEY = 'liyu115.passport.v1';
+const PP = { data: null, pendingNo: null, view: 'main', confirmClear: false, confirmUndo: null, confirmMis: null };
+const uid = () => 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+function ppRead() {
+  let d = null;
+  try { d = JSON.parse(localStorage.getItem(PKEY)); } catch (e) { d = null; }
+  if (!d || typeof d !== 'object' || !Array.isArray(d.profiles)) d = { activeProfileId: null, profiles: [] };
+  const seen = new Set();
+  d.profiles = d.profiles.filter((p) => p && typeof p.id === 'string' && typeof p.name === 'string' && !seen.has(p.id) && seen.add(p.id)).map((p) => {
+    const recs = [], nos = new Set();
+    for (const r of Array.isArray(p.records) ? p.records : []) {
+      if (!r || !Number.isInteger(r.stallNo) || nos.has(r.stallNo) || typeof r.completedAt !== 'string') continue;
+      nos.add(r.stallNo); recs.push({ stallNo: r.stallNo, completedAt: r.completedAt, method: 'self' });
+    }
+    const mis = [], mids = new Set();
+    for (const r of Array.isArray(p.missions) ? p.missions : []) {
+      if (!r || typeof r.missionId !== 'string' || mids.has(r.missionId) || typeof r.completedAt !== 'string') continue;
+      mids.add(r.missionId); mis.push({ missionId: r.missionId, completedAt: r.completedAt, method: 'self' });
+    }
+    return { id: p.id, name: p.name.slice(0, 20), createdAt: typeof p.createdAt === 'string' ? p.createdAt : '', records: recs, missions: mis };
+  });
+  if (!d.profiles.some((p) => p.id === d.activeProfileId)) d.activeProfileId = d.profiles[0] ? d.profiles[0].id : null;
+  return { activeProfileId: d.activeProfileId, profiles: d.profiles };
+}
+// 存檔：成功才算數；失敗就提示，畫面回到瀏覽器實際保存的狀態
+function ppWrite(next) {
+  let ok = true;
+  try { localStorage.setItem(PKEY, JSON.stringify(next)); } catch (e) { ok = false; }
+  PP.data = ppRead();
+  if (!ok) toast('紀錄沒有存成功：這個瀏覽器目前無法保存資料（可能是無痕模式或空間不足）');
+  return ok;
+}
+const ppClone = () => JSON.parse(JSON.stringify(PP.data || ppRead()));
+const ppActive = () => { if (!PP.data) PP.data = ppRead(); return PP.data.profiles.find((p) => p.id === PP.data.activeProfileId) || null; };
+const ppRec = (no) => { const a = ppActive(); return a ? a.records.find((r) => r.stallNo === +no) || null : null; };
+const ppDone = (no) => !!ppRec(no);
+const chalStalls = () => C.stalls.filter((x) => x.challengeEnabled).sort((a, b) => a.no - b.no);
+function fmtDone(iso) { const d = new Date(iso); if (isNaN(d)) return ''; return `${d.getMonth() + 1}/${d.getDate()} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`; }
+function chalInner(no) {
+  const a = ppActive(), rec = ppRec(no), lab = C.passport ? C.passport.selfLabel : '已登記・自行回報';
+  const who = a ? `<span class="chal-who">護照：${esc(a.name)}</span>` : '';
+  if (rec && PP.confirmUndo === +no) return `<p class="chal-h">🎫 闖關登記</p><p class="chal-q">確定要取消「${esc(a.name)}」在第 ${pad2(no)} 攤的登記嗎？</p>
+    <div class="chal-btns"><button type="button" class="btn" data-chal-undo-yes="${no}">確定取消</button><button type="button" class="btn ghost" data-chal-undo-no="${no}">保留登記</button></div>`;
+  if (rec) return `<p class="chal-h">🎫 闖關登記 ${who}</p><p class="chal-ok">✓ ${esc(lab)}</p><p class="chal-meta">第 ${pad2(no)} 攤・完成時間 ${fmtDone(rec.completedAt)}</p>
+    <div class="chal-btns"><button type="button" class="btn ghost" data-chal-undo="${no}">取消登記</button><button type="button" class="btn ghost" data-pass-open>看我的護照</button></div>`;
+  return `<p class="chal-h">🎫 闖關登記 ${who}</p><p class="chal-meta">完成這攤的活動後，按下面的按鈕記到${a ? '你的' : ''}闖關護照（自行回報）。</p>
+    <div class="chal-btns"><button type="button" class="btn" data-chal-do="${no}">登記完成</button>${a ? '<button type="button" class="btn ghost" data-pass-open>看我的護照</button>' : ''}</div>`;
+}
+function refreshChal(focusSel) {
+  document.querySelectorAll('[data-mis]').forEach((el) => { el.innerHTML = misInner(el.dataset.mis); });
+  document.querySelectorAll('[data-chal]').forEach((el) => { el.innerHTML = chalInner(+el.dataset.chal); });
+  document.querySelectorAll('[data-chk]').forEach((el) => { el.textContent = ppDone(+el.dataset.chk) ? '✓ 已登記' : ''; });
+  if ($('#passDlg').open) renderPass();
+  if (focusSel) { const f = document.querySelector(focusSel); if (f) f.focus({ preventScroll: true }); }
+}
+let ppBusy = false;
+function chalRegister(no) {
+  if (ppBusy) return;                                    // 連點只記一次
+  const a = ppActive();
+  if (!a) { PP.pendingNo = +no; PP.view = 'create'; openPass(); return; }
+  if (ppDone(no)) { refreshChal(); return; }
+  ppBusy = true;
+  const next = ppClone(), p = next.profiles.find((x) => x.id === next.activeProfileId);
+  p.records.push({ stallNo: +no, completedAt: new Date().toISOString(), method: 'self' });
+  const ok = ppWrite(next);
+  PP.confirmUndo = null;
+  refreshChal(ok ? `[data-chal-undo="${no}"]` : `[data-chal-do="${no}"]`);
+  if (ok) toast(`✓ 第 ${pad2(no)} 攤已登記（自行回報）・進度 ${ppActive().records.filter((r) => stallByNo(r.stallNo)?.challengeEnabled).length}／${chalStalls().length}`);
+  setTimeout(() => { ppBusy = false; }, 350);
+}
+function chalUndo(no) {
+  const next = ppClone(), p = next.profiles.find((x) => x.id === next.activeProfileId);
+  if (!p) return;
+  p.records = p.records.filter((r) => r.stallNo !== +no);
+  const ok = ppWrite(next);
+  PP.confirmUndo = null;
+  refreshChal(ok ? `[data-chal-do="${no}"]` : `[data-chal-undo="${no}"]`);
+  if (ok) toast(`已取消第 ${pad2(no)} 攤的登記`);
+}
+document.addEventListener('click', (e) => {
+  const t = e.target instanceof Element ? e.target.closest('[data-chal-do],[data-chal-undo],[data-chal-undo-yes],[data-chal-undo-no],[data-pass-open]') : null;
+  if (!t) return;
+  if (t.hasAttribute('data-chal-do')) chalRegister(t.dataset.chalDo);
+  else if (t.hasAttribute('data-chal-undo')) { PP.confirmUndo = +t.dataset.chalUndo; refreshChal(`[data-chal-undo-no="${t.dataset.chalUndo}"]`); }
+  else if (t.hasAttribute('data-chal-undo-yes')) chalUndo(t.dataset.chalUndoYes);
+  else if (t.hasAttribute('data-chal-undo-no')) { const n = t.dataset.chalUndoNo; PP.confirmUndo = null; refreshChal(`[data-chal-undo="${n}"]`); }
+  else if (t.hasAttribute('data-pass-open')) openPass();
+});
+
+// ------------------------------------------------------------------ 五島探索路線（任務設定在 content.json 的 route）
+// 任務紀錄與闖關紀錄、逛島章各自計算；同樣存在目前這本護照裡（本機、自行回報）。
+function routeCheck() {
+  const R = C.route || { missions: [] }, errs = [], ok = [], ids = new Set();
+  for (const m of R.missions || []) {
+    if (!m || !m.id) { errs.push('有一筆任務沒有任務 ID'); continue; }
+    if (ids.has(m.id)) { errs.push(`任務 ID「${m.id}」重複`); continue; }
+    ids.add(m.id);
+    const st = stallByNo(m.stallNo);
+    if (!st) { errs.push(`任務「${m.id}」引用的第 ${m.stallNo} 攤不存在`); continue; }
+    if (m.island && st.island !== m.island) { errs.push(`任務「${m.id}」設定在 ${m.island}，但第 ${m.stallNo} 攤目前在 ${st.island}（攤號為準，請確認）`); }
+    if (!islandById(m.island || st.island)) { errs.push(`任務「${m.id}」的島 ID「${m.island}」不存在`); continue; }
+    if (m.enabled === false) continue;
+    ok.push({ ...m, island: st.island });
+  }
+  return { missions: ok, errs };
+}
+let ROUTE = null;
+const route = () => (ROUTE || (ROUTE = routeCheck()));
+const missionsAt = (no) => route().missions.filter((m) => m.stallNo === +no);
+const misRec = (mid) => { const a = ppActive(); return a ? (a.missions || []).find((r) => r.missionId === mid) || null : null; };
+const misDone = (mid) => !!misRec(mid);
+const nextMission = () => route().missions.find((m) => !misDone(m.id)) || null;
+function misInner(mid) {
+  const m = route().missions.find((x) => x.id === mid); if (!m) return '';
+  const a = ppActive(), rec = misRec(mid), all = route().missions, n = all.indexOf(m) + 1, I = islandById(m.island);
+  const head = `<p class="mis-h"><span class="mis-tag">🧭 ${esc(C.route.title || '五島探索路線')}・第 ${n}／${all.length} 站</span>${m.kind ? `<span class="mis-kind">${esc(m.kind)}任務</span>` : ''}</p><p class="mis-t">${esc(m.text)}</p>`;
+  if (rec && PP.confirmMis === mid) return head + `<p class="chal-q">確定要取消「${esc(a.name)}」這一站（${esc(I.name)}）的任務登記嗎？</p>
+    <div class="chal-btns"><button type="button" class="btn" data-mis-undo-yes="${esc(mid)}">確定取消</button><button type="button" class="btn ghost" data-mis-undo-no="${esc(mid)}">保留登記</button></div>`;
+  if (rec) return head + `<p class="chal-ok">✓ 任務完成・自行回報</p><p class="chal-meta">完成時間 ${fmtDone(rec.completedAt)}${a ? `・護照：${esc(a.name)}` : ''}</p>
+    <div class="chal-btns">${nextMission() ? '<button type="button" class="btn" data-mis-next>下一站 →</button>' : '<span class="mis-done">🎉 路線完成</span>'}<button type="button" class="btn ghost" data-mis-undo="${esc(mid)}">取消登記</button></div>`;
+  return head + `<div class="chal-btns"><button type="button" class="btn" data-mis-do="${esc(mid)}">登記完成</button>${a ? '<button type="button" class="btn ghost" data-pass-open>看我的路線</button>' : ''}</div>`;
+}
+function refreshMis(focusSel) {
+  document.querySelectorAll('[data-mis]').forEach((el) => { el.innerHTML = misInner(el.dataset.mis); });
+  refreshChal(focusSel);
+}
+let misBusy = false;
+function misRegister(mid) {
+  if (misBusy) return;
+  if (!ppActive()) { PP.pendingNo = (route().missions.find((m) => m.id === mid) || {}).stallNo || null; PP.view = 'create'; openPass(); return; }
+  if (misDone(mid)) { refreshMis(); return; }
+  misBusy = true;
+  const next = ppClone(), p = next.profiles.find((x) => x.id === next.activeProfileId);
+  p.missions = p.missions || []; p.missions.push({ missionId: mid, completedAt: new Date().toISOString(), method: 'self' });
+  const ok = ppWrite(next); PP.confirmMis = null;
+  const done = route().missions.filter((m) => misDone(m.id)).length, total = route().missions.length;
+  refreshMis(ok ? (nextMission() ? '[data-mis-next]' : `[data-mis-undo="${mid}"]`) : `[data-mis-do="${mid}"]`);
+  if (ok) toast(done >= total ? `🎉 路線完成！${total} 站全部登記` : `🧭 任務完成（自行回報）・路線 ${done}／${total}`);
+  setTimeout(() => { misBusy = false; }, 350);
+}
+function misUndo(mid) {
+  const next = ppClone(), p = next.profiles.find((x) => x.id === next.activeProfileId); if (!p) return;
+  p.missions = (p.missions || []).filter((r) => r.missionId !== mid);
+  const ok = ppWrite(next); PP.confirmMis = null;
+  refreshMis(ok ? `[data-mis-do="${mid}"]` : `[data-mis-undo="${mid}"]`);
+  if (ok) toast('已取消這一站的任務登記');
+}
+function goNext() { const m = nextMission(); if (!m) { toast('🎉 路線完成，五島都走過了！'); return; } if ($('#passDlg').open) $('#passDlg').close(); goStall(m.stallNo, true, `[data-mis="${m.id}"] [data-mis-do]`); }
+document.addEventListener('click', (e) => {
+  const t = e.target instanceof Element ? e.target.closest('[data-mis-do],[data-mis-undo],[data-mis-undo-yes],[data-mis-undo-no],[data-mis-next],[data-pp-next]') : null;
+  if (!t) return;
+  if (t.hasAttribute('data-mis-do')) misRegister(t.dataset.misDo);
+  else if (t.hasAttribute('data-mis-undo')) { PP.confirmMis = t.dataset.misUndo; refreshMis(`[data-mis-undo-no="${t.dataset.misUndo}"]`); }
+  else if (t.hasAttribute('data-mis-undo-yes')) misUndo(t.dataset.misUndoYes);
+  else if (t.hasAttribute('data-mis-undo-no')) { const id = t.dataset.misUndoNo; PP.confirmMis = null; refreshMis(`[data-mis-undo="${id}"]`); }
+  else goNext();
+});
+function routeHTML() {
+  const R = route(), list = R.missions, done = list.filter((m) => misDone(m.id)).length, nx = nextMission();
+  const err = R.errs.length ? `<div class="mis-err" role="alert"><b>路線設定錯誤</b>（請主辦修正 data/content.json 的 route）<ul>${R.errs.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></div>` : '';
+  if (!list.length) return `<section class="pp-route"><h3 class="pp-h">🧭 ${esc((C.route && C.route.title) || '五島探索路線')}</h3>${err}<p class="foot">目前沒有啟用的任務。</p></section>`;
+  return `<section class="pp-route"><div class="pp-rt-hd"><h3 class="pp-h" style="margin:0">🧭 ${esc(C.route.title || '五島探索路線')}</h3><b class="pp-rt-n">完成 ${done}／${list.length} 島</b></div>
+    ${err}
+    <div class="bar" aria-hidden="true"><i style="width:${(done / list.length * 100).toFixed(1)}%"></i></div>
+    ${nx ? `<button type="button" class="btn pp-next" data-pp-next>下一站：${esc(islandById(nx.island).name)}・${pad2(nx.stallNo)} ${esc(stallByNo(nx.stallNo).name)} →</button>` : '<p class="mis-finish">🎉 路線完成！五島任務全部登記。</p>'}
+    <ol class="pp-rt">${list.map((m, i) => { const r = misRec(m.id), st = stallByNo(m.stallNo), I = islandById(m.island);
+      return `<li class="${r ? 'ok' : ''} ${nx && nx.id === m.id ? 'now' : ''}" style="--pc:${colorOf(m.island)}"><button type="button" class="pp-link" data-pp-go="${m.stallNo}" data-pp-mis="${esc(m.id)}"><span class="pp-mk" aria-hidden="true">${r ? '✓' : i + 1}</span>${esc(I.name)}・${pad2(m.stallNo)} ${esc(st.name)}</button><span class="pp-st">${r ? '已完成' : nx && nx.id === m.id ? '下一站' : '未完成'}</span><p class="pp-rt-t">${esc(m.text)}</p></li>`; }).join('')}</ol>
+    <p class="foot" style="margin:4px 0 0">任務紀錄為自行回報。可以照順序走，也可以點清單自由選站。</p></section>`;
+}
+function openPass() {
+  if (!PP.data) PP.data = ppRead();
+  if (!ppActive()) PP.view = 'create';
+  PP.confirmClear = false;
+  renderPass(); openDlg('#passDlg');
+  const f = $('#passBody').querySelector('#ppName') || $('#passBody').querySelector('button'); if (f) f.focus();
+}
+function renderPass() {
+  const body = $('#passBody'), a = ppActive(), note = C.passport ? C.passport.note : '紀錄保存在目前瀏覽器。';
+  if (PP.view === 'create' || !a) {
+    const back = a ? '<button type="button" class="btn ghost" id="ppBack">返回</button>' : '';
+    const pend = PP.pendingNo ? `<p class="pp-pend">建立後會回到第 ${pad2(PP.pendingNo)} 攤 ${esc(stallByNo(PP.pendingNo)?.name || '')}，再按「登記完成」就好。</p>` : '';
+    body.innerHTML = `<form id="ppForm" class="pp-form" novalidate>
+      <p style="margin:0 0 10px">${PP.data.profiles.length ? '新增一本護照' : '第一次使用，取一個暱稱就能建立護照。'}</p>${pend}
+      <label for="ppName" class="pp-lab">暱稱</label>
+      <input id="ppName" class="pp-in" type="text" maxlength="20" autocomplete="nickname" placeholder="例如：小鯉魚" required>
+      <p class="pp-err" id="ppErr" role="alert" hidden>請輸入暱稱</p>
+      <div class="chal-btns"><button type="submit" class="btn">建立護照</button>${back}</div>
+      <p class="foot">${esc(note)}只需要暱稱，不需要真實姓名。</p></form>`;
+    $('#ppForm').onsubmit = (e) => {
+      e.preventDefault();
+      const name = $('#ppName').value.trim().slice(0, 20);
+      if (!name) { $('#ppErr').hidden = false; $('#ppName').focus(); return; }
+      const next = ppClone(), id = uid();
+      next.profiles.push({ id, name, createdAt: new Date().toISOString(), records: [], missions: [] }); next.activeProfileId = id;
+      if (!ppWrite(next)) { renderPass(); return; }
+      PP.view = 'main';
+      toast(`🎫 已建立「${name}」的護照`);
+      const back2 = PP.pendingNo; PP.pendingNo = null;
+      if (back2) { $('#passDlg').close(); goStall(back2, true); } else { renderPass(); $('#passBody').querySelector('button')?.focus(); }
+      refreshChal();
+    };
+    if ($('#ppBack')) $('#ppBack').onclick = () => { PP.view = 'main'; PP.pendingNo = null; renderPass(); };
+    return;
+  }
+  const list = chalStalls(), done = a.records.filter((r) => stallByNo(r.stallNo)?.challengeEnabled), pct = list.length ? done.length / list.length : 0;
+  const recent = [...done].sort((x, y) => y.completedAt.localeCompare(x.completedAt)).slice(0, 5);
+  const groups = C.islands.map((I) => ({ I, st: list.filter((x) => x.island === I.id) })).filter((g) => g.st.length);
+  body.innerHTML = `
+    <div class="pp-top"><div><p class="pp-eyebrow">護照主人</p><p class="pp-name">${esc(a.name)}</p></div>
+      <div class="pp-sw">${PP.data.profiles.length > 1 ? `<label class="sr-only" for="ppSel">切換護照</label><select id="ppSel" class="pp-in">${PP.data.profiles.map((p) => `<option value="${esc(p.id)}" ${p.id === a.id ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}</select>` : ''}
+      <button type="button" class="btn ghost" id="ppNew">＋ 新增護照</button></div></div>
+    ${routeHTML()}
+    <h3 class="pp-h">🎫 攤位闖關</h3>
+    <div class="pp-prog"><b>已完成 ${done.length}／${list.length}</b><div class="bar" aria-hidden="true"><i style="width:${(pct * 100).toFixed(1)}%"></i></div></div>
+    <p class="foot" style="margin:2px 0 12px">闖關紀錄為自行回報，未經攤主核驗。${esc(note)}<br>六枚逛島章另外計算（看「🏮 集章」）。</p>
+    <h3 class="pp-h">最近完成</h3>
+    ${recent.length ? `<ol class="pp-recent">${recent.map((r) => `<li><button type="button" class="pp-link" data-pp-go="${r.stallNo}">第 ${pad2(r.stallNo)} 攤 ${esc(stallByNo(r.stallNo).name)}</button><span>${fmtDone(r.completedAt)}・自行回報</span></li>`).join('')}</ol>` : '<p class="foot" style="margin:0 0 10px">還沒有紀錄。到有「闖關登記」的攤位完成活動後按「登記完成」。</p>'}
+    <h3 class="pp-h">各島闖關攤位</h3>
+    ${groups.map((g) => `<section class="pp-grp" style="--pc:${colorOf(g.I.id)}"><h4>${esc(g.I.name)} <small>${g.st.filter((x) => ppDone(x.no)).length}／${g.st.length}</small></h4>
+      <ul>${g.st.map((x) => { const r = ppRec(x.no); return `<li class="${r ? 'ok' : ''}"><button type="button" class="pp-link" data-pp-go="${x.no}"><span class="pp-mk" aria-hidden="true">${r ? '✓' : '○'}</span>${pad2(x.no)} ${esc(x.name)}</button><span class="pp-st">${r ? '已完成' : '未完成'}</span></li>`; }).join('')}</ul></section>`).join('')}
+    <div class="pp-clear">${PP.confirmClear ? `<p class="chal-q">確定清除「${esc(a.name)}」的護照和 ${a.records.length} 筆紀錄嗎？清除後無法復原。</p>
+      <div class="chal-btns"><button type="button" class="btn danger" id="ppClearYes">確定清除</button><button type="button" class="btn ghost" id="ppClearNo">取消</button></div>`
+      : `<button type="button" class="btn ghost" id="ppClear">清除這本護照</button>`}</div>`;
+  if ($('#ppSel')) $('#ppSel').onchange = (e) => { const next = ppClone(); next.activeProfileId = e.target.value; if (ppWrite(next)) toast(`已切換到「${ppActive().name}」的護照`); refreshChal('#ppSel'); };
+  $('#ppNew').onclick = () => { PP.view = 'create'; renderPass(); $('#ppName').focus(); };
+  if ($('#ppClear')) $('#ppClear').onclick = () => { PP.confirmClear = true; renderPass(); $('#ppClearNo').focus(); };
+  if ($('#ppClearNo')) $('#ppClearNo').onclick = () => { PP.confirmClear = false; renderPass(); $('#ppClear').focus(); };
+  if ($('#ppClearYes')) $('#ppClearYes').onclick = () => {
+    const next = ppClone(), name = a.name; next.profiles = next.profiles.filter((p) => p.id !== a.id); next.activeProfileId = next.profiles[0] ? next.profiles[0].id : null;
+    PP.confirmClear = false; if (ppWrite(next)) toast(`已清除「${name}」的護照`); refreshChal(); renderPass(); $('#passBody').querySelector('button,input')?.focus();
+  };
+  body.querySelectorAll('[data-pp-go]').forEach((b) => (b.onclick = () => { $('#passDlg').close(); goStall(+b.dataset.ppGo, true, b.dataset.ppMis ? `[data-mis="${b.dataset.ppMis}"] button` : null); }));
+}
+// 開啟某一攤：飛到該島、展開該攤，焦點放在登記按鈕或攤位列
+function goStall(no, focusChal, focusSel) {
+  const st = stallByNo(no); if (!st) return;
+  if (S.open === st.island && $('#sd-' + no)) setStall(no, true);       // 已經在這座島：直接展開，不再飛一次
+  else openIsland(st.island, { no: st.no });
+  if (focusChal) { const t0 = performance.now(); const tick = () => { const b = document.querySelector(focusSel ? `#sd-${no}:not([hidden]) ${focusSel}` : `#sd-${no}:not([hidden]) [data-chal-do], #sd-${no}:not([hidden]) [data-chal-undo]`) || document.querySelector(`#sd-${no}:not([hidden]) [data-chal-do], #sd-${no}:not([hidden]) [data-chal-undo]`); if (b) b.focus({ preventScroll: true }); else if (performance.now() - t0 < 6000) requestAnimationFrame(tick); }; requestAnimationFrame(tick); }
+}
+window.__routeErrors = () => route().errs;
+$('#passBtn').addEventListener('click', () => { PP.pendingNo = null; PP.view = ppActive() ? 'main' : 'create'; openPass(); });
 $('#bagBtn').addEventListener('click', openBag);
 $('#stampBtn').addEventListener('click', openStamps);
 
@@ -155,10 +401,12 @@ function stallDetailHTML(st) {
   const rows = T.fields.map(([k, label]) => v(k) ? `<dt>${esc(label)}</dt><dd>${nl(v(k))}</dd>` : (st.template && req.has(k) ? `<dt>${esc(label)}</dt><dd class="todo">${esc(N.pendingField)}</dd>` : '')).join('');
   if (rows) h += `<dl class="sd-fields">${rows}</dl>`;
   if (!any && !st.template) h += `<p class="sd-empty">${esc(N.pendingIntro)}</p>`;
+  for (const m of missionsAt(st.no)) h += `<div class="mis" data-mis="${esc(m.id)}">${misInner(m.id)}</div>`;
+  if (st.challengeEnabled) h += `<div class="chal" data-chal="${st.no}">${chalInner(st.no)}</div>`;
   return h + `<p class="sd-foot">攤位內容與價格以現場為準。</p>`;
 }
 function stallListHTML(id) {
-  return `<ol class="stalls">${stallsOf(id).map((st) => `<li data-no="${st.no}"><button type="button" class="stall-row" id="sr-${st.no}" aria-expanded="false" aria-controls="sd-${st.no}"><span class="num" aria-hidden="true">${pad2(st.no)}</span><span class="nm ${st.namePending ? 'pending' : ''}"><span class="sr-only">攤號 ${st.no}，</span>${esc(st.name)}</span><span class="chev" aria-hidden="true"></span></button><div class="stall-detail stall-detail-body" id="sd-${st.no}" role="region" aria-labelledby="sr-${st.no}" hidden>${stallDetailHTML(st)}</div></li>`).join('')}</ol>`;
+  return `<ol class="stalls">${stallsOf(id).map((st) => `<li data-no="${st.no}"><button type="button" class="stall-row" id="sr-${st.no}" aria-expanded="false" aria-controls="sd-${st.no}"><span class="num" aria-hidden="true">${pad2(st.no)}</span><span class="nm ${st.namePending ? 'pending' : ''}"><span class="sr-only">攤號 ${st.no}，</span>${esc(st.name)}</span>${st.challengeEnabled ? `<span class="chk" data-chk="${st.no}">${ppDone(st.no) ? '✓ 已登記' : ''}</span>` : ''}<span class="chev" aria-hidden="true"></span></button><div class="stall-detail stall-detail-body" id="sd-${st.no}" role="region" aria-labelledby="sr-${st.no}" hidden>${stallDetailHTML(st)}</div></li>`).join('')}</ol>`;
 }
 function setStall(no, open, scroll = true) {
   const p = $('#panel');
@@ -533,12 +781,13 @@ async function boot() {
   $('#brandMascot').innerHTML = MASCOT;
   C = await fetch('data/content.json', { cache: 'no-cache' }).then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); });
   buildSettings(); renderHud();
+  if (route().errs.length) { console.warn('路線設定錯誤', route().errs); setTimeout(() => toast(`⚠ 路線設定錯誤 ${route().errs.length} 項：${route().errs[0]}（詳見護照頁）`), 1200); }
   S.autoStart = performance.now();
   S.hour = S.hourShown = targetHour(performance.now());
   if (Q.has('nogl') || !webglOK()) { textOnly(Q.has('nogl') ? '已切換為文字清單版' : '這台裝置無法顯示 3D 畫面'); applyTheme(); updateClock(); setInterval(updateClock, 10000); window.__ready = true; return; }
   let mods;
   try {
-    mods = await Promise.all([import('./world.js?v=20261115k'), import('./life.js?v=20261115k'), import('./cam.js?v=20261115k')]);
+    mods = await Promise.all([import('./world.js?v=20261115q'), import('./life.js?v=20261115q'), import('./cam.js?v=20261115q')]);
     const [{ createWorld }, { createLife }, { createCam }] = mods;
     const mobile = isMobile();
     W = createWorld($('#gl'), { quality: S.quality, mobile });

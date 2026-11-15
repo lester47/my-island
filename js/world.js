@@ -1,7 +1,7 @@
 // 3D 世界：天空、海、遠山、島嶼與地標、橋、日夜光影
 import * as THREE from 'three';
-import { TAU, clamp, lerp, smooth, rng, loopNoise, mat, Builder, GEO, glowTexture, C } from './kit.js?v=20261115k';
-import { makeScenery } from './scenery.js?v=20261115k';
+import { TAU, clamp, lerp, smooth, rng, loopNoise, mat, Builder, GEO, glowTexture, C } from './kit.js?v=20261115q';
+import { makeScenery } from './scenery.js?v=20261115q';
 
 export const H = 1.75;               // 島頂草地高度
 const SEG = 72;                      // 海岸線分段（6 的倍數，六角轉角落在頂點上）
@@ -254,7 +254,7 @@ function landmarkCraft(B, g, P) {
   for (const [x, z] of [[.5, 1.7], [1.5, 1.7], [.5, 2.3], [1.5, 2.3]]) B.add(GEO.box, WOOD2, x, .2, z, 0, 0, 0, .07, .4, .07);
   B.pop();
   // 巨型剪刀
-  B.push(-2.3, H, .9, .5);
+  B.push(2.6, H, .3, -.5);                          // 放在空曠的一側，不擋房子旁的小路
   B.add(GEO.box, '#7d8794', 0, .2, 0, 0, 0, 0, 1.2, .4, .8);
   for (const s of [-1, 1]) {
     B.add(GEO.torus, s < 0 ? '#ff8fc0' : P.main, s * .35, 1.0, 0, 0, 0, 0, 1.1, 1.1, 1.6);
@@ -263,7 +263,7 @@ function landmarkCraft(B, g, P) {
   B.add(GEO.ball0, '#6b7380', 0, 1.45, .06, 0, 0, 0, .2);
   B.pop();
   // 調色盤
-  B.push(2.4, H + .05, .9, -.4);
+  B.push(-2.3, H + .05, .9, .4);                    // 調色盤是平的，可以踩過去
   B.add(GEO.cyl16, '#e9c48f', 0, .06, 0, 0, 0, 0, 1.6, .1, 1.2);
   for (let i = 0; i < 6; i++) B.add(GEO.ball0, ['#ff6b6b', '#ffd25a', '#4aa3e8', '#5ec26a', '#b18cf0', '#ff9a3d'][i], Math.cos(i * 1.05) * .45, .16, Math.sin(i * 1.05) * .33, 0, 0, 0, .22, .1, .22);
   B.pop();
@@ -288,8 +288,8 @@ function landmarkPuzzle(B, g, P) {
   ANIM.push((t) => { const a = t * .8; marble.position.set(.3 + Math.cos(a) * 1.2, H + .6, .3 + Math.sin(a * 2) * .5); });
 }
 function landmarkSport(B, g, P) {
-  // 沙包投擲洞洞板
-  B.push(-1.2, H, -.8, .25);
+  // 沙包投擲洞洞板（往中間挪，讓出房子旁的環狀小路）
+  B.push(-.7, H, -.35, .25);
   B.add(GEO.box, '#e7c48c', 0, 1.1, 0, -.5, 0, 0, 2.4, 2.6, .16);
   B.add(GEO.box, WOOD2, 0, 1.1, -.04, -.5, 0, 0, 2.55, 2.75, .1);
   const tilt = -.5;
@@ -400,7 +400,7 @@ function landmarkCenter(B, g, P, extras) {
   // 市集攤位＋燈串
   const stallCols = ['#e8762b', '#2f7fd1', '#dc4848'];
   stallCols.forEach((c, i) => {
-    const a = -.9 + i * .55, r = 7.0;
+    const a = -.75 + i * .3, r = 6.6;                 // 三攤並排在工作島橋與運動島橋之間，讓出兩座橋的通道
     B.push(Math.cos(a) * r, H, Math.sin(a) * r, -a - Math.PI / 2);
     for (const [x, z] of [[-.9, -.5], [.9, -.5], [-.9, .5], [.9, .5]]) B.add(GEO.box, WOOD2, x, 1.05, z, 0, 0, 0, .1, 2.1, .1);
     B.add(GEO.box, WOOD, 0, .45, 0, 0, 0, 0, 1.9, .9, 1.0);
@@ -410,7 +410,7 @@ function landmarkCenter(B, g, P, extras) {
     NIGHT.glows.push(new THREE.Vector3(-.95, 1.95, .55).applyMatrix4(B.m), new THREE.Vector3(.95, 1.95, .55).applyMatrix4(B.m));
     B.pop();
   });
-  extras.market = new THREE.Vector3(Math.cos(-.35) * 6.0, H, Math.sin(-.35) * 6.0);
+  extras.market = new THREE.Vector3(Math.cos(-.45) * 5.3, H, Math.sin(-.45) * 5.3);
 }
 
 // 每座島外圈要放的東西（角度相對於連往中央島的橋）
@@ -422,6 +422,75 @@ const OUTER = {
   recycle: ['house:#d9644a', 'treeR', 'bed', 'well', 'treeP', 'lamp', 'bench', 'treeR', 'sign', 'fence'],
   center:  ['house:#d9644a', 'treeR', 'lamp', 'bench', 'treeP', 'house:#6aa6c9', 'lamp', 'treeR', 'bench', 'treeP', 'lamp', 'bed', 'crate', 'treeR', 'lamp', 'sign'],
 };
+
+// ------------------------------------------------------------------ 可走範圍（依實際模型算出來，不再用手畫的圓）
+// 把島上所有模型在「身體高度」（離地 0.2～1.15）的部分投影到 0.2 格的地圖上，當作障礙；
+// 再算出每一格離最近障礙或島緣有多遠。漫遊的玩家、居民、動物、送貨員都用同一張地圖。
+const CELL = .2, BAND0 = .42, BAND1 = 1.15;     // 腳踝高度以下（小石頭、草）可以跨過去
+function walkGrid(info, group, skip) {
+  const half = info.R * 1.2, N = Math.ceil(half * 2 / CELL), occ = new Uint8Array(N * N);   // 0 島外 1 可走 2 障礙
+  const idx = (x, z) => { const i = Math.floor((x + half) / CELL), j = Math.floor((z + half) / CELL); return i < 0 || j < 0 || i >= N || j >= N ? -1 : j * N + i; };
+  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+    const x = -half + (i + .5) * CELL, z = -half + (j + .5) * CELL;
+    if (Math.hypot(x, z) < info.top(Math.atan2(z, x)) * .985) occ[j * N + i] = 1;
+  }
+  group.updateMatrixWorld(true);
+  const inv = new THREE.Matrix4().copy(group.matrixWorld).invert(), m = new THREE.Matrix4();
+  const skipSet = new Set(); for (const s of skip) s && s.traverse((o) => skipSet.add(o));
+  const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3(), p = new THREE.Vector3();
+  const y0 = H + BAND0, y1 = H + BAND1;
+  group.traverse((o) => {
+    if (!o.isMesh || skipSet.has(o) || !o.visible) return;
+    const pos = o.geometry.attributes.position, ix = o.geometry.index; if (!pos) return;
+    m.multiplyMatrices(inv, o.matrixWorld);
+    const n = ix ? ix.count : pos.count;
+    for (let t = 0; t < n; t += 3) {
+      const i0 = ix ? ix.getX(t) : t, i1 = ix ? ix.getX(t + 1) : t + 1, i2 = ix ? ix.getX(t + 2) : t + 2;
+      a.fromBufferAttribute(pos, i0).applyMatrix4(m); b.fromBufferAttribute(pos, i1).applyMatrix4(m); c.fromBufferAttribute(pos, i2).applyMatrix4(m);
+      if (Math.max(a.y, b.y, c.y) < y0 || Math.min(a.y, b.y, c.y) > y1) continue;
+      const k = Math.max(1, Math.ceil(Math.max(a.distanceTo(b), b.distanceTo(c), c.distanceTo(a)) / (CELL * .45)));
+      for (let u = 0; u <= k; u++) for (let v = 0; v <= k - u; v++) {
+        p.copy(a).addScaledVector(b.clone().sub(a), u / k).addScaledVector(c.clone().sub(a), v / k);
+        if (p.y < y0 || p.y > y1) continue;
+        const q = idx(p.x, p.z); if (q >= 0 && occ[q]) occ[q] = 2;
+      }
+    }
+  });
+  // 牆與牆中間被圍起來的格子（例如房子內部）也算障礙：從島緣與可走大區塊往內灌水，灌不到的就是封閉的
+  const reach = new Uint8Array(N * N), q = [];
+  // 種子：島上離中心最近的一塊開放格（橋頭方向的外圈）
+  for (const ang of info.bridgeAngles) { const r0 = info.top(ang) * .9, s = idx(Math.cos(ang) * r0, Math.sin(ang) * r0); if (s >= 0 && occ[s] === 1 && !reach[s]) { reach[s] = 1; q.push(s); } }
+  while (q.length) { const s = q.pop(), i = s % N, j = (s / N) | 0; for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const ii = i + di, jj = j + dj; if (ii < 0 || jj < 0 || ii >= N || jj >= N) continue; const t = jj * N + ii; if (!reach[t] && occ[t] === 1) { reach[t] = 1; q.push(t); } } }
+  for (let s = 0; s < N * N; s++) if (occ[s] === 1 && !reach[s]) occ[s] = 3;           // 3 = 封閉區（走不進去的地方）
+  // 距離場：每一格離最近「不可走格」的距離（公尺）
+  const dist = new Float32Array(N * N).fill(1e9);
+  const open = (s) => occ[s] === 1;
+  for (let s = 0; s < N * N; s++) if (!open(s)) dist[s] = 0;
+  const D1 = CELL, D2 = CELL * Math.SQRT2;
+  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) { const s = j * N + i; if (!dist[s]) continue; let d = dist[s];
+    if (i > 0) d = Math.min(d, dist[s - 1] + D1); if (j > 0) d = Math.min(d, dist[s - N] + D1); if (i > 0 && j > 0) d = Math.min(d, dist[s - N - 1] + D2); if (i < N - 1 && j > 0) d = Math.min(d, dist[s - N + 1] + D2);
+    if (i === 0 || j === 0 || i === N - 1 || j === N - 1) d = Math.min(d, CELL * .5); dist[s] = d; }
+  for (let j = N - 1; j >= 0; j--) for (let i = N - 1; i >= 0; i--) { const s = j * N + i; if (!dist[s]) continue; let d = dist[s];
+    if (i < N - 1) d = Math.min(d, dist[s + 1] + D1); if (j < N - 1) d = Math.min(d, dist[s + N] + D1); if (i < N - 1 && j < N - 1) d = Math.min(d, dist[s + N + 1] + D2); if (i > 0 && j < N - 1) d = Math.min(d, dist[s + N - 1] + D2); dist[s] = d; }
+  const clear = (x, z) => { const s = idx(x, z); return s < 0 ? 0 : dist[s]; };
+  // 居民與動物的散步路線：沿著原本的環狀小路，遇到障礙就往內或往外找最近的空地，保證每一段都走得通
+  const NL = 144, loopR = new Float32Array(NL);
+  const want = info.ring, minR = 1.0;
+  for (let k = 0; k < NL; k++) {
+    const th = k / NL * TAU, maxR = info.top(th) * .9;
+    let best = -1, bestCost = 1e9, wide = want, wideCl = -1;
+    for (let rr = minR; rr <= maxR; rr += .1) {
+      const cl = clear(Math.cos(th) * rr, Math.sin(th) * rr);
+      if (cl > wideCl) { wideCl = cl; wide = rr; }
+      if (cl < .55) continue;
+      const cost = Math.abs(rr - want) - Math.min(cl, .9) * .3; if (cost < bestCost) { bestCost = cost; best = rr; }
+    }
+    loopR[k] = best >= 0 ? best : wide;                 // 空間不夠寬時，走最寬的那一條縫
+  }
+  for (let it = 0; it < 3; it++) { const cp = loopR.slice(); for (let k = 0; k < NL; k++) { const v = (cp[(k + NL - 1) % NL] + cp[k] * 2 + cp[(k + 1) % NL]) / 4; const th = k / NL * TAU; if (clear(Math.cos(th) * v, Math.sin(th) * v) >= Math.min(.5, clear(Math.cos(th) * loopR[k], Math.sin(th) * loopR[k]))) loopR[k] = v; } }
+  const radAt = (th) => { const f = (((th % TAU) + TAU) % TAU) / TAU * NL, k0 = Math.floor(f) % NL, k1 = (k0 + 1) % NL, t = f - Math.floor(f); return loopR[k0] * (1 - t) + loopR[k1] * t; };
+  return { N, half, cell: CELL, occ, dist, clear, radAt, idx };
+}
 
 // ------------------------------------------------------------------ 建造一座島
 function buildIsland(id, scene, quality) {
@@ -452,10 +521,14 @@ function buildIsland(id, scene, quality) {
     const r = it.startsWith('house') ? edge * .76 : it === 'fence' || it === 'bed' ? edge * .8 : edge * .82;
     if (isC && Math.hypot(Math.cos(a) * r - 7.0, Math.sin(a) * r - 4.3) < 2.6) return;            // 讓出花田
     if (isC && Math.hypot(Math.cos(a) * r - info.extras.windmill.x, Math.sin(a) * r - info.extras.windmill.z) < 2.2) return;
-    if (isC && Math.hypot(Math.cos(a) * r - Math.cos(-.35) * 7, Math.sin(a) * r - Math.sin(-.35) * 7) < 2.4) return; // 讓出市集
+    if (isC && Math.hypot(Math.cos(a) * r - Math.cos(-.45) * 6.6, Math.sin(a) * r - Math.sin(-.45) * 6.6) < 3.0) return; // 讓出市集
+    // 讓出每座橋的通道：物件外緣離橋的中線至少 1.1（玩家肩寬＋一點餘裕），不夠就往旁邊挪，挪不開就不放
+    const [kind, arg] = it.split(':');
+    const rad = { house: 1.7, treeR: 1.0, treeP: .95, bed: 1.25, fence: 1.45, bench: .75, crate: .75, sign: .45, well: .95, lamp: .35, bush: .65 }[kind] || .8;
+    const blocksBridge = (aa) => bridgeAngles.some((b) => { const d = Math.atan2(Math.sin(aa - b), Math.cos(aa - b)); return Math.cos(d) > 0 && Math.abs(Math.sin(d)) * r < rad + 1.1; });
+    if (blocksBridge(a)) { let ok = false; for (let k = 1; k <= 12 && !ok; k++) for (const sg of [1, -1]) { if (!blocksBridge(a + sg * k * .05)) { a += sg * k * .05; ok = true; break; } } if (!ok) return; }
     const x = Math.cos(a) * r, z = Math.sin(a) * r, face = -a - Math.PI / 2;
     B.push(x, H, z, face);
-    const [kind, arg] = it.split(':');
     if (kind === 'house') { house(B, arg, '#fbf3e3', .92); info.colliders.push({ x, z, r: 1.55 }); info.extras.house = info.extras.house || new THREE.Vector3(x, H, z); }
     else if (kind === 'treeR') { treeRound(B, .85 + rand() * .3, i); info.colliders.push({ x, z, r: .45 }); }
     else if (kind === 'treeP') { treePine(B, .9 + rand() * .3); info.colliders.push({ x, z, r: .45 }); }
@@ -483,6 +556,7 @@ function buildIsland(id, scene, quality) {
   info.shellSpot = new THREE.Vector3(L.x + Math.cos(sa) * sr, .44, L.z + Math.sin(sa) * sr);
   info.foam = foam;
   info.top = (th) => shapeR(th, L.seed) * L.R * .95;
+  info.walk = walkGrid(info, group, [terr, foam, boat]);
   return info;
 }
 
@@ -667,18 +741,16 @@ function finishWorld(W) {
     if (moving) for (const f of ANIM) f(t);
   };
   // 地面高度（漫遊用）：島頂、橋面；不可走則回傳 null
+  W.BODY = .24;                                   // 玩家身體半徑
   W.ground = (x, z) => {
     for (const id in islands) {
       const I = islands[id], dx = x - I.pos.x, dz = z - I.pos.z, r = Math.hypot(dx, dz);
-      if (r < I.top(Math.atan2(dz, dx)) * .97) {
-        for (const c of I.colliders) if (Math.hypot(dx - c.x, dz - c.z) < c.r + .25) return null;
-        return H;
-      }
+      if (r < I.top(Math.atan2(dz, dx)) * .97 && I.walk.clear(dx, dz) >= W.BODY) return H;
     }
     for (const b of W.bridges) {
       const ax = b.p1.x - b.p0.x, az = b.p1.z - b.p0.z, L2 = ax * ax + az * az;
       const t = ((x - b.p0.x) * ax + (z - b.p0.z) * az) / L2;
-      if (t < -.04 || t > 1.04) continue;
+      if (t < -.08 || t > 1.08) continue;          // 橋頭和島邊緣重疊一小段，接縫不會卡住
       const px = b.p0.x + ax * t, pz = b.p0.z + az * t;
       if (Math.hypot(x - px, z - pz) < .72) return H + Math.sin(clamp(t, 0, 1) * Math.PI) * .9 + .06;
     }
