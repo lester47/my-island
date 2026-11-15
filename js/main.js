@@ -431,6 +431,7 @@ function panelHTML(id) {
     return `<div class="p-hd" style="--pc:${c};--ptint:#e9f4e4;--pink:#234a20"><p class="eyebrow">★ ${esc(I.role)}</p><h2 id="panelTitle">${esc(I.name)}</h2><button type="button" class="x" data-panel-close aria-label="關閉">✕</button></div>
       <div class="p-sec"><h3>活動總覽</h3><p class="intro-line">${esc(I.intro)}</p><p style="margin-top:6px">${esc(I.overview)}</p></div>
       <div class="p-sec"><h3>活動資訊</h3>${eventHTML()}</div>
+      ${guideHTML()}
       <div class="p-sec"><h3>展區地圖</h3><div class="mapgrid">${C.islands.map((x) => `<button type="button" data-go="${x.id}" style="--c:${x.color}">${x.order}　${esc(x.name)}<br><small>${esc(x.group)}・${stallsOf(x.id).length} 攤</small></button>`).join('')}</div></div>
       <div class="p-sec"><h3>集章進度</h3><div class="stamp-row">🏮 已集 ${S.stamps.length}/6 枚 <button type="button" class="btn ghost" data-stamps>看護照</button></div></div>
       ${resHTML}`;
@@ -445,6 +446,24 @@ function panelHTML(id) {
     <div class="p-sec"><h3>資料下載</h3><a class="dl" href="${esc(I.download)}" download>📄 下載攤位清單（txt）</a></div>
     <div class="p-sec"><div class="stamp-row">${got ? '🏮 這座島已蓋章' : '打開介紹就會蓋章'}・目前 ${S.stamps.length}/6 <button type="button" class="btn ghost" data-stamps>看護照</button></div></div>`;
 }
+// 服務台：玩家推薦玩法（內容在 content.json 的 center.guide）
+function guideHTML() {
+  const G = C.center.guide; if (!G) return '';
+  const sec = G.sections.map((x, i) => {
+    const tag = x.ordered ? 'ol' : 'ul';
+    const acts = (x.actions || []).map(([k, label]) => `<button type="button" class="btn ghost" data-gact="${esc(k)}">${esc(label)}</button>`).join('');
+    return `<details class="gd" ${i === 0 ? 'open' : ''}><summary>${esc(x.h)}</summary><${tag}>${x.items.map((t) => `<li>${esc(t)}</li>`).join('')}</${tag}>${acts ? `<div class="chal-btns">${acts}</div>` : ''}</details>`;
+  }).join('');
+  return `<div class="p-sec guide"><h3>${esc(G.title)}</h3><p class="intro-line">${esc(G.intro)}</p>${sec}<p class="foot" style="margin-top:8px">${esc(G.note)}</p></div>`;
+}
+document.addEventListener('click', (e) => {
+  const b = e.target instanceof Element ? e.target.closest('[data-gact]') : null; if (!b) return;
+  const k = b.dataset.gact;
+  if (k === 'tour') { closePanel(false); startTour(); }
+  else if (k === 'pass') { PP.pendingNo = null; PP.view = ppActive() ? 'main' : 'create'; openPass(); }
+  else if (k === 'next') { if (!ppActive()) { PP.view = 'create'; openPass(); } else goNext(); }
+  else if (k === 'search') { renderList(); openDlg('#listDlg'); $('#searchInput').focus(); }
+});
 function eventHTML() {
   const E = C.center.event, P = E.pending;
   const sched = E.schedule && E.schedule.length ? `<ol class="sched">${E.schedule.map((x) => `<li><b>${esc(x.time)}</b> ${esc(x.title)}</li>`).join('')}</ol>` : esc(P);
@@ -787,7 +806,7 @@ async function boot() {
   if (Q.has('nogl') || !webglOK()) { textOnly(Q.has('nogl') ? '已切換為文字清單版' : '這台裝置無法顯示 3D 畫面'); applyTheme(); updateClock(); setInterval(updateClock, 10000); window.__ready = true; return; }
   let mods;
   try {
-    mods = await Promise.all([import('./world.js?v=20261115s'), import('./life.js?v=20261115s'), import('./cam.js?v=20261115s')]);
+    mods = await Promise.all([import('./world.js?v=20261115t'), import('./life.js?v=20261115t'), import('./cam.js?v=20261115t')]);
     const [{ createWorld }, { createLife }, { createCam }] = mods;
     const mobile = isMobile();
     W = createWorld($('#gl'), { quality: S.quality, mobile });
