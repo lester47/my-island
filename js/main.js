@@ -148,7 +148,7 @@ function stallDetailHTML(st) {
   const keys = ['intro', ...T.fields.map((f) => f[0])];
   const any = keys.some((k) => v(k)) || st.photo;
   let h = `<p class="sd-tags"><span class="badge type">${esc(T.label)}</span>${st.sample ? `<span class="badge">${esc(N.sample)}</span>` : ''}</p>`;
-  if (st.photo) h += `<figure class="sd-photo"><img src="${esc(st.photo)}" alt="${esc(st.photoAlt || st.name)}" loading="lazy" width="1280" height="640">${st.photoCaption ? `<figcaption>${esc(st.photoCaption)}</figcaption>` : ''}</figure>`;
+  if (st.photo) h += `<figure class="sd-photo"><img src="${esc(st.photo + (C.assetVersion ? `?v=${C.assetVersion}` : ""))}" alt="${esc(st.photoAlt || st.name)}" loading="lazy" width="1280" height="640">${st.photoCaption ? `<figcaption>${esc(st.photoCaption)}</figcaption>` : ''}</figure>`;
   if (v('intro')) h += `<p class="sd-intro">${nl(v('intro'))}</p>`;
   else if (st.template) h += `<p class="sd-intro todo">一句介紹：${esc(N.pendingField)}</p>`;
   const rows = T.fields.map(([k, label]) => v(k) ? `<dt>${esc(label)}</dt><dd>${nl(v(k))}</dd>` : (st.template && req.has(k) ? `<dt>${esc(label)}</dt><dd class="todo">${esc(N.pendingField)}</dd>` : '')).join('');
