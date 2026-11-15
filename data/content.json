@@ -1,5 +1,5 @@
 {
-  "assetVersion": "20261115f",
+  "assetVersion": "20261115g",
   "site": {
     "title": "115 鯉魚市集",
     "tagline": "跳上五座六角小島，逛美食、玩手作、闖關挑戰，還能挖二手好物！",
@@ -571,68 +571,107 @@
     {
       "no": 12,
       "name": "鯉魚Liyu遊戲店",
-      "island": "puzzle"
+      "island": "puzzle",
+      "photo": "assets/stalls/stall-12-v2.png",
+      "photoAlt": "插畫：紅白條紋棚的桌遊攤，男孩和女孩坐在桌邊玩棋盤遊戲，架上擺著各式桌遊盒，旁邊有小黑板",
+      "photoCaption": "示意插畫，非攤位實拍"
     },
     {
       "no": 13,
       "name": "圈圈洞洞",
-      "island": "puzzle"
+      "island": "puzzle",
+      "photo": "assets/stalls/stall-13-v2.png",
+      "photoAlt": "插畫：女孩拿著彩色圈圈對準木板上的洞，男孩蹲在旁邊加油，籃子裡裝著更多圈圈",
+      "photoCaption": "示意插畫，非攤位實拍"
     },
     {
       "no": 14,
       "name": "攤名待確認",
       "island": "recycle",
-      "namePending": true
+      "namePending": true,
+      "photo": "assets/stalls/stall-14-v2.png",
+      "photoAlt": "插畫：二手攤桌上擺著書本、玩具車、魔術方塊，旁邊有兔子和恐龍布偶，兩個小朋友在攤位後招呼",
+      "photoCaption": "示意插畫，非攤位實拍"
     },
     {
       "no": 15,
       "name": "夏來寶",
-      "island": "recycle"
+      "island": "recycle",
+      "photo": "assets/stalls/stall-15-v2.png",
+      "photoAlt": "插畫：男孩蹲著看一台舊相機，女孩坐著翻書，木箱裡有黑膠唱片、小熊布偶和鬧鐘",
+      "photoCaption": "示意插畫，非攤位實拍"
     },
     {
       "no": 16,
       "name": "廢物市集",
-      "island": "recycle"
+      "island": "recycle",
+      "photo": "assets/stalls/stall-16-v2.png",
+      "photoAlt": "插畫：二手攤上有掛著衣服的衣架、電風扇、鍋子、烤麵包機和摺好的毛巾，兩個小朋友在旁邊招手",
+      "photoCaption": "示意插畫，非攤位實拍"
     },
     {
       "no": 17,
       "name": "好開心抽抽樂",
-      "island": "sport"
+      "island": "sport",
+      "photo": "assets/stalls/stall-17-v2.png",
+      "photoAlt": "插畫：女孩把手伸進印著星星的紅色抽獎箱，男孩在旁邊期待，桌上擺著小禮物盒",
+      "photoCaption": "示意插畫，非攤位實拍"
     },
     {
       "no": 18,
       "name": "鯉魚記憶王",
-      "island": "puzzle"
+      "island": "puzzle",
+      "photo": "assets/stalls/stall-18-v2.png",
+      "photoAlt": "插畫：兩個小朋友在格子桌上翻記憶卡牌，卡片上有蘋果、小熊和星星，背後掛著草莓與向日葵的配對圖",
+      "photoCaption": "示意插畫，非攤位實拍"
     },
     {
       "no": 19,
       "name": "娃！茶一點就中",
-      "island": "recycle"
+      "island": "recycle",
+      "photo": "assets/stalls/stall-19-v2.png",
+      "photoAlt": "插畫：男孩和女孩在擺滿植物的攤位喝茶，桌上有一壺茶、幾個茶杯和一籃茶葉",
+      "photoCaption": "示意插畫，非攤位實拍"
     },
     {
       "no": 20,
       "name": "聖誕DIY製造所",
-      "island": "craft"
+      "island": "craft",
+      "photo": "assets/stalls/stall-20-v2.png",
+      "photoAlt": "插畫：聖誕布置的攤位，兩個小朋友做星星和雪花吊飾，旁邊有聖誕樹、襪子和聖誕老人裝飾",
+      "photoCaption": "示意插畫，非攤位實拍"
     },
     {
       "no": 21,
       "name": "有吃有玩真好玩",
-      "island": "puzzle"
+      "island": "puzzle",
+      "photo": "assets/stalls/stall-21-v2.png",
+      "photoAlt": "插畫：男孩握拳歡呼，女孩拿著骰子，桌上有棋盤遊戲、一盤點心和一杯珍珠奶茶",
+      "photoCaption": "示意插畫，非攤位實拍"
     },
     {
       "no": 22,
       "name": "鯉魚麻糬屋",
-      "island": "puzzle"
+      "island": "puzzle",
+      "photo": "assets/stalls/stall-22-v2.png",
+      "photoAlt": "插畫：兩個小朋友端著一盤彩色麻糬，攤位掛著紅燈籠，旁邊有蒸籠和梅花盆栽",
+      "photoCaption": "示意插畫，非攤位實拍"
     },
     {
       "no": 23,
       "name": "正反接球王",
-      "island": "sport"
+      "island": "sport",
+      "photo": "assets/stalls/stall-23-v2.png",
+      "photoAlt": "插畫：男孩和女孩在攤位前的草地上互相拋接一顆球",
+      "photoCaption": "示意插畫，非攤位實拍"
     },
     {
       "no": 24,
       "name": "搖出你的好耳力",
-      "island": "sport"
+      "island": "sport",
+      "photo": "assets/stalls/stall-24-v2.png",
+      "photoAlt": "插畫：男孩和女孩各拿著一個裝了豆子的小罐子搖晃聆聽聲音，桌上排著多個彩色罐子",
+      "photoCaption": "示意插畫，非攤位實拍"
     },
     {
       "no": 25,
