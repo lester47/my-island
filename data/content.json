@@ -1,5 +1,5 @@
 {
-  "assetVersion": "20261116c",
+  "assetVersion": "20261116e",
   "site": {
     "title": "115 鯉魚市集",
     "tagline": "跳上五座六角小島，逛美食、玩手作、闖關挑戰，還能挖二手好物！",
@@ -593,6 +593,9 @@
     {
       "no": 4,
       "name": "自製飲料店／鯉魚麻糬屋",
+      "photo": "assets/stalls/r20/stall-04.webp",
+      "photoAlt": "插畫：月兔好味市集攤位，左邊兔子端著冬瓜茶、桌上有一大桶冬瓜茶和一疊杯子，右邊兔子拿木槌搗麻糬、蒸籠裡放著白麻糬，背景是燈籠和滿月",
+      "photoCaption": "示意插畫，非攤位實拍",
       "category": "① 美食小吃",
       "island": "food",
       "type": "food",
@@ -600,17 +603,11 @@
       "parts": [
         {
           "name": "自製飲料店",
-          "desc": "販售自製飲料，口味以現場供應為準。",
-          "photo": "assets/stalls/r20/stall-04-a.webp",
-          "photoAlt": "插畫：男孩把水果茶從壺裡倒進杯子，女孩在旁邊扶著杯子，桌上有一籃鳳梨、柳橙、葡萄等水果",
-          "photoCaption": "示意插畫，非攤位實拍"
+          "desc": "販售自製飲料，口味以現場供應為準。"
         },
         {
           "name": "鯉魚麻糬屋",
-          "desc": "販售麻糬，口味與供應數量以現場為準。",
-          "photo": "assets/stalls/r20/stall-04-b.webp",
-          "photoAlt": "插畫：兩個小朋友端著一盤彩色麻糬，攤位掛著紅燈籠，旁邊有蒸籠和梅花盆栽",
-          "photoCaption": "示意插畫，非攤位實拍"
+          "desc": "販售麻糬，口味與供應數量以現場為準。"
         }
       ],
       "sample": true

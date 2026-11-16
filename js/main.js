@@ -445,7 +445,7 @@ function stallDetailHTML(st) {
   if (st.namePending) return photoHTML(st, st.name) + `<p class="sd-empty">${esc(N.pendingName)}</p>`;
   let h = S.legacyNote && S.legacyNote.no === st.no ? `<p class="sd-legacy" role="status">ℹ️ ${esc(S.legacyNote.msg)}</p>` : '';
   h += `<p class="sd-tags"><span class="badge type">${esc(st.category || T.label)}</span>${st.sample ? `<span class="badge">${esc(N.sample)}</span>` : ''}</p>`;
-  if (st.parts) h += st.parts.map((pt) => `<section class="sd-part"><h4>${esc(pt.name)}</h4>${photoHTML(pt, pt.name)}${fieldsHTML(pt, T, st.template)}</section>`).join('');
+  if (st.parts) h += photoHTML(st, st.name) + st.parts.map((pt) => `<section class="sd-part"><h4>${esc(pt.name)}</h4>${photoHTML(pt, pt.name)}${fieldsHTML(pt, T, st.template)}</section>`).join('');
   else h += photoHTML(st, st.name) + fieldsHTML(st, T, st.template);
   if (!any && !st.template) h += `<p class="sd-empty">${esc(N.pendingIntro)}</p>`;
   for (const m of missionsAt(st.no)) h += `<div class="mis" data-mis="${esc(m.id)}">${misInner(m.id)}</div>`;
@@ -938,7 +938,7 @@ async function boot() {
   if (Q.has('nogl') || !webglOK()) { textOnly(Q.has('nogl') ? '已切換為文字清單版' : '這台裝置無法顯示 3D 畫面'); applyTheme(); updateClock(); setInterval(updateClock, 10000); window.__ready = true; return; }
   let mods;
   try {
-    mods = await Promise.all([import('./world.js?v=20261116d'), import('./life.js?v=20261116d'), import('./cam.js?v=20261116d')]);
+    mods = await Promise.all([import('./world.js?v=20261116e'), import('./life.js?v=20261116e'), import('./cam.js?v=20261116e')]);
     const [{ createWorld }, { createLife }, { createCam }] = mods;
     const mobile = isMobile();
     W = createWorld($('#gl'), { quality: S.quality, mobile });
