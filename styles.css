@@ -339,3 +339,10 @@ select.pp-in { width: auto; max-width: 160px; }
 .tag.boat .dir { display: none; font-size: 14px; color: var(--tc); line-height: 1; }
 .tag.boat.edge .dir { display: inline-block; }
 .tag.boat.edge { opacity: .92; }
+
+/* 合併攤：一張詳情卡分兩段 */
+.sd-part + .sd-part { margin-top: 14px; padding-top: 12px; border-top: 1px dashed color-mix(in srgb, var(--pc, #888) 40%, transparent); }
+.sd-part h4 { margin: 0 0 8px; font-size: 15px; color: var(--pc, inherit); }
+.pp-hist { list-style: none; margin: 0 0 12px; padding: 0; color: #6b6b6b; font-size: 13px; }
+.pp-hist li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 10px; padding: 4px 0; border-bottom: 1px dotted #ccc; }
+.sd-legacy { margin: 0 0 8px; padding: 6px 10px; border-radius: 8px; background: #fff4d6; color: #6a4a00; font-size: 13px; }

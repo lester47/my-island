@@ -39,6 +39,15 @@ function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.ad
 function islandById(id) { return id === 'center' ? C.center : id === 'carp' ? C.carpBoat : C.islands.find((i) => i.id === id); }
 const stallsOf = (id) => C.stalls.filter((x) => x.island === id).sort((a, b) => a.no - b.no);   // 攤號是識別碼：攤位跟著自己的資料走
 const stallByNo = (no) => C.stalls.find((x) => x.no === +no);
+// 攤位連結：新連結帶 roster=20；沒有名冊版本的舊連結（原 26 攤號）依對照表轉到新攤號
+function resolveStallLink(no, roster) {
+  const R = C.roster, n = +no;
+  if (!R || roster === '20' || roster === R.version) return { st: stallByNo(n) };
+  const lg = R.legacy || {}, to = lg.map && lg.map[String(n)];
+  if (to) return { st: stallByNo(to), msg: to !== n ? `這是舊版攤號連結：原第 ${pad2(n)} 攤現在是第 ${pad2(to)} 攤` : '' };
+  if (lg.removed && lg.removed[String(n)]) return { st: null, msg: `原第 ${pad2(n)} 攤「${lg.removed[String(n)]}」在新名冊沒有獨立設攤` };
+  return { st: null, msg: '找不到這個攤號' };
+}
 const nl = (t) => esc(t).replace(/\n/g, '<br>');
 function colorOf(id) { return id === 'center' ? '#3f7d3a' : id === 'carp' ? C.carpBoat.color : islandById(id).dark; }   // 介面用加深色，白字對比 ≥ 4.5
 function openDlg(id) { const d = $(id); if (!d.open) d.showModal(); return d; }
@@ -160,10 +169,31 @@ function ppRead() {
       if (!r || typeof r.missionId !== 'string' || mids.has(r.missionId) || typeof r.completedAt !== 'string') continue;
       mids.add(r.missionId); mis.push({ missionId: r.missionId, completedAt: r.completedAt, method: 'self' });
     }
-    return { id: p.id, name: p.name.slice(0, 20), createdAt: typeof p.createdAt === 'string' ? p.createdAt : '', records: recs, missions: mis };
+    const hist = (Array.isArray(p.history) ? p.history : []).filter((r) => r && Number.isInteger(r.oldNo) && typeof r.completedAt === 'string').map((r) => ({ oldNo: r.oldNo, name: String(r.name || '').slice(0, 30), completedAt: r.completedAt, roster: String(r.roster || 'r26'), method: 'self' }));
+    return { id: p.id, name: p.name.slice(0, 20), createdAt: typeof p.createdAt === 'string' ? p.createdAt : '', records: recs, missions: mis, history: hist };
   });
   if (!d.profiles.some((p) => p.id === d.activeProfileId)) d.activeProfileId = d.profiles[0] ? d.profiles[0].id : null;
-  return { activeProfileId: d.activeProfileId, profiles: d.profiles };
+  const out = { roster: typeof d.roster === 'string' ? d.roster : null, activeProfileId: d.activeProfileId, profiles: d.profiles };
+  return ppMigrate(out);
+}
+// 名冊改版：沒有版本標記的護照都是在原 26 攤名冊時建立的（護照 11/15 上線時已是 26 攤），依對照表轉成新攤號。
+// 合併攤只算一筆（保留較早的時間）；新名冊沒有的攤（舊 06、14）移到「舊版紀錄」，只顯示、不計進度。只轉換一次。
+function ppMigrate(d) {
+  const R = C && C.roster; if (!R || d.roster === R.version) return d;
+  if (d.roster && d.roster !== (R.legacy && R.legacy.from)) return d;    // 來源不明的版本：不動，避免誤配
+  const lg = R.legacy || {}, map = lg.map || {}, rm = lg.removed || {};
+  for (const p of d.profiles) {
+    const by = new Map();
+    for (const r of p.records) {
+      const to = map[String(r.stallNo)];
+      if (to) { const o = by.get(to); if (!o || r.completedAt < o.completedAt) by.set(to, { stallNo: to, completedAt: r.completedAt, method: 'self' }); }
+      else p.history.push({ oldNo: r.stallNo, name: rm[String(r.stallNo)] || '', completedAt: r.completedAt, roster: lg.from || 'r26', method: 'self' });
+    }
+    p.records = [...by.values()];
+  }
+  d.roster = R.version;
+  if (d.profiles.length) { try { localStorage.setItem(PKEY, JSON.stringify(d)); } catch (e) { /* 存不了就下次再轉，畫面先用轉好的結果 */ } }
+  return d;
 }
 // 存檔：成功才算數；失敗就提示，畫面回到瀏覽器實際保存的狀態
 function ppWrite(next) {
@@ -361,6 +391,7 @@ function renderPass() {
     <h3 class="pp-h">各島闖關攤位</h3>
     ${groups.map((g) => `<section class="pp-grp" style="--pc:${colorOf(g.I.id)}"><h4>${esc(g.I.name)} <small>${g.st.filter((x) => ppDone(x.no)).length}／${g.st.length}</small></h4>
       <ul>${g.st.map((x) => { const r = ppRec(x.no); return `<li class="${r ? 'ok' : ''}"><button type="button" class="pp-link" data-pp-go="${x.no}"><span class="pp-mk" aria-hidden="true">${r ? '✓' : '○'}</span>${pad2(x.no)} ${esc(x.name)}</button><span class="pp-st">${r ? '已完成' : '未完成'}</span></li>`; }).join('')}</ul></section>`).join('')}
+    ${a.history && a.history.length ? `<h3 class="pp-h">舊版紀錄 <small>（原 26 攤名冊，不計入進度）</small></h3><ul class="pp-hist">${a.history.map((r) => `<li>原第 ${pad2(r.oldNo)} 攤${r.name ? ` ${esc(r.name)}` : ''}<span>${fmtDone(r.completedAt)}・新名冊沒有獨立設攤</span></li>`).join('')}</ul>` : ''}
     <div class="pp-clear">${PP.confirmClear ? `<p class="chal-q">確定清除「${esc(a.name)}」的護照和 ${a.records.length} 筆紀錄嗎？清除後無法復原。</p>
       <div class="chal-btns"><button type="button" class="btn danger" id="ppClearYes">確定清除</button><button type="button" class="btn ghost" id="ppClearNo">取消</button></div>`
       : `<button type="button" class="btn ghost" id="ppClear">清除這本護照</button>`}</div>`;
@@ -387,19 +418,27 @@ $('#bagBtn').addEventListener('click', openBag);
 $('#stampBtn').addEventListener('click', openStamps);
 
 // ------------------------------------------------------------------ 攤位詳情（點攤位列展開，同時只開一攤）
+// 合併攤（parts）：一張詳情卡分兩段，各有自己的圖片與說明
+const photoHTML = (o, name) => o.photo ? `<div class="stall-photo"><img src="${esc(o.photo + (C.assetVersion ? `?v=${C.assetVersion}` : ''))}" alt="${esc(o.photoAlt || name)}" loading="lazy" decoding="async" width="1774" height="887"></div>${o.photoCaption ? `<p class="stall-photo-cap">${esc(o.photoCaption)}</p>` : ''}` : '';
+function fieldsHTML(o, T, tmpl) {
+  const N = C.stallNotes, v = (k) => String(o[k] ?? '').trim(), req = new Set(T.required);
+  let h = '';
+  if (v('intro')) h += `<p class="sd-intro">${nl(v('intro'))}</p>`;
+  else if (tmpl) h += `<p class="sd-intro todo">一句介紹：${esc(N.pendingField)}</p>`;
+  const rows = T.fields.map(([k, label]) => v(k) ? `<dt>${esc(label)}</dt><dd>${nl(v(k))}</dd>` : (tmpl && req.has(k) ? `<dt>${esc(label)}</dt><dd class="todo">${esc(N.pendingField)}</dd>` : '')).join('');
+  if (rows) h += `<dl class="sd-fields">${rows}</dl>`;
+  return h;
+}
+const stallTexts = (st) => [st, ...(st.parts || [])].flatMap((o) => [o.name, o.intro, o.desc, o.items, o.takeaway, o.rules]).filter(Boolean);
 function stallDetailHTML(st) {
   const N = C.stallNotes, I = islandById(st.island), T = C.stallTypes[st.type || I.stallType];
-  const v = (k) => String(st[k] ?? '').trim(), req = new Set(T.required);
   const keys = ['intro', ...T.fields.map((f) => f[0])];
-  const any = keys.some((k) => v(k)) || st.photo;
-  const photo = st.photo ? `<div class="stall-photo"><img src="${esc(st.photo + (C.assetVersion ? `?v=${C.assetVersion}` : ''))}" alt="${esc(st.photoAlt || st.name)}" loading="lazy" decoding="async" width="1774" height="887"></div>${st.photoCaption ? `<p class="stall-photo-cap">${esc(st.photoCaption)}</p>` : ''}` : '';
-  if (st.namePending) return photo + `<p class="sd-empty">${esc(N.pendingName)}</p>`;
-  let h = `<p class="sd-tags"><span class="badge type">${esc(T.label)}</span>${st.sample ? `<span class="badge">${esc(N.sample)}</span>` : ''}</p>`;
-  h += photo;
-  if (v('intro')) h += `<p class="sd-intro">${nl(v('intro'))}</p>`;
-  else if (st.template) h += `<p class="sd-intro todo">一句介紹：${esc(N.pendingField)}</p>`;
-  const rows = T.fields.map(([k, label]) => v(k) ? `<dt>${esc(label)}</dt><dd>${nl(v(k))}</dd>` : (st.template && req.has(k) ? `<dt>${esc(label)}</dt><dd class="todo">${esc(N.pendingField)}</dd>` : '')).join('');
-  if (rows) h += `<dl class="sd-fields">${rows}</dl>`;
+  const any = [st, ...(st.parts || [])].some((o) => keys.some((k) => String(o[k] ?? '').trim()) || o.photo);
+  if (st.namePending) return photoHTML(st, st.name) + `<p class="sd-empty">${esc(N.pendingName)}</p>`;
+  let h = S.legacyNote && S.legacyNote.no === st.no ? `<p class="sd-legacy" role="status">ℹ️ ${esc(S.legacyNote.msg)}</p>` : '';
+  h += `<p class="sd-tags"><span class="badge type">${esc(st.category || T.label)}</span>${st.sample ? `<span class="badge">${esc(N.sample)}</span>` : ''}</p>`;
+  if (st.parts) h += st.parts.map((pt) => `<section class="sd-part"><h4>${esc(pt.name)}</h4>${photoHTML(pt, pt.name)}${fieldsHTML(pt, T, st.template)}</section>`).join('');
+  else h += photoHTML(st, st.name) + fieldsHTML(st, T, st.template);
   if (!any && !st.template) h += `<p class="sd-empty">${esc(N.pendingIntro)}</p>`;
   for (const m of missionsAt(st.no)) h += `<div class="mis" data-mis="${esc(m.id)}">${misInner(m.id)}</div>`;
   if (st.challengeEnabled) h += `<div class="chal" data-chal="${st.no}">${chalInner(st.no)}</div>`;
@@ -577,11 +616,11 @@ function search(q) {
   // 攤號或攤名完全相同的排最前面，按 Enter 就直接開啟並展開那一攤
   for (const st of C.stalls) {
     const exact = String(st.no) === q || pad2(st.no) === q || st.name.toLowerCase() === q;
-    if (exact || test(st.name) || [st.intro, st.items, st.takeaway, st.rules].some((x) => x && test(x))) hits.push({ id: st.island, no: st.no, exact, text: `${pad2(st.no)} ${st.name}（${islandById(st.island).name}）` });
+    if (exact || stallTexts(st).some(test)) hits.push({ id: st.island, no: st.no, exact, nameHit: [st.name, ...(st.parts || []).map((x) => x.name)].some(test), text: `${pad2(st.no)} ${st.name}（${islandById(st.island).name}）` });
   }
   for (const I of C.islands) if ([I.name, I.group, I.intro, I.landmark].some(test)) hits.push({ id: I.id, text: `${I.name}・${I.group}` });
   if (W && L && [C.carpBoat.name, C.carpBoat.role, '船', '帆船', '碼頭', 'boat'].some(test)) hits.push({ id: 'carp', exact: test(C.carpBoat.name), text: `⛵ ${C.carpBoat.name}・${C.carpBoat.role}` });
-  hits.sort((a, b) => (b.exact ? 1 : 0) - (a.exact ? 1 : 0));
+  hits.sort((a, b) => (b.exact ? 1 : 0) - (a.exact ? 1 : 0) || (b.nameHit ? 1 : 0) - (a.nameHit ? 1 : 0));
   for (const r of C.residents) if (test(r.name) || test(r.job)) hits.push({ id: r.island, text: `${r.name}・${r.job}（${islandById(r.island).name}）` });
   out.innerHTML = hits.length ? hits.slice(0, 20).map((h, i) => `<button type="button" data-id="${h.id}" ${h.no != null ? `data-no="${h.no}"` : ''} style="--c:${colorOf(h.id)}">${esc(h.text)}${i === 0 && h.no != null ? '<small class="enter">按 Enter 直接開啟</small>' : ''}</button>`).join('') : `<p class="none">找不到「${esc(q)}」，換個關鍵字試試，例如「餅乾」「迷宮」或攤號「11」。</p>`;
 }
@@ -772,7 +811,7 @@ function onCanvasUp(e) {
 }
 
 // ------------------------------------------------------------------ 自動導覽路線
-const TOUR = ['center', 'food', 'craft', 'puzzle', 'sport', 'recycle'];
+let TOUR = ['center', 'food', 'craft', 'puzzle', 'recycle', 'sport'];   // 開機後依 content.json 的島嶼順序重設
 const DWELL = () => (S.reduced ? 8000 : 5000);
 function startTour() {
   if (!W) return; closeBubble(); closePanel(false); if (S.walking) exitWalk(true);
@@ -883,6 +922,7 @@ function webglOK() { try { const c = document.createElement('canvas'); return !!
 async function boot() {
   $('#brandMascot').innerHTML = MASCOT;
   C = await fetch('data/content.json', { cache: 'no-cache' }).then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); });
+  TOUR = ['center', ...C.islands.map((i) => i.id)]; PP.data = ppRead();   // 讀護照時順便完成名冊改版轉換
   buildSettings(); renderHud();
   if (route().errs.length) { console.warn('路線設定錯誤', route().errs); setTimeout(() => toast(`⚠ 路線設定錯誤 ${route().errs.length} 項：${route().errs[0]}（詳見護照頁）`), 1200); }
   S.autoStart = performance.now();
@@ -890,7 +930,7 @@ async function boot() {
   if (Q.has('nogl') || !webglOK()) { textOnly(Q.has('nogl') ? '已切換為文字清單版' : '這台裝置無法顯示 3D 畫面'); applyTheme(); updateClock(); setInterval(updateClock, 10000); window.__ready = true; return; }
   let mods;
   try {
-    mods = await Promise.all([import('./world.js?v=20261115u'), import('./life.js?v=20261115u'), import('./cam.js?v=20261115u')]);
+    mods = await Promise.all([import('./world.js?v=20261116a'), import('./life.js?v=20261116a'), import('./cam.js?v=20261116a')]);
     const [{ createWorld }, { createLife }, { createCam }] = mods;
     const mobile = isMobile();
     W = createWorld($('#gl'), { quality: S.quality, mobile });
@@ -940,7 +980,9 @@ async function boot() {
   requestAnimationFrame(frame);
   window.__isle = { W, L, CAM, S, THREE };   // 給自動測試讀取狀態用
   await playIntro(false);
-  const deep = Q.get('island') || location.hash.slice(1), dst = Q.get('stall') && stallByNo(Q.get('stall'));
+  const deep = Q.get('island') || location.hash.slice(1), lk = Q.get('stall') ? resolveStallLink(Q.get('stall'), Q.get('roster')) : null, dst = lk && lk.st;
+  if (lk && lk.msg && dst) S.legacyNote = { no: dst.no, msg: lk.msg };   // 舊攤號連結：說明寫在攤位卡上（蓋章提示不會蓋掉它）
+  else if (lk && lk.msg) toast(lk.msg);
   if (dst) openIsland(dst.island, { no: dst.no });
   else if (deep && islandById(deep)) openIsland(deep);
 }

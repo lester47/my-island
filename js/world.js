@@ -1,7 +1,7 @@
 // 3D 世界：天空、海、遠山、島嶼與地標、橋、日夜光影
 import * as THREE from 'three';
-import { TAU, clamp, lerp, smooth, rng, loopNoise, mat, Builder, GEO, glowTexture, C } from './kit.js?v=20261115u';
-import { makeScenery } from './scenery.js?v=20261115u';
+import { TAU, clamp, lerp, smooth, rng, loopNoise, mat, Builder, GEO, glowTexture, C } from './kit.js?v=20261116a';
+import { makeScenery } from './scenery.js?v=20261116a';
 
 export const H = 1.75;               // 島頂草地高度
 const SEG = 72;                      // 海岸線分段（6 的倍數，六角轉角落在頂點上）
@@ -216,6 +216,15 @@ function rowBoat(color) {
 
 // ------------------------------------------------------------------ 各島地標
 const ANIM = [];   // 會動的小機關（減少動態時停止）
+// 女童軍愛心義賣：小小的紫白條紋爆米花攤（放在島外圈原本放木箱的位置）
+function popcornStand(B) {
+  B.add(GEO.box, '#fbf7ee', 0, .45, 0, 0, 0, 0, .9, .9, .55);
+  B.add(GEO.box, '#e0463a', 0, .55, .28, 0, 0, 0, .22, .2, .02);
+  for (let i = 0; i < 5; i++) B.add(GEO.box, i % 2 ? WHITE : '#8e5cc9', -.36 + i * .18, 1.62, 0, -.2, 0, 0, .18, .05, .8);
+  for (const x of [-.4, .4]) B.add(GEO.box, WOOD2, x, 1.25, -.2, 0, 0, 0, .06, .8, .06);
+  B.add(GEO.box, '#cfe8ff', 0, 1.12, -.05, 0, 0, 0, .42, .36, .36);
+  for (let i = 0; i < 7; i++) B.add(GEO.ball0, '#fff3c4', -.12 + (i % 4) * .08, 1.0 + Math.floor(i / 4) * .07, -.05 + (i % 2) * .08, 0, 0, 0, .09);
+}
 function landmarkFood(B, g, P) {
   // 條紋點心攤＋巨型果汁招牌
   B.push(0, H, -.3);
@@ -250,8 +259,15 @@ function landmarkCraft(B, g, P) {
   B.add(GEO.cone4, '#ffd25a', .22, 3.9, 0, 0, 0, -Math.PI / 2, .3, .45, .05);
   B.add(GEO.box, '#3d2a5c', 0, .75, 1.58, 0, 0, 0, 1.1, 1.5, .05);       // 帳篷門
   B.add(GEO.box, WOOD, 1.0, .45, 2.0, 0, 0, 0, 1.4, .1, .7);
-  for (let i = 0; i < 5; i++) B.add(GEO.cyl8, ['#ff6b6b', '#ffd25a', '#4aa3e8', '#5ec26a', '#b18cf0'][i], .55 + i * .23, .62, 2.0, 0, 0, 0, .16, .26, .16);
+  for (let i = 0; i < 3; i++) B.add(GEO.cyl8, ['#ff6b6b', '#ffd25a', '#4aa3e8'][i], .5 + i * .23, .62, 2.0, 0, 0, 0, .16, .26, .16);
   for (const [x, z] of [[.5, 1.7], [1.5, 1.7], [.5, 2.3], [1.5, 2.3]]) B.add(GEO.box, WOOD2, x, .2, z, 0, 0, 0, .07, .4, .07);
+  // 抽抽樂的抽籤箱（紅箱、黃星、投口）
+  B.add(GEO.box, '#e0463a', 1.38, .75, 2.0, 0, 0, 0, .5, .5, .5);
+  B.add(GEO.box, '#5a1a14', 1.38, 1.005, 2.0, 0, 0, 0, .26, .02, .08);
+  B.add(GEO.cone4, '#ffd25a', 1.38, .78, 2.26, Math.PI / 2, 0, 0, .14, .04, .14);
+  // 接球桶：桶裡裝滿彩色球
+  B.add(GEO.cyl12, '#3c8dea', 2.02, .25, 2.0, 0, 0, 0, .5, .5, .5);
+  for (const [x, z, c] of [[-.1, -.08, '#ff6b6b'], [.1, .06, '#ffd25a'], [-.04, .12, '#5ec26a'], [.12, -.12, '#ffffff']]) B.add(GEO.ball0, c, 2.02 + x, .54, 2.0 + z, 0, 0, 0, .2);
   B.pop();
   // 巨型剪刀
   B.push(2.6, H, .3, -.5);                          // 放在空曠的一側，不擋房子旁的小路
@@ -276,6 +292,11 @@ function landmarkPuzzle(B, g, P) {
   for (const [x, z, w, d] of walls) B.add(GEO.box, '#f3d3a2', x, .55, z, 0, 0, 0, w, .3, d);
   for (const [x, z, c] of [[-1.2, -.8, '#3c8dea'], [.4, .8, '#55c9a8'], [1.2, .15, '#3c8dea'], [-.3, -.9, '#7ad0ff']]) B.add(GEO.sph, c, x, .58, z, 0, 0, 0, .3);
   B.add(GEO.torus, '#e0463a', 1.2, .42, -.8, 0, 0, 0, .6, .6, .9);
+  B.pop();
+  // 記憶卡：鋪在草地上的翻牌（很薄，可以走過去）
+  B.push(-2.3, H + .02, 1.3, .35);
+  B.add(GEO.box, '#2f6db3', 0, .02, 0, 0, 0, 0, 1.5, .04, 1.1);
+  for (let i = 0; i < 4; i++) for (let j = 0; j < 3; j++) { const up = (i * 3 + j) % 5 === 1; B.add(GEO.box, up ? ['#ff6b6b', '#ffd25a', '#5ec26a'][(i + j) % 3] : '#fbf7ee', -.5 + i * .33, .06, -.3 + j * .3, 0, 0, 0, .26, .03, .22); }
   B.pop();
   // 拼圖拱門
   B.push(0, H, -2.2);
@@ -329,7 +350,17 @@ function landmarkRecycle(B, g, P) {
   B.add(GEO.box, WOOD, 0, .8, 0, 0, 0, 0, 1.2, 1.6, .5);
   for (let r = 0; r < 3; r++) for (let i = 0; i < 5; i++) B.add(GEO.box, ['#e0463a', '#3c8dea', '#ffcf3a', '#5ec26a', '#ff9a3d'][(i + r) % 5], -.42 + i * .2, .32 + r * .5, .08, 0, 0, 0, .16, .38, .32);
   B.pop();
-  B.push(-2.3, H, 1.2, .4); crate(B, 1.1); B.add(GEO.sph, '#ffffff', 0, .85, 0, 0, 0, 0, .55); B.pop();
+  B.push(-2.3, H, 1.2, .4); crate(B, 1.1);
+  // 聖誕 DIY：木箱上的小聖誕樹
+  B.add(GEO.cone8, '#2f8a47', 0, .98, 0, 0, 0, 0, .62, .5, .62); B.add(GEO.cone8, '#3aa356', 0, 1.26, 0, 0, 0, 0, .46, .42, .46);
+  B.add(GEO.cone4, '#ffd25a', 0, 1.5, 0, 0, 0, 0, .14, .14, .05);
+  for (const [x, y, z, c] of [[.18, .92, .12, '#e0463a'], [-.15, 1.0, .14, '#ffd25a'], [.1, 1.2, -.12, '#3c8dea']]) B.add(GEO.ball0, c, x, y, z, 0, 0, 0, .08);
+  B.pop();
+  // 屋簷下掛一排聖誕襪（高過頭，不擋路）
+  B.push(-.4, H, -1.0);
+  B.add(GEO.box, WOOD2, 0, 1.92, 1.12, 0, 0, 0, 2.6, .03, .03);
+  for (let i = 0; i < 4; i++) { const x = -.9 + i * .6; B.add(GEO.box, i % 2 ? '#e0463a' : '#2f8a47', x, 1.72, 1.12, 0, 0, 0, .14, .32, .06); B.add(GEO.box, WHITE, x, 1.88, 1.12, 0, 0, 0, .18, .07, .07); B.add(GEO.box, i % 2 ? '#e0463a' : '#2f8a47', x + .07, 1.58, 1.12, 0, 0, 0, .16, .1, .06); }
+  B.pop();
   // 會轉的循環標誌
   B.add(GEO.cyl6, WOOD2, 1.2, H + 1.5, -2.4, 0, 0, 0, .14, 3, .14);
   const sign = new THREE.Group(); sign.position.set(1.2, H + 3.4, -2.4);
@@ -417,7 +448,7 @@ function landmarkCenter(B, g, P, extras) {
 const OUTER = {
   food:    ['house:#d9644a', 'treeR', 'bed', 'bench', 'treeP', 'lamp', 'crate', 'treeR', 'sign', 'bush'],
   craft:   ['house:#6aa6c9', 'treeP', 'bed', 'lamp', 'treeR', 'bench', 'well', 'treeR', 'sign', 'fence'],
-  puzzle:  ['house:#e3a33b', 'treeR', 'fence', 'bench', 'treeP', 'lamp', 'crate', 'bed', 'treeR', 'sign'],
+  puzzle:  ['house:#e3a33b', 'treeR', 'fence', 'bench', 'treeP', 'lamp', 'popcorn', 'bed', 'treeR', 'sign'],
   sport:   ['house:#6aa6c9', 'treeP', 'bench', 'bed', 'lamp', 'treeR', 'crate', 'treeP', 'sign', 'bush'],
   recycle: ['house:#d9644a', 'treeR', 'bed', 'well', 'treeP', 'lamp', 'bench', 'treeR', 'sign', 'fence'],
   center:  ['house:#d9644a', 'treeR', 'lamp', 'bench', 'treeP', 'house:#6aa6c9', 'lamp', 'treeR', 'bench', 'treeP', 'lamp', 'bed', 'crate', 'treeR', 'lamp', 'sign'],
@@ -527,7 +558,7 @@ function buildIsland(id, scene, quality) {
     if (isC && Math.hypot(Math.cos(a) * r - Math.cos(-.45) * 6.6, Math.sin(a) * r - Math.sin(-.45) * 6.6) < 3.0) return; // 讓出市集
     // 讓出每座橋的通道：物件外緣離橋的中線至少 1.1（玩家肩寬＋一點餘裕），不夠就往旁邊挪，挪不開就不放
     const [kind, arg] = it.split(':');
-    const rad = { house: 1.7, treeR: 1.0, treeP: .95, bed: 1.25, fence: 1.45, bench: .75, crate: .75, sign: .45, well: .95, lamp: .35, bush: .65 }[kind] || .8;
+    const rad = { popcorn: .75, house: 1.7, treeR: 1.0, treeP: .95, bed: 1.25, fence: 1.45, bench: .75, crate: .75, sign: .45, well: .95, lamp: .35, bush: .65 }[kind] || .8;
     const blocksBridge = (aa) => corridorA.some((b) => { const d = Math.atan2(Math.sin(aa - b), Math.cos(aa - b)); return Math.cos(d) > 0 && Math.abs(Math.sin(d)) * r < rad + 1.1; });
     if (blocksBridge(a)) { let ok = false; for (let k = 1; k <= 12 && !ok; k++) for (const sg of [1, -1]) { if (!blocksBridge(a + sg * k * .05)) { a += sg * k * .05; ok = true; break; } } if (!ok) return; }
     const x = Math.cos(a) * r, z = Math.sin(a) * r, face = -a - Math.PI / 2;
@@ -538,6 +569,7 @@ function buildIsland(id, scene, quality) {
     else if (kind === 'bed') { flowerBed(B, 2.0, .9); info.colliders.push({ x, z, r: 1.1 }); }
     else if (kind === 'fence') { fence(B, 2.6); bush(B, .8); info.colliders.push({ x, z, r: 1.2 }); }
     else if (kind === 'bench') { bench(B); info.colliders.push({ x, z, r: .6 }); }
+    else if (kind === 'popcorn') { popcornStand(B); info.colliders.push({ x, z, r: .6 }); }
     else if (kind === 'crate') { crate(B, 1); B.push(.6, 0, .2, .4); crate(B, .7); B.pop(); info.colliders.push({ x, z, r: .6 }); }
     else if (kind === 'sign') { signBoard(B, P.main || '#3f7d3a'); info.colliders.push({ x, z, r: .3 }); }
     else if (kind === 'well') { well(B); info.colliders.push({ x, z, r: .8 }); }

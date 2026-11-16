@@ -1,5 +1,5 @@
 {
-  "assetVersion": "20261115q",
+  "assetVersion": "20261116a",
   "site": {
     "title": "115 鯉魚市集",
     "tagline": "跳上五座六角小島，逛美食、玩手作、闖關挑戰，還能挖二手好物！",
@@ -16,7 +16,7 @@
     "name": "鯉魚市集服務台",
     "role": "活動服務台",
     "intro": "活動服務台：活動日期、地點、時程表、展區地圖與集章方式都在這裡。",
-    "overview": "五座主題小島、共 26 個攤位：美食、手作、益智、動感、二手，逛完每一島就能蓋一枚章。",
+    "overview": "五座主題小島、共 20 個攤位：美食小吃、手作體驗（一）、手作體驗（二）、二手跳蚤、趣味遊戲，逛完每一島就能蓋一枚章。",
     "landmark": "活動服務台涼亭、三面鯉魚旗、風車、花田與市集攤位",
     "event": {
       "pending": "待主辦公布",
@@ -38,10 +38,10 @@
         {
           "h": "出門前：先在線上逛一圈（約 10 分鐘）",
           "items": [
-            "按「▶ 導覽」跟著鏡頭飛過服務台和五座島，先認識美食、手作、益智、動感、循環挖寶五個區。",
-            "點島名牌看攤位，挑出最想去的 3 攤。想吃點心推薦「05 靚萱餅乾鋪」，喜歡動手做去「08 自己畫貼紙DIY」，愛挑戰別錯過「11 彈珠迷宮」。",
+            "按「▶ 導覽」跟著鏡頭飛過服務台和五座島，先認識美食、手作一、手作二、二手跳蚤、趣味遊戲五個區。",
+            "點島名牌看攤位，挑出最想去的 3 攤。想吃點心推薦「05 靚萱餅乾鋪／賣手作材料」，喜歡動手做去「06 巧手工坊／自己畫貼紙 DIY」，愛挑戰別錯過「11 彈珠迷宮」。",
             "按「🎫 護照」取一個暱稱（不用真名），建立你的闖關護照。",
-            "有空試試「🚶 漫遊」：從益智闖關島走下階梯到鯉魚號碼頭，等船靠岸放下跳板，走到船尾跟著出航。"
+            "有空試試「🚶 漫遊」：從手作體驗二島走下階梯到鯉魚號碼頭，等船靠岸放下跳板，走到船尾跟著出航。"
           ],
           "actions": [
             [
@@ -79,11 +79,11 @@
           "ordered": true,
           "items": [
             "8:30 到服務台，確認時程與集章方式。",
-            "美食補給島「05 靚萱餅乾鋪」：找出一種餅乾口味，路線第 1 站完成。",
-            "手作創意島「08 自己畫貼紙DIY」：畫一張貼紙。順路到「20 縣女童軍愛心義賣爆米花」買一份，一起做公益。",
-            "益智闖關島「11 彈珠迷宮」：讓彈珠走到終點；還有力氣就加碼「18 鯉魚記憶王」。",
-            "動感挑戰島「25 丟球者」：站在線後投進一球。",
-            "循環挖寶島「15 夏來寶」：挑一件最有故事的二手物說給同伴聽，護照出現「🎉 路線完成」！"
+            "美食補給島「05 靚萱餅乾鋪／賣手作材料」：找出一種餅乾口味，路線第 1 站完成。",
+            "手作體驗一島「06 巧手工坊／自己畫貼紙 DIY」：畫一張貼紙。",
+            "手作體驗二島「11 彈珠迷宮」：讓彈珠走到終點；還有力氣就加碼「13 鯉魚記憶王／搖出你的好耳力」，再到「20 女童軍」愛心義賣攤買一份爆米花，一起做公益。",
+            "循環挖寶島「15 夏來寶／廢物市集」：挑一件最有故事的二手物說給同伴聽。",
+            "趣味遊戲島「18 丟球者」：站在線後投進一球，護照出現「🎉 路線完成」！"
           ]
         },
         {
@@ -98,9 +98,9 @@
         {
           "h": "推薦玩法",
           "items": [
-            "學生：照「下一站」走完五島，再挑戰 16 個有「🎫 闖關登記」的攤位。",
+            "學生：照「下一站」走完五島，再挑戰 12 個有「🎫 闖關登記」的攤位。",
             "家長：活動前一晚陪孩子看導覽、挑好想去的攤，約定在服務台集合。",
-            "老師：分組時每組一台裝置、一本護照；想指定任務攤，分享網址加上 ?stall=攤號。",
+            "老師：分組時每組一台裝置、一本護照；想指定任務攤，分享網址加上 ?stall=攤號&roster=20（例如 ?stall=11&roster=20）。",
             "共用一支手機：在護照按「＋ 新增護照」，每人一本、各自計算。紀錄存在這支手機的瀏覽器，換手機不會跟著走。"
           ]
         }
@@ -114,7 +114,7 @@
       "order": 1,
       "name": "美食補給島",
       "group": "美食小吃",
-      "intro": "吃點心、喝飲料（5 攤）",
+      "intro": "吃點心、喝飲料，還有麻糬和餅乾",
       "tagline": "吃點心、喝飲料",
       "color": "#e8762b",
       "dark": "#b8520f",
@@ -127,62 +127,62 @@
     {
       "id": "craft",
       "order": 2,
-      "name": "手作創意島",
-      "group": "手作體驗",
-      "intro": "動手做，把作品帶回家（5 攤）",
-      "tagline": "動手做，把作品帶回家",
+      "name": "手作體驗一島",
+      "group": "手作體驗（一）",
+      "intro": "動手做小作品，也玩接球、套圈圈和抽抽樂",
+      "tagline": "畫貼紙、做手作，也玩接球和抽籤",
       "color": "#8a5cd0",
       "dark": "#7a4cc0",
       "tint": "#f3ecff",
       "ink": "#4b2a86",
-      "landmark": "紫色手作帳篷，前面立著巨型剪刀與調色盤",
+      "landmark": "紫色手作帳篷，前面立著巨型剪刀與調色盤，旁邊有接球桶和抽籤箱",
       "download": "downloads/stalls-02.txt",
       "stallType": "craft"
     },
     {
       "id": "puzzle",
       "order": 3,
-      "name": "益智闖關島",
-      "group": "益智遊戲",
-      "intro": "玩迷宮、考記憶、闖關（7 攤）",
-      "tagline": "玩迷宮、考記憶、闖關",
+      "name": "手作體驗二島",
+      "group": "手作體驗（二）",
+      "intro": "玩迷宮、考記憶，再到女童軍愛心義賣攤支持公益",
+      "tagline": "彈珠迷宮、記憶卡、愛心義賣",
       "color": "#2f7fd1",
       "dark": "#1f68b5",
       "tint": "#e7f2ff",
       "ink": "#164c85",
-      "landmark": "木製彈珠迷宮與拼圖拱門",
+      "landmark": "木製彈珠迷宮與拼圖拱門，旁邊有記憶卡桌和愛心義賣攤",
       "download": "downloads/stalls-03.txt",
       "stallType": "game"
     },
     {
-      "id": "sport",
+      "id": "recycle",
       "order": 4,
-      "name": "動感挑戰島",
-      "group": "動感遊戲",
-      "intro": "接球、投擲、玩陀螺（5 攤）",
-      "tagline": "接球、投擲、玩陀螺",
+      "name": "循環挖寶島",
+      "group": "二手跳蚤",
+      "intro": "逛二手攤替舊物找新主人，再做一件聖誕小物",
+      "tagline": "逛二手、做聖誕小物",
+      "color": "#3e9b4f",
+      "dark": "#2c7a3b",
+      "tint": "#e9f7ea",
+      "ink": "#1e5d2a",
+      "landmark": "交換小屋、舊書櫃與循環標誌，角落有聖誕樹和手作小物",
+      "download": "downloads/stalls-04.txt",
+      "stallType": "secondhand"
+    },
+    {
+      "id": "sport",
+      "order": 5,
+      "name": "趣味遊戲島",
+      "group": "趣味遊戲",
+      "intro": "比手速、投球、玩戰鬥陀螺",
+      "tagline": "比手速、投球、玩陀螺",
       "color": "#dc4848",
       "dark": "#bf3434",
       "tint": "#ffecec",
       "ink": "#8e2323",
       "landmark": "沙包投擲洞洞板與陀螺擂台",
-      "download": "downloads/stalls-04.txt",
-      "stallType": "game"
-    },
-    {
-      "id": "recycle",
-      "order": 5,
-      "name": "循環挖寶島",
-      "group": "二手跳蚤",
-      "intro": "逛二手攤，替舊物找新主人（4 攤）",
-      "tagline": "逛二手攤，替舊物找新主人",
-      "color": "#3e9b4f",
-      "dark": "#2c7a3b",
-      "tint": "#e9f7ea",
-      "ink": "#1e5d2a",
-      "landmark": "交換小屋、舊書櫃與循環標誌",
       "download": "downloads/stalls-05.txt",
-      "stallType": "secondhand"
+      "stallType": "game"
     }
   ],
   "residents": [
@@ -194,7 +194,7 @@
       "trade": "t1",
       "lines": [
         "歡迎來到美食補給島！吃點心、喝飲料都在這裡。",
-        "這座島有 5 攤：大狗堡、自製飲料店、蜜糖小屋、阿逸哥的美食小食堂、靚萱餅乾鋪。",
+        "這座島有 5 攤：大狗堡、阿逸哥的美食小食堂、蜜糖小屋、自製飲料店／鯉魚麻糬屋、靚萱餅乾鋪／賣手作材料。",
         "逛累了就來補給一下，再出發去別的島！",
         "攤位的菜單和價錢，以現場為準喔。"
       ]
@@ -219,10 +219,10 @@
       "job": "手作帳篷小老師",
       "trade": "t3",
       "lines": [
-        "手作創意島：動手做，把作品帶回家！",
-        "這裡有手作DIY、巧手工坊、自己畫貼紙DIY、吉樂工作室，還有縣女童軍的愛心義賣爆米花。",
+        "手作體驗一島：動手做，也來玩遊戲！",
+        "這裡有巧手工坊／自己畫貼紙 DIY、吉樂工作室、有吃有玩真好玩、正反接球王，還有圈圈洞洞／好開心抽抽樂。",
         "做好的作品可以帶回家喔。",
-        "攤號是 06、07、08、09，還有 20。"
+        "攤號是 06 到 10。"
       ]
     },
     {
@@ -233,9 +233,9 @@
       "trade": "t4",
       "lines": [
         "我最喜歡自己畫貼紙了！",
-        "手作創意島一共 5 攤。",
+        "手作體驗一島一共 5 攤。",
         "剪刀用完要放回去，大家才能接著用。",
-        "20 號攤是縣女童軍愛心義賣爆米花，做公益獻愛心，一起來支持！"
+        "09 號正反接球王，正手反手都要接住喔！"
       ]
     },
     {
@@ -245,9 +245,9 @@
       "job": "迷宮關主",
       "trade": "t5",
       "lines": [
-        "益智闖關島：玩迷宮、考記憶、闖關！",
-        "這裡有 7 攤，是攤位最多的一座島。",
-        "11 號是彈珠迷宮，18 號是鯉魚記憶王。",
+        "手作體驗二島：玩迷宮、考記憶！",
+        "這裡有 11 到 14 攤，還有 20 號女童軍。",
+        "11 號是彈珠迷宮，13 號是鯉魚記憶王／搖出你的好耳力。",
         "闖關慢慢來，想清楚再出手！"
       ]
     },
@@ -258,9 +258,9 @@
       "job": "記憶王助手",
       "trade": "t6",
       "lines": [
-        "鯉魚Liyu遊戲店、鯉魚記憶王、鯉魚麻糬屋，三攤都有鯉魚喔！",
-        "還有名不虛傳GG手、圈圈洞洞、有吃有玩真好玩。",
-        "考考你：益智闖關島有幾攤？答案是 7 攤！",
+        "鯉魚 Liyu 遊戲店、鯉魚記憶王，都有鯉魚喔！",
+        "14 號娃！茶一點就中，瞄準茶杯試試看。",
+        "20 號女童軍愛心義賣爆米花，做公益獻愛心，一起來支持！",
         "排隊的時候請互相禮讓。"
       ]
     },
@@ -271,10 +271,10 @@
       "job": "投擲挑戰關主",
       "trade": "t7",
       "lines": [
-        "動感挑戰島：接球、投擲、玩陀螺！",
-        "25 號是丟球者，23 號是正反接球王。",
+        "趣味遊戲島：比手速、投球、玩陀螺！",
+        "18 號是丟球者，17 號是名不虛傳 GG 手。",
         "丟之前先看看前面有沒有人喔。",
-        "26 號三二一發射！戰鬥陀螺，等你來挑戰！"
+        "19 號三二一發射！／戰鬥陀螺，等你來挑戰！"
       ]
     },
     {
@@ -284,8 +284,8 @@
       "job": "陀螺擂台裁判",
       "trade": "t8",
       "lines": [
-        "動感挑戰島有 5 攤。",
-        "17 號好開心抽抽樂、24 號搖出你的好耳力也在這裡。",
+        "趣味遊戲島有 3 攤：17、18、19。",
+        "陀螺擂台在島的中間，快來看看！",
         "玩累了記得喝水休息一下。",
         "準備好了嗎？三、二、一，發射！"
       ]
@@ -298,9 +298,9 @@
       "trade": "t9",
       "lines": [
         "循環挖寶島：逛二手攤，替舊物找新主人！",
-        "這裡有二手跳蚤市場、夏來寶、廢物市集，還有哇！茶一點就中。",
-        "14 號攤的攤名還在確認中，到現場看看吧。",
-        "舊東西換個主人，就能繼續被好好使用。"
+        "15 號是夏來寶／廢物市集，16 號是聖誕 DIY 製造所。",
+        "舊東西換個主人，就能繼續被好好使用。",
+        "做一件聖誕小物，帶回家掛在聖誕樹上吧！"
       ]
     },
     {
@@ -310,9 +310,9 @@
       "job": "交換小屋管理員",
       "trade": "t10",
       "lines": [
-        "循環挖寶島一共 4 攤。",
+        "循環挖寶島一共 2 攤。",
         "挖到寶了嗎？記得好好愛惜它。",
-        "15 號是夏來寶，16 號是廢物市集。",
+        "二手玩具和舊書都在 15 號攤。",
         "集滿五座島的章，再回服務台看看吧！"
       ]
     },
@@ -324,7 +324,7 @@
       "trade": "t0",
       "lines": [
         "歡迎來到 115 鯉魚市集服務台！",
-        "五座小島、共 26 個攤位，從哪一座開始逛都可以。",
+        "五座小島、共 20 個攤位，從哪一座開始逛都可以。",
         "沙灘上的貝殼可以撿，拿來跟島民交換小東西。",
         "12 月 12 日早上 8 點到 12 點，在鯉魚國小操場，記得來喔！"
       ]
@@ -385,7 +385,7 @@
       "trade": null,
       "lines": [
         "二手攤說不定有寶貝。",
-        "我想去益智闖關島挑戰迷宮。",
+        "我想去手作體驗二島挑戰彈珠迷宮。",
         "你集到幾枚章了？"
       ]
     }
@@ -471,42 +471,42 @@
       "give": "sticker",
       "giveQty": 1,
       "get": "gift",
-      "hint": "手繪貼紙可以跟手作創意島的小紫換"
+      "hint": "手繪貼紙可以跟手作體驗一島的小紫換"
     },
     {
       "id": "t5",
       "give": "gift",
       "giveQty": 1,
       "get": "puzzle",
-      "hint": "手作小禮物可以跟手作創意島的彩彩換"
+      "hint": "手作小禮物可以跟手作體驗一島的彩彩換"
     },
     {
       "id": "t6",
       "give": "puzzle",
       "giveQty": 1,
       "get": "marble",
-      "hint": "拼圖片可以跟益智闖關島的阿迷換"
+      "hint": "拼圖片可以跟手作體驗二島的阿迷換"
     },
     {
       "id": "t7",
       "give": "marble",
       "giveQty": 1,
       "get": "beanbag",
-      "hint": "彈珠可以跟益智闖關島的小智換"
+      "hint": "彈珠可以跟手作體驗二島的小智換"
     },
     {
       "id": "t8",
       "give": "beanbag",
       "giveQty": 1,
       "get": "top",
-      "hint": "沙包可以跟動感挑戰島的阿動換"
+      "hint": "沙包可以跟趣味遊戲島的阿動換"
     },
     {
       "id": "t9",
       "give": "top",
       "giveQty": 1,
       "get": "book",
-      "hint": "陀螺可以跟動感挑戰島的小陀換"
+      "hint": "陀螺可以跟趣味遊戲島的小陀換"
     },
     {
       "id": "t10",
@@ -554,306 +554,337 @@
     {
       "no": 1,
       "name": "大狗堡",
+      "category": "① 美食小吃",
       "island": "food",
-      "photo": "assets/stalls/stall-01-v2.png",
+      "type": "food",
+      "challengeEnabled": false,
+      "desc": "販售熱狗堡，適合逛市集時當點心。",
+      "photo": "assets/stalls/r20/stall-01.png",
       "photoAlt": "插畫：女孩捧著淋了番茄醬和芥末的熱狗堡，男孩在橘白條紋棚的攤位後比讚，桌上有香腸和醬料瓶",
       "photoCaption": "示意插畫，非攤位實拍",
-      "desc": "販售熱狗堡，適合逛市集時當點心。",
-      "sample": true,
-      "challengeEnabled": false
+      "sample": true
     },
     {
       "no": 2,
-      "name": "自製飲料店",
+      "name": "阿逸哥的美食小食堂",
+      "category": "① 美食小吃",
       "island": "food",
-      "photo": "assets/stalls/stall-02-v2.png",
-      "photoAlt": "插畫：男孩把水果茶從壺裡倒進杯子，女孩在旁邊扶著杯子，桌上有一籃鳳梨、柳橙、葡萄等水果",
+      "type": "food",
+      "challengeEnabled": false,
+      "desc": "販售市集小吃，當日品項以攤位公告為準。",
+      "photo": "assets/stalls/r20/stall-02.png",
+      "photoAlt": "插畫：男孩在藍格子桌巾的攤位上夾炸物，女孩端著一盤點心，桌上擺著幾盤小吃和春捲",
       "photoCaption": "示意插畫，非攤位實拍",
-      "desc": "販售自製飲料，口味以現場供應為準。",
-      "sample": true,
-      "challengeEnabled": false
+      "sample": true
     },
     {
       "no": 3,
       "name": "蜜糖小屋",
+      "category": "① 美食小吃",
       "island": "food",
-      "photo": "assets/stalls/stall-03-v2.png",
+      "type": "food",
+      "challengeEnabled": false,
+      "desc": "販售甜點與小零食，歡迎到攤位挑選。",
+      "photo": "assets/stalls/r20/stall-03.png",
       "photoAlt": "插畫：兩個小朋友站在蜂巢裝飾的小木屋攤位兩旁，屋裡擺著杯子蛋糕、鬆餅和一罐蜂蜜",
       "photoCaption": "示意插畫，非攤位實拍",
-      "desc": "販售甜點與小零食，歡迎到攤位挑選。",
-      "sample": true,
-      "challengeEnabled": false
+      "sample": true
     },
     {
       "no": 4,
-      "name": "阿逸哥的美食小食堂",
+      "name": "自製飲料店／鯉魚麻糬屋",
+      "category": "① 美食小吃",
       "island": "food",
-      "photo": "assets/stalls/stall-04-v2.png",
-      "photoAlt": "插畫：男孩在藍格子桌巾的攤位上夾炸物，女孩端著一盤點心，桌上擺著幾盤小吃和春捲",
-      "photoCaption": "示意插畫，非攤位實拍",
-      "desc": "販售市集小吃，當日品項以攤位公告為準。",
-      "sample": true,
-      "challengeEnabled": false
+      "type": "food",
+      "challengeEnabled": false,
+      "parts": [
+        {
+          "name": "自製飲料店",
+          "desc": "販售自製飲料，口味以現場供應為準。",
+          "photo": "assets/stalls/r20/stall-04-a.png",
+          "photoAlt": "插畫：男孩把水果茶從壺裡倒進杯子，女孩在旁邊扶著杯子，桌上有一籃鳳梨、柳橙、葡萄等水果",
+          "photoCaption": "示意插畫，非攤位實拍"
+        },
+        {
+          "name": "鯉魚麻糬屋",
+          "desc": "販售麻糬，口味與供應數量以現場為準。",
+          "photo": "assets/stalls/r20/stall-04-b.png",
+          "photoAlt": "插畫：兩個小朋友端著一盤彩色麻糬，攤位掛著紅燈籠，旁邊有蒸籠和梅花盆栽",
+          "photoCaption": "示意插畫，非攤位實拍"
+        }
+      ],
+      "sample": true
     },
     {
       "no": 5,
-      "name": "靚萱餅乾鋪",
+      "name": "靚萱餅乾鋪／賣手作材料",
+      "category": "① 美食小吃",
       "island": "food",
-      "photo": "assets/stalls/stall-05-v2.png",
+      "type": "food",
+      "challengeEnabled": false,
+      "desc": "販售餅乾，歡迎到攤位看看有哪些口味。",
+      "photo": "assets/stalls/r20/stall-05.png",
       "photoAlt": "插畫：女孩和男孩一起端著一整盤巧克力豆餅乾",
       "photoCaption": "示意插畫，非攤位實拍",
-      "desc": "販售餅乾，歡迎到攤位看看有哪些口味。",
-      "sample": true,
-      "challengeEnabled": false
+      "sample": true
     },
     {
       "no": 6,
-      "name": "手作DIY",
+      "name": "巧手工坊／自己畫貼紙 DIY",
+      "category": "② 手作體驗（一）",
       "island": "craft",
-      "photo": "assets/stalls/stall-06-v2.png",
-      "photoAlt": "插畫：男孩用剪刀剪黃色色紙，女孩拿著彩色紙風車花，桌上有色紙、膠水和蠟筆",
-      "photoCaption": "示意插畫，非攤位實拍",
-      "rules": "選擇材料，依攤主示範組合與裝飾。",
-      "clear": "完成一件手作作品。",
-      "sample": true,
-      "challengeEnabled": true
+      "type": "craft",
+      "challengeEnabled": true,
+      "parts": [
+        {
+          "name": "巧手工坊",
+          "rules": "運用攤位提供的材料，做出自己的小作品。",
+          "clear": "依示範完成作品的主要造型。",
+          "photo": "assets/stalls/r20/stall-06-a.png",
+          "photoAlt": "插畫：男孩用針線縫小熊臉的不織布吊飾，女孩在旁邊幫忙，桌上有不織布、剪刀和毛線球",
+          "photoCaption": "示意插畫，非攤位實拍"
+        },
+        {
+          "name": "自己畫貼紙 DIY",
+          "rules": "在空白貼紙上畫出喜歡的圖案，再上色。",
+          "clear": "完成至少一張自畫貼紙。",
+          "photo": "assets/stalls/r20/stall-06-b.png",
+          "photoAlt": "插畫：兩個小朋友用彩色筆畫貼紙，紙上有星星、愛心、小貓、花和兔子圖案",
+          "photoCaption": "示意插畫，非攤位實拍"
+        }
+      ],
+      "sample": true
     },
     {
       "no": 7,
-      "name": "巧手工坊",
+      "name": "吉樂工作室",
+      "category": "② 手作體驗（一）",
       "island": "craft",
-      "photo": "assets/stalls/stall-07-v2.png",
-      "photoAlt": "插畫：男孩用針線縫小熊臉的不織布吊飾，女孩在旁邊幫忙，桌上有不織布、剪刀和毛線球",
+      "type": "craft",
+      "challengeEnabled": true,
+      "rules": "挑選材料，跟著攤主示範製作並裝飾作品。",
+      "clear": "完成一件現場指定的作品。",
+      "photo": "assets/stalls/r20/stall-07.png",
+      "photoAlt": "插畫：兩個小朋友在掛著三角旗的工作室裡，用黏土捏彩虹和小房子",
       "photoCaption": "示意插畫，非攤位實拍",
-      "rules": "運用攤位提供的材料，做出自己的小作品。",
-      "clear": "依示範完成作品的主要造型。",
-      "sample": true,
-      "challengeEnabled": true
+      "sample": true
     },
     {
       "no": 8,
-      "name": "自己畫貼紙DIY",
+      "name": "有吃有玩真好玩",
+      "category": "② 手作體驗（一）",
       "island": "craft",
-      "photo": "assets/stalls/stall-08-v2.png",
-      "photoAlt": "插畫：兩個小朋友用彩色筆畫貼紙，紙上有星星、愛心、小貓、花和兔子圖案",
+      "type": "game",
+      "challengeEnabled": true,
+      "rules": "依攤主說明完成一輪小遊戲，也可到攤位選購點心。",
+      "clear": "達成當輪遊戲的指定目標。",
+      "photo": "assets/stalls/r20/stall-08.png",
+      "photoAlt": "插畫：男孩握拳歡呼，女孩拿著骰子，桌上有棋盤遊戲、一盤點心和一杯珍珠奶茶",
       "photoCaption": "示意插畫，非攤位實拍",
-      "rules": "在空白貼紙上畫出喜歡的圖案，再上色。",
-      "clear": "完成至少一張自畫貼紙。",
-      "sample": true,
-      "challengeEnabled": true
+      "sample": true
     },
     {
       "no": 9,
-      "name": "吉樂工作室",
+      "name": "正反接球王",
+      "category": "② 手作體驗（一）",
       "island": "craft",
-      "photo": "assets/stalls/stall-09-v2.png",
-      "photoAlt": "插畫：兩個小朋友在掛著三角旗的工作室裡，用黏土捏彩虹和小房子",
+      "type": "game",
+      "challengeEnabled": true,
+      "rules": "依指示切換正手、反手，接住來球。",
+      "clear": "正手與反手各成功接住一次。",
+      "photo": "assets/stalls/r20/stall-09.png",
+      "photoAlt": "插畫：男孩和女孩在攤位前的草地上互相拋接一顆球",
       "photoCaption": "示意插畫，非攤位實拍",
-      "rules": "挑選材料，跟著攤主示範製作並裝飾作品。",
-      "clear": "完成一件現場指定的作品。",
-      "sample": true,
-      "challengeEnabled": true
+      "sample": true
     },
     {
       "no": 10,
-      "name": "名不虛傳GG手",
-      "island": "puzzle",
-      "photo": "assets/stalls/stall-10-v2.png",
-      "photoAlt": "插畫：兩個小朋友在彈珠台遊戲盒前舉手歡呼，盒裡有彩色圓圈目標和一顆白球",
-      "photoCaption": "示意插畫，非攤位實拍",
-      "rules": "依攤主示範操作道具，挑戰指定目標。",
-      "clear": "達成攤主指定的目標。",
-      "sample": true,
-      "challengeEnabled": true
+      "name": "圈圈洞洞／好開心抽抽樂",
+      "category": "② 手作體驗（一）",
+      "island": "craft",
+      "type": "game",
+      "challengeEnabled": true,
+      "parts": [
+        {
+          "name": "圈圈洞洞",
+          "rules": "站在指定線後，把圈圈投向洞洞板的目標區。",
+          "clear": "至少一次投中指定目標。",
+          "photo": "assets/stalls/r20/stall-10-a.png",
+          "photoAlt": "插畫：女孩拿著彩色圈圈對準木板上的洞，男孩蹲在旁邊加油，籃子裡裝著更多圈圈",
+          "photoCaption": "示意插畫，非攤位實拍"
+        },
+        {
+          "name": "好開心抽抽樂",
+          "rules": "從抽獎盒抽出一張籤，依籤上的結果對獎。",
+          "clear": "完成抽籤並核對結果。",
+          "photo": "assets/stalls/r20/stall-10-b.png",
+          "photoAlt": "插畫：女孩把手伸進印著星星的紅色抽獎箱，男孩在旁邊期待，桌上擺著小禮物盒",
+          "photoCaption": "示意插畫，非攤位實拍"
+        }
+      ],
+      "sample": true
     },
     {
       "no": 11,
       "name": "彈珠迷宮",
+      "category": "③ 手作體驗（二）",
       "island": "puzzle",
-      "sample": true,
-      "photo": "assets/stalls/stall-11-v2.png",
-      "photoAlt": "插畫：兩個穿制服的小朋友跪在藍色地毯上玩木製彈珠迷宮，男孩指著迷宮裡的藍色彈珠，迷宮一端有藍屋頂小屋，另一端有紅色拱門",
-      "photoCaption": "示意插畫，非攤位實拍",
+      "type": "game",
+      "challengeEnabled": true,
       "rules": "操控彈珠沿迷宮路線，從起點走到終點。",
       "clear": "讓彈珠抵達終點。",
-      "challengeEnabled": true
+      "photo": "assets/stalls/r20/stall-11.png",
+      "photoAlt": "插畫：兩個穿制服的小朋友跪在藍色地毯上玩木製彈珠迷宮，男孩指著迷宮裡的藍色彈珠，迷宮一端有藍屋頂小屋，另一端有紅色拱門",
+      "photoCaption": "示意插畫，非攤位實拍",
+      "sample": true
     },
     {
       "no": 12,
-      "name": "鯉魚Liyu遊戲店",
+      "name": "鯉魚 Liyu 遊戲店",
+      "category": "③ 手作體驗（二）",
       "island": "puzzle",
-      "photo": "assets/stalls/stall-12-v2.png",
-      "photoAlt": "插畫：紅白條紋棚的桌遊攤，男孩和女孩坐在桌邊玩棋盤遊戲，架上擺著各式桌遊盒，旁邊有小黑板",
-      "photoCaption": "示意插畫，非攤位實拍",
+      "type": "game",
+      "challengeEnabled": true,
       "rules": "挑選現場提供的遊戲，依攤主說明完成一輪。",
       "clear": "達成所選遊戲的指定目標。",
-      "sample": true,
-      "challengeEnabled": true
+      "photo": "assets/stalls/r20/stall-12.png",
+      "photoAlt": "插畫：紅白條紋棚的桌遊攤，男孩和女孩坐在桌邊玩棋盤遊戲，架上擺著各式桌遊盒，旁邊有小黑板",
+      "photoCaption": "示意插畫，非攤位實拍",
+      "sample": true
     },
     {
       "no": 13,
-      "name": "圈圈洞洞",
+      "name": "鯉魚記憶王／搖出你的好耳力",
+      "category": "③ 手作體驗（二）",
       "island": "puzzle",
-      "photo": "assets/stalls/stall-13-v2.png",
-      "photoAlt": "插畫：女孩拿著彩色圈圈對準木板上的洞，男孩蹲在旁邊加油，籃子裡裝著更多圈圈",
-      "photoCaption": "示意插畫，非攤位實拍",
-      "rules": "站在指定線後，把圈圈投向洞洞板的目標區。",
-      "clear": "至少一次投中指定目標。",
-      "sample": true,
-      "challengeEnabled": true
+      "type": "game",
+      "challengeEnabled": true,
+      "parts": [
+        {
+          "name": "鯉魚記憶王",
+          "rules": "每次翻開兩張牌，記住位置並找出相同圖案。",
+          "clear": "配對成功至少一組。",
+          "photo": "assets/stalls/r20/stall-13-a.png",
+          "photoAlt": "插畫：兩個小朋友在格子桌上翻記憶卡牌，卡片上有蘋果、小熊和星星，背後掛著草莓與向日葵的配對圖",
+          "photoCaption": "示意插畫，非攤位實拍"
+        },
+        {
+          "name": "搖出你的好耳力",
+          "rules": "搖一搖不同的容器，聽聲音並找出一樣的一組。",
+          "clear": "正確配對至少一組。",
+          "photo": "assets/stalls/r20/stall-13-b.png",
+          "photoAlt": "插畫：男孩和女孩各拿著一個裝了豆子的小罐子搖晃聆聽聲音，桌上排著多個彩色罐子",
+          "photoCaption": "示意插畫，非攤位實拍"
+        }
+      ],
+      "sample": true
     },
     {
       "no": 14,
-      "name": "二手跳蚤市場",
-      "island": "recycle",
-      "photo": "assets/stalls/stall-14-v2.png",
-      "photoAlt": "插畫：二手攤桌上擺著書本、玩具車、魔術方塊，旁邊有兔子和恐龍布偶，兩個小朋友在攤位後招呼",
+      "name": "娃！茶一點就中",
+      "category": "③ 手作體驗（二）",
+      "island": "puzzle",
+      "type": "game",
+      "challengeEnabled": true,
+      "rules": "站在指定線後，把遊戲道具投向茶杯造型的目標。",
+      "clear": "至少一次投中指定目標。",
+      "photo": "assets/stalls/r20/stall-14.png",
+      "photoAlt": "插畫：男孩和女孩在擺滿植物的攤位喝茶，桌上有一壺茶、幾個茶杯和一籃茶葉",
       "photoCaption": "示意插畫，非攤位實拍",
-      "desc": "販售二手物品，歡迎看看有哪些還能繼續使用的好物。",
-      "sample": true,
-      "challengeEnabled": false
+      "sample": true
     },
     {
       "no": 15,
-      "name": "夏來寶",
+      "name": "夏來寶／廢物市集",
+      "category": "④ 二手跳蚤",
       "island": "recycle",
-      "photo": "assets/stalls/stall-15-v2.png",
-      "photoAlt": "插畫：男孩蹲著看一台舊相機，女孩坐著翻書，木箱裡有黑膠唱片、小熊布偶和鬧鐘",
-      "photoCaption": "示意插畫，非攤位實拍",
-      "desc": "二手挖寶攤，歡迎挑選中意的物品。",
-      "sample": true,
-      "challengeEnabled": false
+      "type": "secondhand",
+      "challengeEnabled": false,
+      "parts": [
+        {
+          "name": "夏來寶",
+          "desc": "二手挖寶攤，歡迎挑選中意的物品。",
+          "photo": "assets/stalls/r20/stall-15-a.png",
+          "photoAlt": "插畫：男孩蹲著看一台舊相機，女孩坐著翻書，木箱裡有黑膠唱片、小熊布偶和鬧鐘",
+          "photoCaption": "示意插畫，非攤位實拍"
+        },
+        {
+          "name": "廢物市集",
+          "desc": "販售整理過的二手物件，讓用得到的人把它們帶回家。",
+          "photo": "assets/stalls/r20/stall-15-b.png",
+          "photoAlt": "插畫：二手攤上有掛著衣服的衣架、電風扇、鍋子、烤麵包機和摺好的毛巾，兩個小朋友在旁邊招手",
+          "photoCaption": "示意插畫，非攤位實拍"
+        }
+      ],
+      "sample": true
     },
     {
       "no": 16,
-      "name": "廢物市集",
+      "name": "聖誕 DIY 製造所",
+      "category": "④ 二手跳蚤",
       "island": "recycle",
-      "photo": "assets/stalls/stall-16-v2.png",
-      "photoAlt": "插畫：二手攤上有掛著衣服的衣架、電風扇、鍋子、烤麵包機和摺好的毛巾，兩個小朋友在旁邊招手",
+      "type": "craft",
+      "challengeEnabled": false,
+      "rules": "使用提供的材料，製作並裝飾一件聖誕小物。",
+      "clear": "完成一件聖誕手作。",
+      "photo": "assets/stalls/r20/stall-16.png",
+      "photoAlt": "插畫：聖誕布置的攤位，兩個小朋友做星星和雪花吊飾，旁邊有聖誕樹、襪子和聖誕老人裝飾",
       "photoCaption": "示意插畫，非攤位實拍",
-      "desc": "販售整理過的二手物件，讓用得到的人把它們帶回家。",
-      "sample": true,
-      "challengeEnabled": false
+      "sample": true
     },
     {
       "no": 17,
-      "name": "好開心抽抽樂",
+      "name": "名不虛傳 GG 手",
+      "category": "⑤ 趣味遊戲",
       "island": "sport",
-      "photo": "assets/stalls/stall-17-v2.png",
-      "photoAlt": "插畫：女孩把手伸進印著星星的紅色抽獎箱，男孩在旁邊期待，桌上擺著小禮物盒",
+      "type": "game",
+      "challengeEnabled": true,
+      "rules": "依攤主示範操作道具，挑戰指定目標。",
+      "clear": "達成攤主指定的目標。",
+      "photo": "assets/stalls/r20/stall-17.png",
+      "photoAlt": "插畫：兩個小朋友在彈珠台遊戲盒前舉手歡呼，盒裡有彩色圓圈目標和一顆白球",
       "photoCaption": "示意插畫，非攤位實拍",
-      "rules": "從抽獎盒抽出一張籤，依籤上的結果對獎。",
-      "clear": "完成抽籤並核對結果。",
-      "sample": true,
-      "challengeEnabled": true
+      "sample": true
     },
     {
       "no": 18,
-      "name": "鯉魚記憶王",
-      "island": "puzzle",
-      "photo": "assets/stalls/stall-18-v2.png",
-      "photoAlt": "插畫：兩個小朋友在格子桌上翻記憶卡牌，卡片上有蘋果、小熊和星星，背後掛著草莓與向日葵的配對圖",
+      "name": "丟球者",
+      "category": "⑤ 趣味遊戲",
+      "island": "sport",
+      "type": "game",
+      "challengeEnabled": true,
+      "rules": "站在指定線後，把球投進目標籃或洞口。",
+      "clear": "至少投進一球。",
+      "photo": "assets/stalls/r20/stall-18.png",
+      "photoAlt": "插畫：學生把彩色球投向前方的目標籃，籃子裡裝滿彩色球，另一位學生在旁邊握拳加油",
       "photoCaption": "示意插畫，非攤位實拍",
-      "rules": "每次翻開兩張牌，記住位置並找出相同圖案。",
-      "clear": "配對成功至少一組。",
-      "sample": true,
-      "challengeEnabled": true
+      "sample": true
     },
     {
       "no": 19,
-      "name": "哇！茶一點就中",
-      "island": "recycle",
-      "photo": "assets/stalls/stall-19-v2.png",
-      "photoAlt": "插畫：男孩和女孩在擺滿植物的攤位喝茶，桌上有一壺茶、幾個茶杯和一籃茶葉",
-      "photoCaption": "示意插畫，非攤位實拍",
-      "rules": "站在指定線後，把遊戲道具投向茶杯造型的目標。",
-      "clear": "至少一次投中指定目標。",
-      "sample": true,
+      "name": "三二一發射！／戰鬥陀螺",
+      "category": "⑤ 趣味遊戲",
+      "island": "sport",
       "type": "game",
-      "challengeEnabled": true
+      "challengeEnabled": true,
+      "rules": "倒數後把陀螺發射到擂台，與對手同場較量。",
+      "clear": "讓自己的陀螺比對手轉得更久。",
+      "photo": "assets/stalls/r20/stall-19.png",
+      "photoAlt": "插畫：兩位學生拿著發射器跪在圓形擂台兩邊，擂台裡的兩顆戰鬥陀螺正在比拚",
+      "photoCaption": "示意插畫，非攤位實拍",
+      "sample": true
     },
     {
       "no": 20,
-      "name": "縣女童軍愛心義賣爆米花",
-      "island": "craft",
+      "name": "女童軍",
+      "category": "③ 手作體驗（二）",
+      "island": "puzzle",
       "type": "food",
+      "challengeEnabled": false,
       "desc": "縣女童軍愛心義賣爆米花，所得做公益、獻愛心，鼓勵大家一起來參加！",
-      "photo": "assets/stalls/stall-20-v2.png",
+      "photo": "assets/stalls/r20/stall-20.png",
       "photoAlt": "插畫：紫白條紋棚的爆米花攤，攤台上有爆米花機和一籃爆米花，桌巾上有紅色愛心，兩位穿制服的女童軍各捧著一桶爆米花",
-      "photoCaption": "示意插畫，非攤位實拍",
-      "challengeEnabled": false
-    },
-    {
-      "no": 21,
-      "name": "有吃有玩真好玩",
-      "island": "puzzle",
-      "photo": "assets/stalls/stall-21-v2.png",
-      "photoAlt": "插畫：男孩握拳歡呼，女孩拿著骰子，桌上有棋盤遊戲、一盤點心和一杯珍珠奶茶",
-      "photoCaption": "示意插畫，非攤位實拍",
-      "rules": "依攤主說明完成一輪小遊戲，也可到攤位選購點心。",
-      "clear": "達成當輪遊戲的指定目標。",
-      "sample": true,
-      "challengeEnabled": true
-    },
-    {
-      "no": 22,
-      "name": "鯉魚麻糬屋",
-      "island": "puzzle",
-      "photo": "assets/stalls/stall-22-v2.png",
-      "photoAlt": "插畫：兩個小朋友端著一盤彩色麻糬，攤位掛著紅燈籠，旁邊有蒸籠和梅花盆栽",
-      "photoCaption": "示意插畫，非攤位實拍",
-      "desc": "販售麻糬，口味與供應數量以現場為準。",
-      "sample": true,
-      "type": "food",
-      "challengeEnabled": false
-    },
-    {
-      "no": 23,
-      "name": "正反接球王",
-      "island": "sport",
-      "photo": "assets/stalls/stall-23-v2.png",
-      "photoAlt": "插畫：男孩和女孩在攤位前的草地上互相拋接一顆球",
-      "photoCaption": "示意插畫，非攤位實拍",
-      "rules": "依指示切換正手、反手，接住來球。",
-      "clear": "正手與反手各成功接住一次。",
-      "sample": true,
-      "challengeEnabled": true
-    },
-    {
-      "no": 24,
-      "name": "搖出你的好耳力",
-      "island": "sport",
-      "photo": "assets/stalls/stall-24-v2.png",
-      "photoAlt": "插畫：男孩和女孩各拿著一個裝了豆子的小罐子搖晃聆聽聲音，桌上排著多個彩色罐子",
-      "photoCaption": "示意插畫，非攤位實拍",
-      "rules": "搖一搖不同的容器，聽聲音並找出一樣的一組。",
-      "clear": "正確配對至少一組。",
-      "sample": true,
-      "challengeEnabled": true
-    },
-    {
-      "no": 25,
-      "name": "丟球者",
-      "island": "sport",
-      "rules": "站在指定線後，把球投進目標籃或洞口。",
-      "clear": "至少投進一球。",
-      "sample": true,
-      "photo": "assets/stalls/stall-25-v2.png",
-      "photoAlt": "插畫：學生把彩色球投向前方的目標籃，籃子裡裝滿彩色球，另一位學生在旁邊握拳加油",
-      "photoCaption": "示意插畫，非攤位實拍",
-      "challengeEnabled": true
-    },
-    {
-      "no": 26,
-      "name": "三二一發射！戰鬥陀螺",
-      "island": "sport",
-      "rules": "倒數後把陀螺發射到擂台，與對手同場較量。",
-      "clear": "讓自己的陀螺比對手轉得更久。",
-      "sample": true,
-      "photo": "assets/stalls/stall-26-v2.png",
-      "photoAlt": "插畫：兩位學生拿著發射器跪在圓形擂台兩邊，擂台裡的兩顆戰鬥陀螺正在比拚",
-      "photoCaption": "示意插畫，非攤位實拍",
-      "challengeEnabled": true
+      "photoCaption": "示意插畫，非攤位實拍"
     }
   ],
   "stallTypes": {
@@ -994,15 +1025,15 @@
         "id": "m-food",
         "island": "food",
         "stallNo": 5,
-        "text": "到靚萱餅乾鋪，找出現場販售的一種餅乾口味。",
+        "text": "到靚萱餅乾鋪／賣手作材料，找出現場販售的一種餅乾口味。",
         "kind": "觀察",
         "enabled": true
       },
       {
         "id": "m-craft",
         "island": "craft",
-        "stallNo": 8,
-        "text": "在自己畫貼紙 DIY 完成一張自畫貼紙。",
+        "stallNo": 6,
+        "text": "在巧手工坊／自己畫貼紙 DIY 完成一張自畫貼紙。",
         "kind": "手作",
         "enabled": true
       },
@@ -1015,19 +1046,19 @@
         "enabled": true
       },
       {
-        "id": "m-sport",
-        "island": "sport",
-        "stallNo": 25,
-        "text": "到丟球者站在線後，至少投進一球。",
-        "kind": "遊戲",
-        "enabled": true
-      },
-      {
         "id": "m-recycle",
         "island": "recycle",
         "stallNo": 15,
-        "text": "到夏來寶挑一件最有故事的二手物，說給同伴聽。",
+        "text": "到夏來寶／廢物市集挑一件最有故事的二手物，說給同伴聽。",
         "kind": "觀察",
+        "enabled": true
+      },
+      {
+        "id": "m-sport",
+        "island": "sport",
+        "stallNo": 18,
+        "text": "到丟球者站在線後，至少投進一球。",
+        "kind": "遊戲",
         "enabled": true
       }
     ]
@@ -1036,13 +1067,50 @@
     "name": "鯉魚號",
     "role": "虛擬遊船",
     "color": "#c73a1f",
-    "intro": "一艘鯉魚造型的帆船，載著小朋友繞五座主題島一圈，再倒退停回益智闖關島的鯉魚號碼頭，放下跳板讓大家上下船。",
+    "intro": "一艘鯉魚造型的帆船，載著小朋友繞五座主題島一圈，再倒退停回手作體驗二島的鯉魚號碼頭，放下跳板讓大家上下船。",
     "how": [
       "按「登船」會站到船尾甲板，跟著船一起出航；方向鍵或 WASD 可以在甲板上走動、轉頭看島。",
-      "船停靠碼頭、跳板放下時，從船尾左側走上跳板就能下船，沿棧道和階梯走回益智闖關島。",
-      "也可以先走到益智闖關島西側的碼頭等船，跳板放下後走上船。",
+      "船停靠碼頭、跳板放下時，從船尾左側走上跳板就能下船，沿棧道和階梯走回手作體驗二島。",
+      "也可以先走到手作體驗二島西側的碼頭等船，跳板放下後走上船。",
       "在俯視畫面點船或「鯉魚號」標籤，鏡頭會跟著船走；按 ✕ 回到全景。"
     ],
     "note": "鯉魚號只在網站裡，市集現場沒有船；船上的小朋友是示意角色。"
+  },
+  "roster": {
+    "version": "r20",
+    "label": "115 攤位名冊（20 攤定稿）",
+    "legacy": {
+      "from": "r26",
+      "map": {
+        "1": 1,
+        "2": 4,
+        "3": 3,
+        "4": 2,
+        "5": 5,
+        "7": 6,
+        "8": 6,
+        "9": 7,
+        "10": 17,
+        "11": 11,
+        "12": 12,
+        "13": 10,
+        "15": 15,
+        "16": 15,
+        "17": 10,
+        "18": 13,
+        "19": 14,
+        "20": 20,
+        "21": 8,
+        "22": 4,
+        "23": 9,
+        "24": 13,
+        "25": 18,
+        "26": 19
+      },
+      "removed": {
+        "6": "手作DIY",
+        "14": "二手跳蚤市場"
+      }
+    }
   }
 }
