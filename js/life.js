@@ -1,7 +1,7 @@
 // 生活感：居民、送貨員、商人、路人、動物、雲、鳥群、帆船、螢火蟲、貝殼
 import * as THREE from 'three';
-import { TAU, clamp, lerp, rng, mat, GEO, glowTexture, C } from './kit.js?v=20261116c';
-import { H, PIER_Y } from './world.js?v=20261116c';
+import { TAU, clamp, lerp, rng, mat, GEO, glowTexture, C } from './kit.js?v=20261116d';
+import { H, PIER_Y } from './world.js?v=20261116d';
 
 const SKIN = ['#ffd9b8', '#f2c49b', '#e0ad84', '#ffe3c8'];
 const SHIRT = ['#e8762b', '#8a5cd0', '#2f7fd1', '#dc4848', '#3e9b4f', '#e3a33b', '#f2f2f2', '#4fb3b0'];
@@ -174,30 +174,59 @@ export function createLife(W, content, opts) {
     g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
     scene.add(g); boats.push({ g, a: i * Math.PI + .6, rad: 60 + i * 10, sp: .022 - i * .006 });
   }
-  // 鯉魚帆船：船身是一條紅白錦鯉做成的敞篷船，船艙裡三排長椅坐滿小朋友；背鰭當帆，尾鰭在船尾翹起
+  // 鯉魚號（參考主視覺）：木造敞篷船，船頭是一顆大鯉魚頭（大圓眼），船身外側包著橘紅與米白的鱗片，
+  // 吃水線一圈白浪；木桅頂端有木球，米白船帆上畫著躍出藍浪的橘色鯉魚，桅頂拉一串彩旗到船頭
   {
-    const g = new THREE.Group(), red = mat('#e4532c'), white = mat('#fbf3e6'), gold = mat('#f2b33d'), dark = mat('#2a211c'), wood = mat('#c99a63'), woodD = mat('#9a6b3c');
+    const g = new THREE.Group(), red = mat('#e8552d'), orange = mat('#f08a3c'), cream = mat('#fbf0dc'), dark = mat('#2a211c'),
+      wood = mat('#c99a63'), woodD = mat('#8a5a2e'), woodM = mat('#b07a45'), foam = mat('#ffffff');
     const L = 3.1, Wd = 1.55, RIM = .78;
-    // 船殼：下半個橢球（上緣紅、吃水線以下白），內側也看得到
-    const hullR = new THREE.Mesh(new THREE.SphereGeometry(1, 18, 10, 0, TAU, Math.PI * .5, Math.PI * .2), mat('#e4532c', { side: THREE.DoubleSide }));
-    const hullW = new THREE.Mesh(new THREE.SphereGeometry(1, 18, 10, 0, TAU, Math.PI * .7, Math.PI * .3), mat('#fbf3e6', { side: THREE.DoubleSide }));
+    // 船殼：下半個橢球（上緣橘紅、吃水線附近米白），內側也看得到
+    const hullR = new THREE.Mesh(new THREE.SphereGeometry(1, 20, 10, 0, TAU, Math.PI * .5, Math.PI * .22), mat('#e8552d', { side: THREE.DoubleSide }));
+    const hullW = new THREE.Mesh(new THREE.SphereGeometry(1, 20, 10, 0, TAU, Math.PI * .72, Math.PI * .28), mat('#fbf0dc', { side: THREE.DoubleSide }));
     for (const h of [hullR, hullW]) { h.scale.set(Wd, .9, L); h.position.y = RIM; g.add(h); }
-    const rim = new THREE.Mesh(new THREE.TorusGeometry(1, .07, 6, 36), gold); rim.rotation.x = Math.PI / 2; rim.scale.set(Wd, L, 1); rim.position.y = RIM; g.add(rim);
+    // 木造船舷：兩圈木條＋一排舷板
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(1, .09, 6, 40), woodD); rim.rotation.x = Math.PI / 2; rim.scale.set(Wd, L, 1); rim.position.y = RIM + .02; g.add(rim);
+    const rim2 = new THREE.Mesh(new THREE.TorusGeometry(1, .06, 6, 40), woodM); rim2.rotation.x = Math.PI / 2; rim2.scale.set(Wd * .985, L * .99, 1); rim2.position.y = RIM - .13; g.add(rim2);
     const floor = new THREE.Mesh(new THREE.CircleGeometry(1, 24), wood); floor.rotation.x = -Math.PI / 2; floor.scale.set(Wd * .82, L * .85, 1); floor.position.y = .3; g.add(floor);
-    // 頭（船頭）：白底紅頂、眼睛、嘴、鬚
-    const head = new THREE.Mesh(new THREE.SphereGeometry(1, 14, 10), white); head.scale.set(1.05, .8, 1.0); head.position.set(0, .95, L - .15); g.add(head);
-    const cap = new THREE.Mesh(new THREE.SphereGeometry(1, 12, 6, 0, TAU, 0, Math.PI * .5), red); cap.scale.set(.66, .5, .6); cap.position.set(0, 1.2, L - .35); g.add(cap);
+    // 船身鱗片：沿橢球表面排兩列半圓鱗，橘紅／米白交錯（像主視覺的鯉魚身）
+    const scaleGeo = new THREE.SphereGeometry(1, 10, 6, 0, Math.PI, 0, Math.PI);
+    const onHull = (z, dy) => { const k = 1 - (z / L) ** 2 - (dy / .9) ** 2; return k > 0 ? Wd * Math.sqrt(k) : 0; };
     for (const sx of [-1, 1]) {
-      const eye = new THREE.Mesh(new THREE.SphereGeometry(1, 8, 6), white); eye.scale.setScalar(.22); eye.position.set(sx * .78, 1.15, L + .1); g.add(eye);
-      const pupil = new THREE.Mesh(new THREE.SphereGeometry(1, 8, 6), dark); pupil.scale.setScalar(.12); pupil.position.set(sx * .92, 1.17, L + .17); g.add(pupil);
-      const wh = new THREE.Mesh(new THREE.CylinderGeometry(.03, .02, 1, 5), gold); wh.position.set(sx * .45, .75, L + .85); wh.rotation.set(Math.PI / 2.6, 0, sx * .5); g.add(wh);
-      const fin = new THREE.Mesh(new THREE.ConeGeometry(.5, 1, 4), red); fin.scale.set(.55, 1.2, .12); fin.position.set(sx * 1.55, .35, L * .45); fin.rotation.set(.6, 0, sx * 1.9); g.add(fin);
-      for (let k = 0; k < 4; k++) { const sc = new THREE.Mesh(new THREE.SphereGeometry(1, 8, 4, 0, Math.PI), gold); sc.scale.set(.3, .2, .05); sc.position.set(sx * 1.47, .5, 1.3 - k * .85); sc.rotation.y = sx * Math.PI / 2; g.add(sc); }
+      for (const [row, dy] of [[0, -.08], [1, -.32]]) {
+        for (let i = 0; i < 9; i++) {
+          const z = 1.95 - i * .5 - row * .25; if (z < -2.55) continue;
+          const x = onHull(z, dy); if (!x) continue;
+          const sc = new THREE.Mesh(scaleGeo, (i + row) % 2 ? cream : red);
+          sc.scale.set(.3, .26, .06); sc.position.set(sx * (x + .02), RIM + dy, z);
+          sc.lookAt(sc.position.clone().add(new THREE.Vector3(sx * x / Wd, 0, z / L * .4))); g.add(sc);
+          if (row === 0) { const rim3 = new THREE.Mesh(scaleGeo, orange); rim3.scale.set(.2, .17, .065); rim3.position.copy(sc.position).add(new THREE.Vector3(sx * .01, .02, 0)); rim3.quaternion.copy(sc.quaternion); if ((i + row) % 2 === 0) g.add(rim3); }
+        }
+      }
+      // 胸鰭
+      const pf = new THREE.Mesh(new THREE.ConeGeometry(.5, 1, 5), orange); pf.scale.set(.6, 1.1, .1); pf.position.set(sx * 1.5, .3, 1.75); pf.rotation.set(.7, 0, sx * 2.0); g.add(pf);
     }
-    const mouth = new THREE.Mesh(new THREE.TorusGeometry(.22, .08, 6, 12), red); mouth.position.set(0, .85, L + .85); g.add(mouth);
-    // 尾鰭
-    const tail = new THREE.Shape(); tail.moveTo(0, 0); tail.quadraticCurveTo(.9, .5, 1.6, 1.4); tail.quadraticCurveTo(1.05, 1.0, .65, 1.0); tail.quadraticCurveTo(.4, .5, 0, 0);
-    for (const sy of [1, -.55]) { const t = new THREE.Mesh(new THREE.ShapeGeometry(tail), mat('#e86a3c', { side: THREE.DoubleSide })); t.rotation.y = Math.PI / 2; t.scale.set(1, sy, 1); t.position.set(0, .75, -L + .1); g.add(t); }
+    // 船頭：大鯉魚頭（橘紅頭頂、米白下巴、大圓眼、厚嘴唇、頭冠鰭）
+    const head = new THREE.Mesh(new THREE.SphereGeometry(1, 18, 12), red); head.scale.set(1.12, .95, 1.2); head.position.set(0, 1.18, L + .05); g.add(head);
+    const jaw = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 10), cream); jaw.scale.set(1.0, .6, 1.05); jaw.position.set(0, .78, L + .3); g.add(jaw);
+    const lip = new THREE.Mesh(new THREE.TorusGeometry(.32, .12, 8, 16), cream); lip.scale.set(1.2, .7, 1); lip.position.set(0, .98, L + 1.22); g.add(lip);
+    const lipIn = new THREE.Mesh(new THREE.SphereGeometry(1, 10, 8), mat('#7a2412')); lipIn.scale.set(.3, .14, .1); lipIn.position.set(0, .98, L + 1.2); g.add(lipIn);
+    for (const sx of [-1, 1]) {
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(1, 14, 10), cream); eye.scale.setScalar(.36); eye.position.set(sx * .78, 1.42, L + .55); g.add(eye);
+      const pupil = new THREE.Mesh(new THREE.SphereGeometry(1, 12, 8), dark); pupil.scale.setScalar(.22); pupil.position.set(sx * .98, 1.45, L + .66); g.add(pupil);
+      const glint = new THREE.Mesh(new THREE.SphereGeometry(1, 6, 4), foam); glint.scale.setScalar(.06); glint.position.set(sx * 1.12, 1.55, L + .72); g.add(glint);
+      const wh = new THREE.Mesh(new THREE.CylinderGeometry(.04, .02, .9, 5), cream); wh.position.set(sx * .42, .82, L + 1.35); wh.rotation.set(Math.PI / 2.4, 0, sx * .7); g.add(wh);
+      const gill = new THREE.Mesh(new THREE.TorusGeometry(.55, .045, 5, 12, Math.PI * .8), cream); gill.position.set(sx * 1.02, 1.05, L - .55); gill.rotation.set(0, sx * Math.PI / 2, -Math.PI * .4); g.add(gill);
+    }
+    const crest = new THREE.Shape(); crest.moveTo(0, 0); crest.quadraticCurveTo(.35, .75, 1.1, .85); crest.quadraticCurveTo(.85, .45, 1.05, 0); crest.lineTo(0, 0);
+    const cr = new THREE.Mesh(new THREE.ShapeGeometry(crest), mat('#f6c06a', { side: THREE.DoubleSide })); cr.rotation.y = -Math.PI / 2; cr.position.set(0, 1.95, L - .55); g.add(cr);
+    // 船尾：木造尾柱往上捲
+    const sternPost = new THREE.Mesh(new THREE.TorusGeometry(.38, .09, 6, 14, Math.PI * 1.2), woodD); sternPost.rotation.set(0, Math.PI / 2, 0); sternPost.position.set(0, RIM + .3, -L - .05); g.add(sternPost);
+    // 吃水線白浪：一圈浪花＋船頭兩側捲浪
+    const wave = new THREE.Mesh(new THREE.TorusGeometry(1, .13, 6, 40), foam); wave.rotation.x = Math.PI / 2; wave.scale.set(Wd * .93, L * .97, 1); wave.position.y = .08; g.add(wave);
+    for (const sx of [-1, 1]) for (let k = 0; k < 3; k++) {
+      const curl = new THREE.Mesh(new THREE.TorusGeometry(.22 - k * .03, .07, 6, 12, Math.PI * 1.4), foam);
+      curl.position.set(sx * (Wd * .75 - k * .2), .22, L * .7 - k * .75); curl.rotation.set(0, sx * Math.PI / 2, Math.PI * .1); g.add(curl);
+    }
     // 三排長椅＋小朋友（2、3、2 人），面向船頭
     const kids = [], kr = rng(1150), rows = [[1.15, [-.5, .5]], [.0, [-.72, 0, .72]], [-1.15, [-.5, .5]]];
     const uni = ['#f6f6f2', '#f6f6f2', '#ffd36b', '#9fd3f5', '#f6f6f2', '#ffb3b3', '#f6f6f2'];
@@ -217,30 +246,77 @@ export function createLife(W, content, opts) {
     }
     // 船尾左舷內側的小木階（從碼頭跳板跨過船緣，踩這一階下到甲板）
     { const step = new THREE.Mesh(GEO.box, wood); step.scale.set(.42, .24, .7); step.position.set(-.86, .42, -2.0); g.add(step); }
-    // 桅杆在船頭後方，背鰭帆往後展開罩在小朋友上方
-    const mast = new THREE.Mesh(GEO.cyl6, mat('#8d5d35')); mast.scale.set(.1, 5.4, .1); mast.position.set(0, 3.0, 1.95); g.add(mast);
-    const fin = new THREE.Shape(); fin.moveTo(0, 0); fin.lineTo(0, 3.4); fin.quadraticCurveTo(.9, 3.1, 1.6, 2.4);
-    for (let k = 0; k < 4; k++) { const y0 = 2.4 - k * .55; fin.quadraticCurveTo(2.05 - k * .05, y0 - .18, 1.7 - k * .05, y0 - .55); }
-    fin.lineTo(0, 0);
-    const sail = new THREE.Mesh(new THREE.ShapeGeometry(fin), mat('#fbf3e6', { side: THREE.DoubleSide })); sail.rotation.y = Math.PI / 2; sail.position.set(0, 2.05, 1.92); g.add(sail);
-    const band = new THREE.Mesh(new THREE.ShapeGeometry(fin), mat('#e4532c', { side: THREE.DoubleSide })); band.rotation.y = Math.PI / 2; band.scale.set(.42, .42, 1); band.position.set(.02, 3.45, 1.9); g.add(band);
-    const flag = new THREE.Mesh(GEO.box, gold); flag.scale.set(.03, .32, .55); flag.position.set(0, 5.85, 1.7); g.add(flag);
-    // 船帆上的直書「鯉魚號」（兩面各一片，從哪一側看都是正字）
-    const nameCv = document.createElement('canvas'); nameCv.width = 128; nameCv.height = 352;
-    const nameTex = new THREE.CanvasTexture(nameCv); nameTex.colorSpace = THREE.SRGBColorSpace; nameTex.anisotropy = 4;
-    const drawName = () => {
-      const x = nameCv.getContext('2d'); x.clearRect(0, 0, 128, 352);
-      x.fillStyle = '#c73a1f'; x.textAlign = 'center'; x.textBaseline = 'middle';
-      x.font = "900 92px 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', 'Noto Sans CJK TC', sans-serif";
-      ['鯉', '魚', '號'].forEach((ch, i) => x.fillText(ch, 64, 62 + i * 112));
-      nameTex.needsUpdate = true;
+    // 木桅（頂端木球）＋上下帆桁；方形船帆往船尾展開，罩在小朋友上方
+    const MZ = 1.95, SB = 2.0, ST = 5.0, SW = 2.9;                       // 桅杆位置、帆底、帆頂、帆寬（往船尾）
+    const mast = new THREE.Mesh(GEO.cyl8, woodD); mast.scale.set(.16, 5.7, .16); mast.position.set(0, 3.1, MZ); g.add(mast);
+    const knob = new THREE.Mesh(new THREE.SphereGeometry(1, 12, 8), wood); knob.scale.setScalar(.2); knob.position.set(0, 6.05, MZ); g.add(knob);
+    for (const y of [SB - .05, ST + .05]) { const yard = new THREE.Mesh(GEO.cyl6, woodM); yard.scale.set(.08, SW + .3, .08); yard.rotation.x = Math.PI / 2; yard.position.set(0, y, MZ - SW / 2); g.add(yard); }
+    // 帆面：畫布貼圖（兩面各一片，鯉魚都朝船頭跳、字都是正的）
+    const drawSail = (flip) => {
+      const cv = document.createElement('canvas'); cv.width = 512; cv.height = 560; const x = cv.getContext('2d');
+      const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
+      const paint = () => {
+        x.setTransform(1, 0, 0, 1, 0, 0);
+        x.fillStyle = '#fbf3e3'; x.fillRect(0, 0, 512, 560);
+        const rr = rng(77); x.fillStyle = 'rgba(160,130,90,.08)'; for (let i = 0; i < 900; i++) x.fillRect(rr() * 512, rr() * 560, 2, 2);   // 布紋
+        x.strokeStyle = '#e2d2b4'; x.lineWidth = 10; x.strokeRect(5, 5, 502, 550);
+        if (flip) { x.translate(512, 0); x.scale(-1, 1); }                // 桅杆那一側永遠是鯉魚頭的方向
+        // 藍色捲浪（下方三層）
+        const waveRow = (y, c, amp) => { x.fillStyle = c; x.beginPath(); x.moveTo(0, 560); x.lineTo(0, y);
+          for (let i = 0; i < 6; i++) { const x0 = i * 90; x.bezierCurveTo(x0 + 25, y - amp, x0 + 70, y - amp, x0 + 90, y); } x.lineTo(512, 560); x.closePath(); x.fill();
+          x.strokeStyle = '#ffffff'; x.lineWidth = 6; for (let i = 0; i < 6; i++) { x.beginPath(); x.arc(i * 90 + 52, y - amp * .45, amp * .32, Math.PI, Math.PI * 2.2); x.stroke(); } };
+        waveRow(445, '#3f7fc4', 46); waveRow(490, '#2b63a6', 40); waveRow(530, '#5a9bd8', 30);
+        // 躍起的橘色鯉魚（頭在左上、尾在右下），身體由鱗片與鰭組成
+        x.save(); x.translate(270, 245); x.rotate(.55);
+        const body = () => { x.beginPath(); x.moveTo(-190, 0); x.bezierCurveTo(-150, -95, 60, -95, 120, -25); x.lineTo(150, 0); x.lineTo(120, 25); x.bezierCurveTo(60, 95, -150, 95, -190, 0); x.closePath(); };
+        // 尾鰭
+        x.fillStyle = '#e8552d'; x.beginPath(); x.moveTo(135, 0); x.bezierCurveTo(190, -40, 230, -110, 250, -120); x.bezierCurveTo(225, -60, 220, -20, 205, 0); x.bezierCurveTo(220, 20, 225, 60, 250, 120); x.bezierCurveTo(230, 110, 190, 40, 135, 0); x.fill();
+        x.strokeStyle = '#f6b26b'; x.lineWidth = 4; for (const k of [-70, -35, 35, 70]) { x.beginPath(); x.moveTo(150, 0); x.lineTo(225, k * 1.3); x.stroke(); }
+        // 背鰭、腹鰭
+        x.fillStyle = '#f08a3c'; x.beginPath(); x.moveTo(-90, -70); x.quadraticCurveTo(-20, -150, 70, -60); x.closePath(); x.fill();
+        x.beginPath(); x.moveTo(-60, 70); x.quadraticCurveTo(-30, 130, 10, 72); x.closePath(); x.fill();
+        body(); const gr = x.createLinearGradient(0, -80, 0, 80); gr.addColorStop(0, '#e2401f'); gr.addColorStop(.55, '#f07a32'); gr.addColorStop(1, '#fbd9a8'); x.fillStyle = gr; x.fill();
+        x.save(); body(); x.clip(); x.strokeStyle = 'rgba(255,240,215,.75)'; x.lineWidth = 4;
+        for (let c = -120; c < 130; c += 34) for (let r2 = -70; r2 < 80; r2 += 30) { x.beginPath(); x.arc(c + (r2 / 30 % 2 ? 17 : 0), r2, 17, -Math.PI / 2, Math.PI / 2); x.stroke(); }
+        x.restore();
+        x.strokeStyle = '#a8321a'; x.lineWidth = 5; body(); x.stroke();
+        // 頭：鰓線、眼睛、嘴、鬚
+        x.strokeStyle = '#fbe3c2'; x.lineWidth = 6; x.beginPath(); x.arc(-105, 0, 58, -1.1, 1.1); x.stroke();
+        x.fillStyle = '#ffffff'; x.beginPath(); x.arc(-150, -22, 17, 0, TAU); x.fill(); x.fillStyle = '#1d1712'; x.beginPath(); x.arc(-153, -22, 10, 0, TAU); x.fill();
+        x.fillStyle = '#ffffff'; x.beginPath(); x.arc(-156, -26, 3.5, 0, TAU); x.fill();
+        x.strokeStyle = '#a8321a'; x.lineWidth = 5; x.beginPath(); x.moveTo(-188, 6); x.quadraticCurveTo(-175, 16, -160, 12); x.stroke();
+        x.strokeStyle = '#e2401f'; x.lineWidth = 4; x.beginPath(); x.moveTo(-182, 14); x.quadraticCurveTo(-215, 40, -205, 70); x.stroke();
+        x.restore();
+        // 水花
+        x.fillStyle = '#ffffff'; for (const [px, py, pr] of [[330, 410, 12], [360, 385, 8], [300, 395, 7], [385, 410, 6]]) { x.beginPath(); x.arc(px, py, pr, 0, TAU); x.fill(); }
+        // 直書「鯉魚號」：寫在靠桅杆的一側，兩面都是正字
+        x.setTransform(1, 0, 0, 1, 0, 0);
+        const tx = flip ? 512 - 52 : 52;
+        x.fillStyle = 'rgba(251,243,227,.85)'; x.fillRect(tx - 36, 22, 72, 228);
+        x.fillStyle = '#c73a1f'; x.textAlign = 'center'; x.textBaseline = 'middle';
+        x.font = "900 60px 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', 'Noto Sans CJK TC', sans-serif";
+        ['鯉', '魚', '號'].forEach((ch, i) => x.fillText(ch, tx, 62 + i * 72));
+        tex.needsUpdate = true;
+      };
+      paint(); if (document.fonts && document.fonts.ready) document.fonts.ready.then(paint);
+      return tex;
     };
-    drawName(); if (document.fonts && document.fonts.ready) document.fonts.ready.then(drawName);
-    const nameMat = new THREE.MeshBasicMaterial({ map: nameTex, transparent: true, depthWrite: false });
+    const sailGeo = new THREE.PlaneGeometry(SW, ST - SB, 8, 6);
+    { const pos = sailGeo.attributes.position; for (let i = 0; i < pos.count; i++) { const u = pos.getX(i) / SW + .5, v = pos.getY(i) / (ST - SB) + .5; pos.setZ(i, Math.sin(u * Math.PI) * Math.sin(v * Math.PI) * .22); } sailGeo.computeVertexNormals(); }   // 帆面微微鼓起
     for (const sx of [1, -1]) {
-      const pl = new THREE.Mesh(new THREE.PlaneGeometry(.62, 1.7), nameMat);
-      pl.position.set(sx * .035, 3.45, 1.12); pl.rotation.y = sx * Math.PI / 2; pl.renderOrder = 3; g.add(pl);
+      const pl = new THREE.Mesh(sailGeo, new THREE.MeshStandardMaterial({ map: drawSail(sx < 0), roughness: .95, side: THREE.FrontSide }));
+      pl.rotation.y = sx * Math.PI / 2; pl.position.set(sx * .03, (SB + ST) / 2, MZ - SW / 2 - .05); g.add(pl);
     }
+    // 繩索：桅頂→船頭、桅頂→船尾
+    const rope = (a, b, c = '#d9c8a4') => { const d = b.clone().sub(a); const m = new THREE.Mesh(new THREE.CylinderGeometry(.018, .018, d.length(), 4), mat(c)); m.position.copy(a).add(b).multiplyScalar(.5); m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize()); g.add(m); };
+    const top = new THREE.Vector3(0, 5.85, MZ);
+    rope(top, new THREE.Vector3(0, RIM + .1, -L + .1));
+    // 彩旗串：桅頂往船頭垂下一條弧線，掛紅、黃、橘、綠三角旗
+    const bow = new THREE.Vector3(0, 1.95, L + .55), flagCols = ['#e4532c', '#ffcf3a', '#f08a3c', '#5ec26a', '#3c8dea'];
+    const sag = (t) => top.clone().lerp(bow, t).add(new THREE.Vector3(0, -Math.sin(t * Math.PI) * .7, 0));
+    for (let i = 0; i < 12; i++) { rope(sag(i / 12), sag((i + 1) / 12), '#8a5a2e'); }
+    const flagGeo = new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute([0, 0, -.16, 0, 0, .16, 0, -.4, 0], 3)); flagGeo.computeVertexNormals();
+    for (let i = 1; i < 10; i++) { const f = new THREE.Mesh(flagGeo, mat(flagCols[i % flagCols.length], { side: THREE.DoubleSide })); f.position.copy(sag(i / 10)); g.add(f); }
     g.scale.setScalar(1.3);
     g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
     scene.add(g); boats.push({ g, a: 3.95, rad: 46, sp: .016, carp: true, kids, kr });
