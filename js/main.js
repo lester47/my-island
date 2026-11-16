@@ -34,6 +34,14 @@ if (S.reduced == null) S.reduced = matchMedia('(prefers-reduced-motion: reduce)'
 if (!S.bag) S.bag = { shell: 3 };
 
 // ------------------------------------------------------------------ 共用小元件
+// 滾輪縮放段數提示（電腦版）：「縮放 4／10」，一秒後淡出
+let zoomT = 0;
+function showZoom(k, n) {
+  let el = $('#zoomPill');
+  if (!el) { el = document.createElement('div'); el.id = 'zoomPill'; el.setAttribute('role', 'status'); el.setAttribute('aria-live', 'polite'); document.body.append(el); }
+  el.innerHTML = `<span>🔍 縮放 ${k}／${n}</span><i aria-hidden="true">${Array.from({ length: n }, (_, i) => `<b class="${i < k ? 'on' : ''}"></b>`).join('')}</i>`;
+  el.classList.add('show'); clearTimeout(zoomT); zoomT = setTimeout(() => el.classList.remove('show'), 1100);
+}
 let toastT = 0;
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 2400); }
 function islandById(id) { return id === 'center' ? C.center : id === 'carp' ? C.carpBoat : C.islands.find((i) => i.id === id); }
@@ -419,7 +427,7 @@ $('#stampBtn').addEventListener('click', openStamps);
 
 // ------------------------------------------------------------------ 攤位詳情（點攤位列展開，同時只開一攤）
 // 合併攤（parts）：一張詳情卡分兩段，各有自己的圖片與說明
-const photoHTML = (o, name) => o.photo ? `<div class="stall-photo"><img src="${esc(o.photo + (C.assetVersion ? `?v=${C.assetVersion}` : ''))}" alt="${esc(o.photoAlt || name)}" loading="lazy" decoding="async" width="1774" height="887"></div>${o.photoCaption ? `<p class="stall-photo-cap">${esc(o.photoCaption)}</p>` : ''}` : '';
+const photoHTML = (o, name) => o.photo ? `<div class="stall-photo"><img src="${esc(o.photo + (C.assetVersion ? `?v=${C.assetVersion}` : ''))}" alt="${esc(o.photoAlt || name)}" loading="lazy" decoding="async" width="1200" height="600"></div>${o.photoCaption ? `<p class="stall-photo-cap">${esc(o.photoCaption)}</p>` : ''}` : '';
 function fieldsHTML(o, T, tmpl) {
   const N = C.stallNotes, v = (k) => String(o[k] ?? '').trim(), req = new Set(T.required);
   let h = '';
@@ -930,13 +938,13 @@ async function boot() {
   if (Q.has('nogl') || !webglOK()) { textOnly(Q.has('nogl') ? '已切換為文字清單版' : '這台裝置無法顯示 3D 畫面'); applyTheme(); updateClock(); setInterval(updateClock, 10000); window.__ready = true; return; }
   let mods;
   try {
-    mods = await Promise.all([import('./world.js?v=20261116a'), import('./life.js?v=20261116a'), import('./cam.js?v=20261116a')]);
+    mods = await Promise.all([import('./world.js?v=20261116c'), import('./life.js?v=20261116c'), import('./cam.js?v=20261116c')]);
     const [{ createWorld }, { createLife }, { createCam }] = mods;
     const mobile = isMobile();
     W = createWorld($('#gl'), { quality: S.quality, mobile });
     W.renderer.setPixelRatio(Math.min(devicePixelRatio, S.quality === 'low' ? 1 : (mobile ? 1.5 : 2)));
     L = createLife(W, C, { halfPeople: mobile || S.quality === 'low', quality: S.quality });
-    CAM = createCam(W, $('#gl'), { onIntro: (k) => { L.setDeck(k < .3 ? 1 : Math.max(0, 1 - (k - .3) / .25)); if (k > .55) $('.intro-title').classList.add('show'); } });
+    CAM = createCam(W, $('#gl'), { onZoom: showZoom, onIntro: (k) => { L.setDeck(k < .3 ? 1 : Math.max(0, 1 - (k - .3) / .25)); if (k > .55) $('.intro-title').classList.add('show'); } });
     CAM.S.reduced = S.reduced; CAM.S.mobile = mobile;
   } catch (err) { console.warn(err); textOnly('3D 畫面載入失敗'); window.__ready = true; return; }
   if (S.quality === 'low') setQuality('low');

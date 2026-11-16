@@ -1,9 +1,9 @@
 // 鏡頭：拖曳旋轉縮放、回到全景、點島飛近（電影史詩運鏡）、開場、導覽、地面漫遊
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { TAU, clamp, lerp, easeInOut, smooth } from './kit.js?v=20261116a';
-import { H } from './world.js?v=20261116a';
-import { SHORE } from './scenery.js?v=20261116a';
+import { TAU, clamp, lerp, easeInOut, smooth } from './kit.js?v=20261116c';
+import { H } from './world.js?v=20261116c';
+import { SHORE } from './scenery.js?v=20261116c';
 
 export function createCam(W, canvas, hooks) {
   const camera = W.camera;
@@ -184,10 +184,40 @@ export function createCam(W, canvas, hooks) {
   addEventListener('pointermove', (e) => { if (look && S.mode === 'walk') { walk.yaw = look.yaw - (e.clientX - look.x) * .005; walk.pitch = clamp(look.pitch - (e.clientY - look.y) * .004, -.9, .6); } });
   addEventListener('pointerup', () => { look = null; });
 
+  // 電腦版滑鼠滾輪：縮放分成 10 段（1＝最遠、10＝最近），每滾一格換一段並平滑過去；手機雙指縮放不變
+  const ZOOM_N = 10;
+  const zoomDists = () => { const a = controls.minDistance, b = controls.maxDistance; return Array.from({ length: ZOOM_N }, (_, i) => b * Math.pow(a / b, i / (ZOOM_N - 1))); };
+  const zoomLevelOf = (d) => { const L = zoomDists(); let k = 0; for (let i = 1; i < ZOOM_N; i++) if (Math.abs(Math.log(L[i] / d)) < Math.abs(Math.log(L[k] / d))) k = i; return k; };
+  let wheelAcc = 0, wheelT = 0;
+  addEventListener('wheel', (e) => {
+    if (e.target !== canvas || S.mode !== 'orbit' || S.introStep) return;
+    e.preventDefault(); e.stopPropagation();                            // 不交給 OrbitControls 的連續縮放
+    if (S.busy) return;
+    const px = e.deltaMode === 1 ? e.deltaY * 33 : e.deltaMode === 2 ? e.deltaY * 400 : e.deltaY;
+    const now = performance.now();
+    if (now - wheelT > 300) wheelAcc = 0;                                // 停一下就重新累計
+    wheelAcc += px;
+    if (Math.abs(wheelAcc) < 40 || now - wheelT < 110) return;           // 觸控板的細小捲動要累積到一格才換段
+    const dir = Math.sign(wheelAcc); wheelAcc = 0; wheelT = now;
+    const cur = S.zoomTo != null ? S.zoomTo : camera.position.distanceTo(controls.target);
+    const k = Math.max(0, Math.min(ZOOM_N - 1, zoomLevelOf(cur) - dir));   // 往前滾（deltaY<0）＝放大
+    S.zoomTo = zoomDists()[k]; S.zoomLevel = k + 1;
+    controls.dispatchEvent({ type: 'start' }); controls.dispatchEvent({ type: 'end' });
+    hooks && hooks.onZoom && hooks.onZoom(k + 1, ZOOM_N);
+  }, { capture: true, passive: false });
+  function stepZoom(dt) {
+    if (S.zoomTo == null) return;
+    const off = camera.position.clone().sub(controls.target), d = off.length();
+    const nd = S.reduced ? S.zoomTo : d + (S.zoomTo - d) * (1 - Math.exp(-Math.min(dt || .016, .1) * 14));   // 依時間平滑，約 0.3 秒到位
+    camera.position.copy(controls.target).add(off.multiplyScalar(nd / d));
+    if (Math.abs(nd - S.zoomTo) < .05) S.zoomTo = null;
+  }
+
   function update(dt) {
     if (S.introStep) { S.introStep(); return; }
     if (S.mode === 'walk') { stepWalk(dt); return; }
-    if (S.busy) { stepFlight(); return; }
+    if (S.busy) { S.zoomTo = null; stepFlight(); return; }
+    stepZoom(dt);
     if (S.follow) { const a = S.follow.fn(); const dv = a.clone().sub(S.follow.last); S.follow.last.copy(a); controls.target.add(dv); camera.position.add(dv); }
     controls.enableDamping = !S.reduced;
     controls.update();

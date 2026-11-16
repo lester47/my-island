@@ -1,5 +1,5 @@
 {
-  "assetVersion": "20261116a",
+  "assetVersion": "20261116c",
   "site": {
     "title": "115 鯉魚市集",
     "tagline": "跳上五座六角小島，逛美食、玩手作、闖關挑戰，還能挖二手好物！",
@@ -559,7 +559,7 @@
       "type": "food",
       "challengeEnabled": false,
       "desc": "販售熱狗堡，適合逛市集時當點心。",
-      "photo": "assets/stalls/r20/stall-01.png",
+      "photo": "assets/stalls/r20/stall-01.webp",
       "photoAlt": "插畫：女孩捧著淋了番茄醬和芥末的熱狗堡，男孩在橘白條紋棚的攤位後比讚，桌上有香腸和醬料瓶",
       "photoCaption": "示意插畫，非攤位實拍",
       "sample": true
@@ -572,7 +572,7 @@
       "type": "food",
       "challengeEnabled": false,
       "desc": "販售市集小吃，當日品項以攤位公告為準。",
-      "photo": "assets/stalls/r20/stall-02.png",
+      "photo": "assets/stalls/r20/stall-02.webp",
       "photoAlt": "插畫：男孩在藍格子桌巾的攤位上夾炸物，女孩端著一盤點心，桌上擺著幾盤小吃和春捲",
       "photoCaption": "示意插畫，非攤位實拍",
       "sample": true
@@ -585,7 +585,7 @@
       "type": "food",
       "challengeEnabled": false,
       "desc": "販售甜點與小零食，歡迎到攤位挑選。",
-      "photo": "assets/stalls/r20/stall-03.png",
+      "photo": "assets/stalls/r20/stall-03.webp",
       "photoAlt": "插畫：兩個小朋友站在蜂巢裝飾的小木屋攤位兩旁，屋裡擺著杯子蛋糕、鬆餅和一罐蜂蜜",
       "photoCaption": "示意插畫，非攤位實拍",
       "sample": true
@@ -601,14 +601,14 @@
         {
           "name": "自製飲料店",
           "desc": "販售自製飲料，口味以現場供應為準。",
-          "photo": "assets/stalls/r20/stall-04-a.png",
+          "photo": "assets/stalls/r20/stall-04-a.webp",
           "photoAlt": "插畫：男孩把水果茶從壺裡倒進杯子，女孩在旁邊扶著杯子，桌上有一籃鳳梨、柳橙、葡萄等水果",
           "photoCaption": "示意插畫，非攤位實拍"
         },
         {
           "name": "鯉魚麻糬屋",
           "desc": "販售麻糬，口味與供應數量以現場為準。",
-          "photo": "assets/stalls/r20/stall-04-b.png",
+          "photo": "assets/stalls/r20/stall-04-b.webp",
           "photoAlt": "插畫：兩個小朋友端著一盤彩色麻糬，攤位掛著紅燈籠，旁邊有蒸籠和梅花盆栽",
           "photoCaption": "示意插畫，非攤位實拍"
         }
@@ -623,7 +623,7 @@
       "type": "food",
       "challengeEnabled": false,
       "desc": "販售餅乾，歡迎到攤位看看有哪些口味。",
-      "photo": "assets/stalls/r20/stall-05.png",
+      "photo": "assets/stalls/r20/stall-05.webp",
       "photoAlt": "插畫：女孩和男孩一起端著一整盤巧克力豆餅乾",
       "photoCaption": "示意插畫，非攤位實拍",
       "sample": true
@@ -640,7 +640,7 @@
           "name": "巧手工坊",
           "rules": "運用攤位提供的材料，做出自己的小作品。",
           "clear": "依示範完成作品的主要造型。",
-          "photo": "assets/stalls/r20/stall-06-a.png",
+          "photo": "assets/stalls/r20/stall-06-a.webp",
           "photoAlt": "插畫：男孩用針線縫小熊臉的不織布吊飾，女孩在旁邊幫忙，桌上有不織布、剪刀和毛線球",
           "photoCaption": "示意插畫，非攤位實拍"
         },
@@ -648,7 +648,7 @@
           "name": "自己畫貼紙 DIY",
           "rules": "在空白貼紙上畫出喜歡的圖案，再上色。",
           "clear": "完成至少一張自畫貼紙。",
-          "photo": "assets/stalls/r20/stall-06-b.png",
+          "photo": "assets/stalls/r20/stall-06-b.webp",
           "photoAlt": "插畫：兩個小朋友用彩色筆畫貼紙，紙上有星星、愛心、小貓、花和兔子圖案",
           "photoCaption": "示意插畫，非攤位實拍"
         }
@@ -664,7 +664,7 @@
       "challengeEnabled": true,
       "rules": "挑選材料，跟著攤主示範製作並裝飾作品。",
       "clear": "完成一件現場指定的作品。",
-      "photo": "assets/stalls/r20/stall-07.png",
+      "photo": "assets/stalls/r20/stall-07.webp",
       "photoAlt": "插畫：兩個小朋友在掛著三角旗的工作室裡，用黏土捏彩虹和小房子",
       "photoCaption": "示意插畫，非攤位實拍",
       "sample": true
@@ -678,7 +678,7 @@
       "challengeEnabled": true,
       "rules": "依攤主說明完成一輪小遊戲，也可到攤位選購點心。",
       "clear": "達成當輪遊戲的指定目標。",
-      "photo": "assets/stalls/r20/stall-08.png",
+      "photo": "assets/stalls/r20/stall-08.webp",
       "photoAlt": "插畫：男孩握拳歡呼，女孩拿著骰子，桌上有棋盤遊戲、一盤點心和一杯珍珠奶茶",
       "photoCaption": "示意插畫，非攤位實拍",
       "sample": true
@@ -692,7 +692,7 @@
       "challengeEnabled": true,
       "rules": "依指示切換正手、反手，接住來球。",
       "clear": "正手與反手各成功接住一次。",
-      "photo": "assets/stalls/r20/stall-09.png",
+      "photo": "assets/stalls/r20/stall-09.webp",
       "photoAlt": "插畫：男孩和女孩在攤位前的草地上互相拋接一顆球",
       "photoCaption": "示意插畫，非攤位實拍",
       "sample": true
@@ -709,7 +709,7 @@
           "name": "套圈圈",
           "rules": "站在指定線後，把圈圈套向前方的目標。",
           "clear": "至少套中一個目標。",
-          "photo": "assets/stalls/r20/stall-10-a.png",
+          "photo": "assets/stalls/r20/stall-10-a.webp",
           "photoAlt": "插畫：女孩拿著彩色圈圈對準木板上的洞，男孩蹲在旁邊加油，籃子裡裝著更多圈圈",
           "photoCaption": "示意插畫，非攤位實拍"
         },
@@ -717,7 +717,7 @@
           "name": "戳洞洞",
           "rules": "挑一格戳破紙面，看看洞裡藏了什麼。",
           "clear": "完成一次戳洞洞並對獎。",
-          "photo": "assets/stalls/r20/stall-10-b.png",
+          "photo": "assets/stalls/r20/stall-10-b.webp",
           "photoAlt": "插畫：女孩把手伸進印著星星的紅色抽獎箱，男孩在旁邊期待，桌上擺著小禮物盒（示意好開心抽抽樂的對獎）",
           "photoCaption": "示意插畫，非攤位實拍"
         }
@@ -733,7 +733,7 @@
       "challengeEnabled": true,
       "rules": "操控彈珠沿迷宮路線，從起點走到終點。",
       "clear": "讓彈珠抵達終點。",
-      "photo": "assets/stalls/r20/stall-11.png",
+      "photo": "assets/stalls/r20/stall-11.webp",
       "photoAlt": "插畫：兩個穿制服的小朋友跪在藍色地毯上玩木製彈珠迷宮，男孩指著迷宮裡的藍色彈珠，迷宮一端有藍屋頂小屋，另一端有紅色拱門",
       "photoCaption": "示意插畫，非攤位實拍",
       "sample": true
@@ -747,7 +747,7 @@
       "challengeEnabled": true,
       "rules": "挑選現場提供的遊戲，依攤主說明完成一輪。",
       "clear": "達成所選遊戲的指定目標。",
-      "photo": "assets/stalls/r20/stall-12.png",
+      "photo": "assets/stalls/r20/stall-12.webp",
       "photoAlt": "插畫：紅白條紋棚的桌遊攤，男孩和女孩坐在桌邊玩棋盤遊戲，架上擺著各式桌遊盒，旁邊有小黑板",
       "photoCaption": "示意插畫，非攤位實拍",
       "sample": true
@@ -764,7 +764,7 @@
           "name": "鯉魚記憶王",
           "rules": "每次翻開兩張牌，記住位置並找出相同圖案。",
           "clear": "配對成功至少一組。",
-          "photo": "assets/stalls/r20/stall-13-a.png",
+          "photo": "assets/stalls/r20/stall-13-a.webp",
           "photoAlt": "插畫：兩個小朋友在格子桌上翻記憶卡牌，卡片上有蘋果、小熊和星星，背後掛著草莓與向日葵的配對圖",
           "photoCaption": "示意插畫，非攤位實拍"
         },
@@ -772,7 +772,7 @@
           "name": "搖出你的好耳力",
           "rules": "搖一搖不同的容器，聽聲音並找出一樣的一組。",
           "clear": "正確配對至少一組。",
-          "photo": "assets/stalls/r20/stall-13-b.png",
+          "photo": "assets/stalls/r20/stall-13-b.webp",
           "photoAlt": "插畫：男孩和女孩各拿著一個裝了豆子的小罐子搖晃聆聽聲音，桌上排著多個彩色罐子",
           "photoCaption": "示意插畫，非攤位實拍"
         }
@@ -788,7 +788,7 @@
       "challengeEnabled": true,
       "rules": "站在指定線後，把遊戲道具投向茶杯造型的目標。",
       "clear": "至少一次投中指定目標。",
-      "photo": "assets/stalls/r20/stall-14.png",
+      "photo": "assets/stalls/r20/stall-14.webp",
       "photoAlt": "插畫：男孩和女孩在擺滿植物的攤位喝茶，桌上有一壺茶、幾個茶杯和一籃茶葉",
       "photoCaption": "示意插畫，非攤位實拍",
       "sample": true
@@ -804,14 +804,14 @@
         {
           "name": "夏來寶",
           "desc": "二手挖寶攤，歡迎挑選中意的物品。",
-          "photo": "assets/stalls/r20/stall-15-a.png",
+          "photo": "assets/stalls/r20/stall-15-a.webp",
           "photoAlt": "插畫：男孩蹲著看一台舊相機，女孩坐著翻書，木箱裡有黑膠唱片、小熊布偶和鬧鐘",
           "photoCaption": "示意插畫，非攤位實拍"
         },
         {
           "name": "廢物市集",
           "desc": "販售整理過的二手物件，讓用得到的人把它們帶回家。",
-          "photo": "assets/stalls/r20/stall-15-b.png",
+          "photo": "assets/stalls/r20/stall-15-b.webp",
           "photoAlt": "插畫：二手攤上有掛著衣服的衣架、電風扇、鍋子、烤麵包機和摺好的毛巾，兩個小朋友在旁邊招手",
           "photoCaption": "示意插畫，非攤位實拍"
         }
@@ -827,7 +827,7 @@
       "challengeEnabled": false,
       "rules": "使用提供的材料，製作並裝飾一件聖誕小物。",
       "clear": "完成一件聖誕手作。",
-      "photo": "assets/stalls/r20/stall-16.png",
+      "photo": "assets/stalls/r20/stall-16.webp",
       "photoAlt": "插畫：聖誕布置的攤位，兩個小朋友做星星和雪花吊飾，旁邊有聖誕樹、襪子和聖誕老人裝飾",
       "photoCaption": "示意插畫，非攤位實拍",
       "sample": true
@@ -841,7 +841,7 @@
       "challengeEnabled": true,
       "rules": "依攤主示範操作道具，挑戰指定目標。",
       "clear": "達成攤主指定的目標。",
-      "photo": "assets/stalls/r20/stall-17.png",
+      "photo": "assets/stalls/r20/stall-17.webp",
       "photoAlt": "插畫：兩個小朋友在彈珠台遊戲盒前舉手歡呼，盒裡有彩色圓圈目標和一顆白球",
       "photoCaption": "示意插畫，非攤位實拍",
       "sample": true
@@ -855,7 +855,7 @@
       "challengeEnabled": true,
       "rules": "站在指定線後，把球投進目標籃或洞口。",
       "clear": "至少投進一球。",
-      "photo": "assets/stalls/r20/stall-18.png",
+      "photo": "assets/stalls/r20/stall-18.webp",
       "photoAlt": "插畫：學生把彩色球投向前方的目標籃，籃子裡裝滿彩色球，另一位學生在旁邊握拳加油",
       "photoCaption": "示意插畫，非攤位實拍",
       "sample": true
@@ -869,7 +869,7 @@
       "challengeEnabled": true,
       "rules": "倒數後把陀螺發射到擂台，與對手同場較量。",
       "clear": "讓自己的陀螺比對手轉得更久。",
-      "photo": "assets/stalls/r20/stall-19.png",
+      "photo": "assets/stalls/r20/stall-19.webp",
       "photoAlt": "插畫：兩位學生拿著發射器跪在圓形擂台兩邊，擂台裡的兩顆戰鬥陀螺正在比拚",
       "photoCaption": "示意插畫，非攤位實拍",
       "sample": true
@@ -882,7 +882,7 @@
       "type": "food",
       "challengeEnabled": false,
       "desc": "縣女童軍愛心義賣爆米花，所得做公益、獻愛心，鼓勵大家一起來參加！",
-      "photo": "assets/stalls/r20/stall-20.png",
+      "photo": "assets/stalls/r20/stall-20.webp",
       "photoAlt": "插畫：紫白條紋棚的爆米花攤，攤台上有爆米花機和一籃爆米花，桌巾上有紅色愛心，兩位穿制服的女童軍各捧著一桶爆米花",
       "photoCaption": "示意插畫，非攤位實拍"
     }
