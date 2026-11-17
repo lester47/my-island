@@ -1,6 +1,6 @@
 // 115 鯉魚市集｜介面與流程
 import * as THREE from 'three';
-import { ROLES, OUTFITS } from './roles.js?v=20261117k';
+import { ROLES, OUTFITS } from './roles.js?v=20261117l';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -942,10 +942,10 @@ function openMe() {
 $('#meBtn').addEventListener('click', openMe);
 
 // ------------------------------------------------------------------ 多人連線與即時人數（content.json 的 multiplayer）
-let NET = null, COUNT = null, SG = null, FX = null;
+let NET = null, COUNT = null, SG = null, FX = null, FA = null;
 function startNet() {
   const M = C.multiplayer; if (!M || !M.enabled || !M.firebase || !PL) return;
-  import('./net.js?v=20261117k').then(({ createNet }) => {
+  import('./net.js?v=20261117l').then(({ createNet }) => {
     NET = createNet(M.firebase, {
       myPos: () => PL.myPos(), upsert: (id, info, pos) => PL.upsert(id, info, pos), remove: (id) => PL.remove(id),
       onCount: (c) => { COUNT = c; const el = $('#onlineChip'); el.hidden = false; $('#onlineCount').textContent = c.players; el.setAttribute('aria-label', `市集島上 ${c.players} 人，開著網站 ${c.viewers} 人，點一下看各身分人數`); },
@@ -1034,8 +1034,8 @@ async function boot() {
   if (Q.has('nogl') || !webglOK()) { textOnly(Q.has('nogl') ? '已切換為文字清單版' : '這台裝置無法顯示 3D 畫面'); applyTheme(); updateClock(); setInterval(updateClock, 10000); window.__ready = true; return; }
   let mods;
   try {
-    mods = await Promise.all([import('./world.js?v=20261117k'), import('./life.js?v=20261117k'), import('./cam.js?v=20261117k'), import('./players.js?v=20261117k'), import('./signs.js?v=20261117k'), import('./festival.js?v=20261117k')]);
-    const [{ createWorld, H: GROUND_H }, { createLife, makePerson }, { createCam }, { createPlayers }, { createSigns }, { createFestival }] = mods;
+    mods = await Promise.all([import('./world.js?v=20261117l'), import('./life.js?v=20261117l'), import('./cam.js?v=20261117l'), import('./players.js?v=20261117l'), import('./signs.js?v=20261117l'), import('./festival.js?v=20261117l'), import('./fauna.js?v=20261117l')]);
+    const [{ createWorld, H: GROUND_H }, { createLife, makePerson }, { createCam }, { createPlayers }, { createSigns }, { createFestival }, { createFauna }] = mods;
     const mobile = isMobile();
     W = createWorld($('#gl'), { quality: S.quality, mobile });
     W.renderer.setPixelRatio(Math.min(devicePixelRatio, S.quality === 'low' ? 1 : (mobile ? 1.5 : 2)));
@@ -1043,8 +1043,9 @@ async function boot() {
     CAM = createCam(W, $('#gl'), { onZoom: showZoom, onIntro: (k) => { L.setDeck(k < .3 ? 1 : Math.max(0, 1 - (k - .3) / .25)); if (k > .55) $('.intro-title').classList.add('show'); } });
     CAM.S.reduced = S.reduced; CAM.S.mobile = mobile;
     PL = createPlayers(W, GROUND_H); renderMe(); startNet();
-    SG = createSigns(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261117k')).rng, low: mobile || S.quality === 'low' });
-    FX = createFestival(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261117k')).rng, low: mobile || S.quality === 'low', avoid: SG.signs.map((s) => s.g.position) });
+    SG = createSigns(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261117l')).rng, low: mobile || S.quality === 'low' });
+    FX = createFestival(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261117l')).rng, low: mobile || S.quality === 'low', avoid: SG.signs.map((s) => s.g.position) });
+    FA = createFauna(W, { H: GROUND_H, rng: (await import('./kit.js?v=20261117l')).rng });
   } catch (err) { console.warn(err); textOnly('3D 畫面載入失敗'); window.__ready = true; return; }
   if (S.quality === 'low') setQuality('low');
   buildTags();
@@ -1078,6 +1079,7 @@ async function boot() {
     if (NET) NET.tick(now);
     SG.update(t, moving);
     FX.update(t, dt, moving, W.state.n);
+    FA.update(t, dt, moving, W.state.n);
     W.renderer.render(W.scene, W.camera);
     if (!S.walking) placeTags();
     refreshBoatPanel(now);
@@ -1089,7 +1091,7 @@ async function boot() {
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
-  window.__isle = { W, L, CAM, S, THREE, get PL() { return PL; }, get NET() { return NET; }, get SG() { return SG; }, get FX() { return FX; } };   // 給自動測試讀取狀態用
+  window.__isle = { W, L, CAM, S, THREE, get PL() { return PL; }, get NET() { return NET; }, get SG() { return SG; }, get FX() { return FX; }, get FA() { return FA; } };   // 給自動測試讀取狀態用
   await playIntro(false);
   const deep = Q.get('island') || location.hash.slice(1), lk = Q.get('stall') ? resolveStallLink(Q.get('stall'), Q.get('roster')) : null, dst = lk && lk.st;
   if (lk && lk.msg && dst) S.legacyNote = { no: dst.no, msg: lk.msg };   // 舊攤號連結：說明寫在攤位卡上（蓋章提示不會蓋掉它）
