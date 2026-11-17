@@ -1,5 +1,6 @@
 // 115 鯉魚市集｜介面與流程
 import * as THREE from 'three';
+import { ROLES, OUTFITS } from './roles.js?v=20261117b';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -874,7 +875,10 @@ let hintT = 0;
 function enterWalk(at) {
   if (!W) return; closeBubble(); closePanel(false); if (S.tour) endTour(false);
   S.walking = true; document.body.classList.add('walking'); $('#walkui').hidden = false; $('#walkBtn').classList.add('on');
-  CAM.enterWalk(at && at.pos ? at : null); const h = $('#walkHint'); h.classList.remove('fade'); clearTimeout(hintT); hintT = setTimeout(() => h.classList.add('fade'), 4500);
+  // 已加入市集：從自己的人物所在位置出發，預設第三人稱看得到自己
+  const mine = PL && PL.me() ? PL.spawnFor() : null;
+  CAM.walk.third = !!mine && store.get('view', 'third') === 'third'; $('#walkView').hidden = !mine; syncViewBtn();
+  CAM.enterWalk(at && at.pos ? at : mine); const h = $('#walkHint'); h.classList.remove('fade'); clearTimeout(hintT); hintT = setTimeout(() => h.classList.add('fade'), 4500);
   $('#walkExit').focus({ preventScroll: true });
 }
 function exitWalk(instant) {
@@ -884,6 +888,54 @@ function exitWalk(instant) {
 }
 $('#walkBtn').addEventListener('click', () => (S.walking ? exitWalk() : enterWalk()));
 $('#walkExit').addEventListener('click', () => exitWalk());
+function syncViewBtn() { $('#walkView').textContent = CAM && CAM.walk.third ? '👁 切換成第一人稱' : '🧍 切換成看得到自己'; }
+$('#walkView').addEventListener('click', () => { CAM.walk.third = !CAM.walk.third; store.set('view', CAM.walk.third ? 'third' : 'first'); syncViewBtn(); });
+
+// ------------------------------------------------------------------ 用暱稱加入市集（目前只在這台裝置；之後接連線服務會看到其他人）
+let PL = null;
+const BAD_WORDS = ['幹', '靠北', '靠杯', '白痴', '白癡', '智障', '垃圾', '去死', '屌', '機掰', '雞掰', '王八', '賤', 'fuck', 'shit', 'bitch', 'damn', 'sex'];
+function cleanName(s) { return String(s || '').replace(/[\u0000-\u001f<>]/g, '').replace(/\s+/g, ' ').trim(); }
+function nameProblem(n) {
+  if (!n) return '請輸入暱稱';
+  if ([...n].length > 10) return '暱稱最多 10 個字';
+  const low = n.toLowerCase().replace(/[\s._\-*]/g, '');
+  if (BAD_WORDS.some((w) => low.includes(w))) return '這個暱稱不太適合，換一個吧';
+  return '';
+}
+const meProfile = () => store.get('me', null);
+function renderMe() {
+  const p = meProfile(), R = p && ROLES[p.role];
+  $('#meName').textContent = p ? p.name : '加入';
+  $('#meBtn').setAttribute('aria-label', p ? `我的暱稱：${p.name}（${R ? R.label : ''}），點一下修改或離開` : '用暱稱加入市集');
+  $('#meBtn').classList.toggle('on', !!p);
+  if (PL) PL.setMe(p);
+  if (S.walking) { $('#walkView').hidden = !p; if (!p) CAM.walk.third = false; syncViewBtn(); }
+}
+function openMe() {
+  const p = meProfile() || {}, role = p.role || 'student', shirt = p.shirt || OUTFITS[Math.floor(Math.random() * OUTFITS.length)];
+  const pass = ppActive && ppActive();
+  $('#meBody').innerHTML = `<form id="meForm" class="pp-form" novalidate>
+    <p style="margin:0 0 10px">${p.name ? '可以修改暱稱、身分和衣服顏色。' : '取一個暱稱、選身分和衣服顏色，你的小人物就會出現在島上，頭上有你的名牌。'}</p>
+    <label for="meNick" class="pp-lab">暱稱（最多 10 個字）</label>
+    <input id="meNick" class="pp-in" type="text" maxlength="12" autocomplete="nickname" placeholder="例如：小鯉魚" value="${esc(p.name || (pass ? pass.name : ''))}" required>
+    <p class="pp-err" id="meErr" role="alert" hidden></p>
+    <fieldset class="me-set"><legend class="pp-lab">身分</legend><div class="me-roles">${Object.entries(ROLES).map(([k, r]) => `<label class="me-role" style="--rc:${r.color}"><input type="radio" name="role" value="${k}" ${k === role ? 'checked' : ''}><span>${r.icon} ${r.label}</span></label>`).join('')}</div></fieldset>
+    <fieldset class="me-set"><legend class="pp-lab">衣服顏色</legend><div class="me-colors">${OUTFITS.map((c, i) => `<label class="me-color" style="--c:${c}"><input type="radio" name="shirt" value="${c}" ${c === shirt ? 'checked' : ''} aria-label="顏色 ${i + 1}"><span></span></label>`).join('')}</div></fieldset>
+    <div class="chal-btns"><button type="submit" class="btn">${p.name ? '儲存' : '加入市集'}</button>${p.name ? '<button type="button" class="btn ghost" id="meLeave">離開市集</button>' : ''}</div>
+    <p class="foot">請用暱稱，不要用真實姓名。暱稱和人物目前只存在這台裝置。</p></form>`;
+  openDlg('#meDlg'); $('#meNick').focus();
+  $('#meForm').onsubmit = (e) => {
+    e.preventDefault();
+    const name = cleanName($('#meNick').value), bad = nameProblem(name);
+    if (bad) { const er = $('#meErr'); er.textContent = bad; er.hidden = false; $('#meNick').focus(); return; }
+    const f = new FormData(e.target);
+    const next = { id: p.id || `u${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`, name, role: f.get('role') || 'student', shirt: f.get('shirt') || shirt, joinedAt: p.joinedAt || new Date().toISOString() };
+    store.set('me', next); $('#meDlg').close(); renderMe();
+    toast(p.name ? '已更新你的名牌' : `👋 歡迎 ${name}！按「🚶 漫遊」就能帶著自己的人物逛島`);
+  };
+  if ($('#meLeave')) $('#meLeave').onclick = () => { store.set('me', null); $('#meDlg').close(); renderMe(); toast('已離開市集，你的人物從島上收起來了'); };
+}
+$('#meBtn').addEventListener('click', openMe);
 document.querySelectorAll('.dpad button').forEach((b) => {
   const on = (v) => (e) => { e.preventDefault(); CAM.walk.pad[b.dataset.d] = v; };
   b.addEventListener('pointerdown', on(true)); b.addEventListener('pointerup', on(false)); b.addEventListener('pointerleave', on(false)); b.addEventListener('pointercancel', on(false));
@@ -955,17 +1007,19 @@ async function boot() {
   if (route().errs.length) { console.warn('路線設定錯誤', route().errs); setTimeout(() => toast(`⚠ 路線設定錯誤 ${route().errs.length} 項：${route().errs[0]}（詳見護照頁）`), 1200); }
   S.autoStart = performance.now();
   S.hour = S.hourShown = targetHour(performance.now());
+  renderMe();
   if (Q.has('nogl') || !webglOK()) { textOnly(Q.has('nogl') ? '已切換為文字清單版' : '這台裝置無法顯示 3D 畫面'); applyTheme(); updateClock(); setInterval(updateClock, 10000); window.__ready = true; return; }
   let mods;
   try {
-    mods = await Promise.all([import('./world.js?v=20261117a'), import('./life.js?v=20261117a'), import('./cam.js?v=20261117a')]);
-    const [{ createWorld }, { createLife }, { createCam }] = mods;
+    mods = await Promise.all([import('./world.js?v=20261117b'), import('./life.js?v=20261117b'), import('./cam.js?v=20261117b'), import('./players.js?v=20261117b')]);
+    const [{ createWorld, H: GROUND_H }, { createLife }, { createCam }, { createPlayers }] = mods;
     const mobile = isMobile();
     W = createWorld($('#gl'), { quality: S.quality, mobile });
     W.renderer.setPixelRatio(Math.min(devicePixelRatio, S.quality === 'low' ? 1 : (mobile ? 1.5 : 2)));
     L = createLife(W, C, { halfPeople: mobile || S.quality === 'low', quality: S.quality });
     CAM = createCam(W, $('#gl'), { onZoom: showZoom, onIntro: (k) => { L.setDeck(k < .3 ? 1 : Math.max(0, 1 - (k - .3) / .25)); if (k > .55) $('.intro-title').classList.add('show'); } });
     CAM.S.reduced = S.reduced; CAM.S.mobile = mobile;
+    PL = createPlayers(W, GROUND_H); renderMe();
   } catch (err) { console.warn(err); textOnly('3D 畫面載入失敗'); window.__ready = true; return; }
   if (S.quality === 'low') setQuality('low');
   buildTags();
@@ -995,6 +1049,7 @@ async function boot() {
     L.update(t, dt, moving, W.state.n, W.camera);
     for (const a of L.agents) if (a.lowHidden) a.P.g.visible = false;
     stepTour(now);
+    PL.update(dt, t, CAM.walk, S.walking, !CAM.walk.third, innerWidth, innerHeight);
     W.renderer.render(W.scene, W.camera);
     if (!S.walking) placeTags();
     refreshBoatPanel(now);

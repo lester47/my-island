@@ -176,6 +176,32 @@ html[data-theme="deep"] .p-hd { background: var(--surface2); color: var(--ink); 
 .dpad button { border: 0; border-radius: 14px; background: color-mix(in srgb, var(--surface) 92%, transparent); box-shadow: var(--shadow); font-size: 20px; touch-action: none; user-select: none; }
 .dpad [data-d="up"] { grid-column: 2; grid-row: 1; } .dpad [data-d="left"] { grid-column: 1; grid-row: 2; } .dpad [data-d="down"] { grid-column: 2; grid-row: 2; } .dpad [data-d="right"] { grid-column: 3; grid-row: 2; }
 .walking .tag, .walking .layout-note { display: none; }
+.walk-view { position: fixed; z-index: 22; top: 136px; right: 20px; min-height: 40px; border: 0; border-radius: 999px; padding: 0 14px; background: var(--surface); color: var(--ink, #1b2a20); font-weight: 800; box-shadow: var(--shadow); }
+
+/* 登入者名牌 */
+.nametags { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 3; }
+.ntag { position: absolute; left: 0; top: 0; display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 3px 9px 4px; border-radius: 10px; background: #fff; border: 2px solid var(--rc); color: #1b2a20; font-size: 13px; line-height: 1.2; white-space: nowrap; box-shadow: 0 3px 10px rgba(0,0,0,.18); will-change: transform; }
+.ntag::after { content: ''; position: absolute; left: 50%; bottom: -7px; transform: translateX(-50%); border: 6px solid transparent; border-top-color: var(--rc); border-bottom: 0; }
+.ntag .r { font-size: 11px; font-weight: 800; color: var(--rc); }
+.ntag b { font-weight: 900; }
+.ntag i { position: absolute; top: -9px; right: -9px; font-style: normal; font-size: 11px; font-weight: 900; color: #fff; background: #e3a33b; border-radius: 999px; padding: 1px 6px; }
+.ntag.me { border-width: 3px; box-shadow: 0 0 0 3px rgba(227,163,59,.45), 0 3px 10px rgba(0,0,0,.2); }
+.ntag.far { transform-origin: 50% 100%; font-size: 11px; padding: 2px 6px; }
+.ntag.far .r { display: none; }
+.hchip.me { max-width: 150px; }
+.hchip.me b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hchip.me.on { box-shadow: 0 0 0 3px #e3a33b, var(--shadow); }
+.hchip.online { cursor: default; }
+.me-set { border: 0; margin: 10px 0 0; padding: 0; }
+.me-roles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.me-role input, .me-color input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.me-role span { display: flex; align-items: center; justify-content: center; min-height: 44px; border-radius: 12px; border: 2px solid color-mix(in srgb, var(--rc) 35%, transparent); font-weight: 800; color: var(--rc); background: var(--surface); cursor: pointer; }
+.me-role input:checked + span { background: var(--rc); color: #fff; border-color: var(--rc); }
+.me-role input:focus-visible + span, .me-color input:focus-visible + span { outline: 3px solid #e3a33b; outline-offset: 2px; }
+.me-colors { display: flex; flex-wrap: wrap; gap: 8px; }
+.me-color span { display: block; width: 40px; height: 40px; border-radius: 50%; background: var(--c); border: 3px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.2); cursor: pointer; }
+.me-color input:checked + span { box-shadow: 0 0 0 3px #1b2a20; }
+@media (max-width: 760px) { .me-roles { grid-template-columns: repeat(2, 1fr); } .walk-view { top: 70px; left: 12px; right: auto; font-size: 13px; min-height: 36px; } .hchip.me { max-width: 110px; } }
 
 /* 開場 */
 .intro { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; pointer-events: auto; background: transparent; }
