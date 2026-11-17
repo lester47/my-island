@@ -389,6 +389,33 @@ export function createSigns(W, content, H, opts = {}) {
       signs.push(s); for (const o of [B.hit, B.face, B.back]) pickables.push({ obj: o, sign: s });
     });
   }
+  // 樹擋到攤子招牌就移開：搬到島上離所有攤子和步道都遠一點的草地；找不到位置就收起來
+  for (const I0 of content.islands) {
+    const I = islands[I0.id]; if (!I || !I.trees) continue;
+    const booths = signs.filter((s) => s.island === I0.id).map((s) => s.g.position);
+    const far = (x, z, d) => booths.every((b) => Math.hypot(b.x - x, b.z - z) > d);
+    for (const tr of I.trees) {
+      const wx = I.pos.x + tr.position.x, wz = I.pos.z + tr.position.z;
+      if (far(wx, wz, 3.6)) continue;           // 樹冠半徑約 1.3，加上招牌寬度，3.6 以內都可能擋到
+      let spot = null;
+      // 依序放寬條件：先找島緣的空地，再試步道內側的空地
+      for (const [need, gap] of [[.7, 4.0], [.5, 3.8], [.4, 3.6]]) {
+        for (let k = 0; k < 96 && !spot; k++) {
+          const th = (k * 37 % 96) / 96 * TAU;
+          if ((I.bridgeAngles || []).some((b) => Math.abs(Math.atan2(Math.sin(th - b), Math.cos(th - b))) < .45)) continue;
+          for (const r of [I.top(th) * .86, I.top(th) * .78, I.walk.radAt(th) + 1.6, I.walk.radAt(th) - 1.0, I.walk.radAt(th) - 1.6]) {
+            if (r < 1.2) continue;
+            const x = Math.cos(th) * r, z = Math.sin(th) * r;
+            if (!far(I.pos.x + x, I.pos.z + z, gap) || I.walk.clear(x, z) < need) continue;
+            if (I.trees.some((o) => o !== tr && o.visible && Math.hypot(o.position.x - x, o.position.z - z) < 1.8)) continue;
+            spot = { x, z }; break;
+          }
+        }
+        if (spot) break;
+      }
+      if (spot) tr.position.set(spot.x, tr.position.y, spot.z); else tr.visible = false;
+    }
+  }
   // 攤主的小動作：左右看看、偶爾揮手招呼客人
   function update(t, moving) {
     if (!moving) return;

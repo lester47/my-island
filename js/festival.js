@@ -40,7 +40,7 @@ export function createFestival(W, content, H, opts = {}) {
   const kinds = new Set();  // 記錄放了幾種裝飾
 
   // ------------------------------------------------ 找空地：步道外側、離攤子和橋夠遠
-  const taken = (opts.avoid || []).map((p) => ({ x: p.x, z: p.z, r: 1.45 }));
+  const taken = (opts.avoid || []).map((p) => ({ x: p.x, z: p.z, r: 2.0 }));   // 攤子和樹的周圍留空，不擋招牌
   function freeSpot(id, need = .6, rad = .8) {
     const I = islands[id]; if (!I || !I.walk) return null;
     const bAngs = I.bridgeAngles || [];

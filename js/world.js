@@ -1,7 +1,7 @@
 // 3D 世界：天空、海、遠山、島嶼與地標、橋、日夜光影
 import * as THREE from 'three';
-import { TAU, clamp, lerp, smooth, rng, loopNoise, mat, Builder, GEO, glowTexture, C } from './kit.js?v=20261117w';
-import { makeScenery } from './scenery.js?v=20261117w';
+import { TAU, clamp, lerp, smooth, rng, loopNoise, mat, Builder, GEO, glowTexture, C } from './kit.js?v=20261117y';
+import { makeScenery } from './scenery.js?v=20261117y';
 
 export const H = 1.75;               // 島頂草地高度
 const SEG = 72;                      // 海岸線分段（6 的倍數，六角轉角落在頂點上）
@@ -594,8 +594,12 @@ function buildIsland(id, scene, quality) {
     const x = Math.cos(a) * r, z = Math.sin(a) * r, face = -a - Math.PI / 2;
     B.push(x, H, z, face);
     if (kind === 'house') { house(B, arg, '#fbf3e3', .92); info.colliders.push({ x, z, r: 1.55 }); info.extras.house = info.extras.house || new THREE.Vector3(x, H, z); }
-    else if (kind === 'treeR') { treeRound(B, .85 + rand() * .3, i); info.colliders.push({ x, z, r: .45 }); }
-    else if (kind === 'treeP') { treePine(B, .9 + rand() * .3); info.colliders.push({ x, z, r: .45 }); }
+    else if (kind === 'treeR' || kind === 'treeP') {
+      // 每棵樹是獨立的小模型，之後攤子擋到招牌時可以把樹移開
+      const TB = new Builder(); if (kind === 'treeR') treeRound(TB, .85 + rand() * .3, i); else treePine(TB, .9 + rand() * .3);
+      const tm = TB.build(MAT_FOR, true); tm.position.set(x, H, z); tm.rotation.y = face; group.add(tm);
+      (info.trees = info.trees || []).push(tm); info.colliders.push({ x, z, r: .45 });
+    }
     else if (kind === 'bed') { flowerBed(B, 2.0, .9); info.colliders.push({ x, z, r: 1.1 }); }
     else if (kind === 'fence') { fence(B, 2.6); bush(B, .8); info.colliders.push({ x, z, r: 1.2 }); }
     else if (kind === 'bench') { bench(B); info.colliders.push({ x, z, r: .6 }); }
