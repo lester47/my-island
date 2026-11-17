@@ -192,28 +192,47 @@ export function createSigns(W, content, H) {
     // 不擋橋頭（朝中央島的方向）和鯉魚號碼頭
     const toC = Math.atan2(-I.pos.z, -I.pos.x);
     const avoid = [[toC, .55]];
-    if (W.pier && W.pier.berth && I0.id === 'puzzle') { const b = W.pier.berth.pos; avoid.push([Math.atan2(b.z - I.pos.z, b.x - I.pos.x), .7]); }
+    if (W.pier && W.pier.berth && I0.id === 'puzzle') { const b = W.pier.berth.pos; avoid.push([Math.atan2(b.z - I.pos.z, b.x - I.pos.x), .45]); }
     const near = (th) => avoid.some(([a, w]) => { let d = th - a; while (d > Math.PI) d -= TAU; while (d < -Math.PI) d += TAU; return Math.abs(d) < w; });
     // 候選位置：石板小路外側的草地，四周空間要夠放一座攤子；空間不夠時逐步放寬
+    // 每個角度試幾個不同的距離（離小路近一點或遠一點），挑空間最大的
     let cand = [];
-    for (const need of [1.0, .85, .7, .55]) {
+    for (const need of [.9, .75, .6, .48]) {
       cand = [];
-      for (let k = 0; k < 160; k++) {
-        const th = toC + .55 + k / 160 * (TAU - 1.1);   // 從橋頭右邊開始繞一圈，攤號照順序排
+      for (let k = 0; k < 180; k++) {
+        const th = toC + .55 + k / 180 * (TAU - 1.1);   // 從橋頭右邊開始繞一圈，攤號照順序排
         if (near(th)) continue;
-        const r = Math.min(I.walk.radAt(th) + 1.15, I.top(th) * .84);
-        const x = Math.cos(th) * r, z = Math.sin(th) * r;
-        if (I.walk.clear(x, z) < need) continue;
-        cand.push({ th, x, z });
+        let best = null;
+        // 正數：小路外側；負數：小路內側（攤子正面一樣朝向小路）。外側優先
+        for (const off of [1.15, .9, 1.4, .7, -.8, -1.0, -1.25]) {
+          const r = Math.min(I.walk.radAt(th) + off, I.top(th) * .86);
+          const x = Math.cos(th) * r, z = Math.sin(th) * r, cl = I.walk.clear(x, z), score = cl - (off < 0 ? .3 : 0);
+          if (cl >= need && (!best || score > best.score)) best = { th, x, z, cl, score, inner: off < 0 };
+        }
+        if (best) cand.push(best);
       }
-      if (cand.length >= stalls.length * 6) break;
+      // 候選位置要夠多、而且分布得夠開，才不會擠在同一邊
+      const spread = cand.length ? cand[cand.length - 1].th - cand[0].th : 0;
+      if (cand.length >= stalls.length * 5 && spread > Math.PI) break;
     }
     if (!cand.length) continue;
+    // 依角度平均分配，並且攤子之間至少隔一段距離（不會擠成一堆）
+    const th0 = cand[0].th, th1 = cand[cand.length - 1].th, chosen = [];
+    const pickFor = (target, gap) => {
+      let best = null, bd = Infinity;
+      for (const c of cand) {
+        if (chosen.some((o) => Math.hypot(o.x - c.x, o.z - c.z) < gap)) continue;
+        const d = Math.abs(c.th - target); if (d < bd) { bd = d; best = c; }
+      }
+      return best;
+    };
     stalls.forEach((st, k) => {
-      const c = cand[Math.floor((k + .5) * cand.length / stalls.length)];
+      const target = th0 + (k + .5) / stalls.length * (th1 - th0);
+      const c = pickFor(target, 2.6) || pickFor(target, 2.0) || pickFor(target, 1.4) || cand[Math.floor((k + .5) * cand.length / stalls.length)];
+      chosen.push(c);
       const B = makeBooth(st, I0);
       B.g.position.set(I.pos.x + c.x, H, I.pos.z + c.z);
-      B.g.rotation.y = Math.atan2(-c.x, -c.z);          // 攤子正面朝向島中央的小路
+      B.g.rotation.y = Math.atan2(-c.x, -c.z) + (c.inner ? Math.PI : 0);   // 攤子正面朝向小路
       scene.add(B.g);
       const s = { g: B.g, st, island: I0.id };
       signs.push(s); for (const o of [B.hit, B.face, B.back]) pickables.push({ obj: o, sign: s });
