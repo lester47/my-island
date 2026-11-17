@@ -828,6 +828,9 @@ function onCanvasUp(e) {
   }
   if (pick && pick.shell) { if (performance.now() >= pick.shell.hiddenUntil) { pick.shell.hiddenUntil = performance.now() + 20000; S.bag.shell = (S.bag.shell || 0) + 1; saveBag(); toast('🐚 撿到一個貝殼！+1'); } return; }
   if (pick) { openBubble(pick); return; }
+  // 攤位立牌：點牌子直接打開那一攤的攤位卡
+  const sh = SG && ray.intersectObjects(SG.pickables.map((p) => p.obj), false)[0];
+  if (sh) { const sg = SG.pickables.find((p) => p.obj === sh.object).sign; closeBubble(); openIsland(sg.island, { no: sg.st.no }); return; }
   if (S.bubble) { closeBubble(); return; }
   let best = null;
   for (const id of STAMP_IDS) {
@@ -939,7 +942,7 @@ function openMe() {
 $('#meBtn').addEventListener('click', openMe);
 
 // ------------------------------------------------------------------ 多人連線與即時人數（content.json 的 multiplayer）
-let NET = null, COUNT = null;
+let NET = null, COUNT = null, SG = null;
 function startNet() {
   const M = C.multiplayer; if (!M || !M.enabled || !M.firebase || !PL) return;
   import('./net.js?v=20261117d').then(({ createNet }) => {
@@ -1031,8 +1034,8 @@ async function boot() {
   if (Q.has('nogl') || !webglOK()) { textOnly(Q.has('nogl') ? '已切換為文字清單版' : '這台裝置無法顯示 3D 畫面'); applyTheme(); updateClock(); setInterval(updateClock, 10000); window.__ready = true; return; }
   let mods;
   try {
-    mods = await Promise.all([import('./world.js?v=20261117d'), import('./life.js?v=20261117d'), import('./cam.js?v=20261117d'), import('./players.js?v=20261117d')]);
-    const [{ createWorld, H: GROUND_H }, { createLife }, { createCam }, { createPlayers }] = mods;
+    mods = await Promise.all([import('./world.js?v=20261117d'), import('./life.js?v=20261117d'), import('./cam.js?v=20261117d'), import('./players.js?v=20261117d'), import('./signs.js?v=20261117d')]);
+    const [{ createWorld, H: GROUND_H }, { createLife }, { createCam }, { createPlayers }, { createSigns }] = mods;
     const mobile = isMobile();
     W = createWorld($('#gl'), { quality: S.quality, mobile });
     W.renderer.setPixelRatio(Math.min(devicePixelRatio, S.quality === 'low' ? 1 : (mobile ? 1.5 : 2)));
@@ -1040,6 +1043,7 @@ async function boot() {
     CAM = createCam(W, $('#gl'), { onZoom: showZoom, onIntro: (k) => { L.setDeck(k < .3 ? 1 : Math.max(0, 1 - (k - .3) / .25)); if (k > .55) $('.intro-title').classList.add('show'); } });
     CAM.S.reduced = S.reduced; CAM.S.mobile = mobile;
     PL = createPlayers(W, GROUND_H); renderMe(); startNet();
+    SG = createSigns(W, C, GROUND_H);
   } catch (err) { console.warn(err); textOnly('3D 畫面載入失敗'); window.__ready = true; return; }
   if (S.quality === 'low') setQuality('low');
   buildTags();
@@ -1071,6 +1075,7 @@ async function boot() {
     stepTour(now);
     PL.update(dt, t, CAM.walk, S.walking, !CAM.walk.third, innerWidth, innerHeight);
     if (NET) NET.tick(now);
+    SG.update(W.camera);
     W.renderer.render(W.scene, W.camera);
     if (!S.walking) placeTags();
     refreshBoatPanel(now);
