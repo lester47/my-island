@@ -390,3 +390,8 @@ select.pp-in { width: auto; max-width: 160px; }
 .hchip.online small { font-size: 12px; font-weight: 700; margin-left: -3px; }
 .hchip.online.off { opacity: .55; }
 @media (max-width: 760px) { .hchip.online small { display: none; } .hud-right { gap: 6px; } .hud-right .hchip { min-width: 52px; padding: 0 8px; } }
+
+/* 拉近看某座島時，其他島的名牌變淡縮小（滑過或聚焦時恢復） */
+.tag.far { opacity: .38; font-size: 12px; padding: 2px 8px 2px 3px; }
+.tag.far .ct, .tag.far .st { display: none; }
+.tag.far:hover, .tag.far:focus-visible { opacity: 1; }

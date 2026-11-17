@@ -1,6 +1,6 @@
 // 115 鯉魚市集｜介面與流程
 import * as THREE from 'three';
-import { ROLES, OUTFITS } from './roles.js?v=20261117p';
+import { ROLES, OUTFITS } from './roles.js?v=20261117q';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -716,9 +716,14 @@ function placeTags() {
   const w = innerWidth, h = innerHeight, rects = [];
   for (const id of STAMP_IDS) {
     const I = W.islands[id], t = tags[id];
-    _v.set(I.pos.x, .6, I.pos.z + I.R * 1.12).project(W.camera);
+    // 小島的名牌放在島的外緣（離中央島最遠的那一邊），不會擋住服務台、風車和橋；服務台維持在島的前緣
+    if (id !== 'center') { const a = Math.atan2(I.pos.z, I.pos.x), r = I.top(a) * 1.05; _v.set(I.pos.x + Math.cos(a) * r, .6, I.pos.z + Math.sin(a) * r).project(W.camera); }
+    else _v.set(I.pos.x, .6, I.pos.z + I.R * 1.12).project(W.camera);
     const vis = _v.z < 1 && Math.abs(_v.x) < 1.2 && Math.abs(_v.y) < 1.2;
     t.style.visibility = vis ? 'visible' : 'hidden';
+    // 鏡頭拉近看某座島時，其他島的名牌變淡、縮小，不擋住眼前的風車和攤子
+    const camD = W.camera.position.distanceTo(CAM.controls.target), focusD = Math.hypot(I.pos.x - CAM.controls.target.x, I.pos.z - CAM.controls.target.z);
+    t.classList.toggle('far', !S.tour && camD < 18 && focusD > I.R * 1.1);
     const tw = t.offsetWidth || 160, th = t.offsetHeight || 44;
     rects.push({ t, x: (_v.x + 1) / 2 * w - tw / 2, y: (1 - _v.y) / 2 * h - th / 2, w: tw, h: th, vis });
   }
@@ -956,7 +961,7 @@ function balloonPopped() {
 }
 function startNet() {
   const M = C.multiplayer; if (!M || !M.enabled || !M.firebase || !PL) return;
-  import('./net.js?v=20261117p').then(({ createNet }) => {
+  import('./net.js?v=20261117q').then(({ createNet }) => {
     NET = createNet(M.firebase, {
       myPos: () => PL.myPos(), upsert: (id, info, pos) => PL.upsert(id, info, pos), remove: (id) => PL.remove(id),
       onCount: (c) => { COUNT = c; const el = $('#onlineChip'); el.hidden = false; $('#onlineCount').textContent = c.players; el.setAttribute('aria-label', `市集島上 ${c.players} 人，開著網站 ${c.viewers} 人，點一下看各身分人數`); },
@@ -1045,7 +1050,7 @@ async function boot() {
   if (Q.has('nogl') || !webglOK()) { textOnly(Q.has('nogl') ? '已切換為文字清單版' : '這台裝置無法顯示 3D 畫面'); applyTheme(); updateClock(); setInterval(updateClock, 10000); window.__ready = true; return; }
   let mods;
   try {
-    mods = await Promise.all([import('./world.js?v=20261117p'), import('./life.js?v=20261117p'), import('./cam.js?v=20261117p'), import('./players.js?v=20261117p'), import('./signs.js?v=20261117p'), import('./festival.js?v=20261117p'), import('./fauna.js?v=20261117p')]);
+    mods = await Promise.all([import('./world.js?v=20261117q'), import('./life.js?v=20261117q'), import('./cam.js?v=20261117q'), import('./players.js?v=20261117q'), import('./signs.js?v=20261117q'), import('./festival.js?v=20261117q'), import('./fauna.js?v=20261117q')]);
     const [{ createWorld, H: GROUND_H }, { createLife, makePerson }, { createCam }, { createPlayers }, { createSigns }, { createFestival }, { createFauna }] = mods;
     const mobile = isMobile();
     W = createWorld($('#gl'), { quality: S.quality, mobile });
@@ -1054,9 +1059,9 @@ async function boot() {
     CAM = createCam(W, $('#gl'), { onZoom: showZoom, onIntro: (k) => { L.setDeck(k < .3 ? 1 : Math.max(0, 1 - (k - .3) / .25)); if (k > .55) $('.intro-title').classList.add('show'); } });
     CAM.S.reduced = S.reduced; CAM.S.mobile = mobile;
     PL = createPlayers(W, GROUND_H); renderMe(); startNet();
-    SG = createSigns(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261117p')).rng, low: mobile || S.quality === 'low' });
-    FX = createFestival(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261117p')).rng, low: mobile || S.quality === 'low', avoid: SG.signs.map((s) => s.g.position) });
-    FA = createFauna(W, { H: GROUND_H, rng: (await import('./kit.js?v=20261117p')).rng });
+    SG = createSigns(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261117q')).rng, low: mobile || S.quality === 'low' });
+    FX = createFestival(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261117q')).rng, low: mobile || S.quality === 'low', avoid: SG.signs.map((s) => s.g.position) });
+    FA = createFauna(W, { H: GROUND_H, rng: (await import('./kit.js?v=20261117q')).rng });
   } catch (err) { console.warn(err); textOnly('3D 畫面載入失敗'); window.__ready = true; return; }
   if (S.quality === 'low') setQuality('low');
   buildTags();

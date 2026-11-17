@@ -1,7 +1,7 @@
 // 3D 世界：天空、海、遠山、島嶼與地標、橋、日夜光影
 import * as THREE from 'three';
-import { TAU, clamp, lerp, smooth, rng, loopNoise, mat, Builder, GEO, glowTexture, C } from './kit.js?v=20261117p';
-import { makeScenery } from './scenery.js?v=20261117p';
+import { TAU, clamp, lerp, smooth, rng, loopNoise, mat, Builder, GEO, glowTexture, C } from './kit.js?v=20261117q';
+import { makeScenery } from './scenery.js?v=20261117q';
 
 export const H = 1.75;               // 島頂草地高度
 const SEG = 72;                      // 海岸線分段（6 的倍數，六角轉角落在頂點上）
@@ -424,11 +424,12 @@ function landmarkCenter(B, g, P, extras) {
   const koiPlane = (n, w) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, w / KOI_AR), koiMat[n]); m.castShadow = true; return m; };
   blades.children.forEach((arm, i) => {
     if (!arm.isGroup) return;
+    // 四片共用同一條規則：魚頭朝軸心、魚尾朝外（圖片的魚頭在左邊，轉 90° 後朝向葉片根部）
+    // 魚放在葉布正中央，比葉布小一圈，四周留米白邊
     for (const [z, ry] of [[.022, 0], [-.022, Math.PI]]) {
-      const k = koiPlane(i % 5, 1.5); k.position.set(.34, 1.35, z); k.rotation.set(0, ry, Math.PI / 2); arm.add(k);
+      const k = koiPlane(i % 5, 1.35); k.position.set(.34, 1.35, z); k.rotation.set(0, ry, Math.PI / 2); arm.add(k);
     }
   });
-  { const k = koiPlane(4, .9); k.position.set(0, 0, .2); blades.add(k); }
   // 塔身：前後各一尾大的錦鯉，貼在塔的外牆上
   for (const [y, a, n] of [[1.5, .5, 0], [2.7, .5 + Math.PI, 3]]) {
     const r = 1.0 - (y / 4) * .45 + .04; const k = koiPlane(n, 1.7);
