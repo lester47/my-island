@@ -1,6 +1,6 @@
 // 115 鯉魚市集｜介面與流程
 import * as THREE from 'three';
-import { ROLES, OUTFITS } from './roles.js?v=20261117l';
+import { ROLES, OUTFITS } from './roles.js?v=20261117n';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -811,8 +811,11 @@ function onCanvasDown(e) { down = { x: e.clientX, y: e.clientY }; $('#gl').class
 function onCanvasUp(e) {
   $('#gl').classList.remove('drag');
   if (!down) return; const moved = Math.hypot(e.clientX - down.x, e.clientY - down.y); down = null;
-  if (moved > 7 || S.intro || S.walking || (CAM.S.busy && !CAM.S.busy.custom)) return;
+  if (moved > 7 || S.intro) return;
   ndc.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+  // 氣球彩蛋：點氣球就刺破（漫遊時也可以）；熱氣球刺不破
+  if (FX) { ray.setFromCamera(ndc, W.camera); const bh = ray.intersectObjects(FX.balloons(), false)[0]; if (bh && FX.pop(bh.object)) { balloonPopped(); return; } }
+  if (S.walking || (CAM.S.busy && !CAM.S.busy.custom)) return;
   ray.setFromCamera(ndc, W.camera);
   const life = ray.intersectObjects(L.pickables.filter((p) => p.obj.parent && p.obj.parent.visible).map((p) => p.obj), false)[0];
   let pick = life ? L.pickables.find((p) => p.obj === life.object) : null;
@@ -943,9 +946,17 @@ $('#meBtn').addEventListener('click', openMe);
 
 // ------------------------------------------------------------------ 多人連線與即時人數（content.json 的 multiplayer）
 let NET = null, COUNT = null, SG = null, FX = null, FA = null;
+// 刺破氣球的彩蛋：每一顆都有一句話；第 5、10、20、50 顆有特別獎勵
+const POP_LINES = ['啵！氣球破掉了 🎈', '砰！嚇了小鯉魚一跳', '啵～裡面飄出一張小紙條：「祝你逛得開心！」', '砰！五彩紙片飛滿天', '啵！攤主說：「再來一顆？」', '砰！小心別嚇到旁邊的蝴蝶', '啵～聽說刺破很多顆會有驚喜…'];
+function balloonPopped() {
+  const n = (store.get('pops', 0) || 0) + 1; store.set('pops', n);
+  const prize = { 5: ['🐚', 'shell', '🎉 彩蛋！刺破第 5 顆氣球，送你一個貝殼！'], 10: ['🐚', 'shell', '🎉 第 10 顆！再送一個貝殼，拿去跟島民交換吧'], 20: ['🍪', 'cookie', '🏆 第 20 顆！小鯉魚送你一塊餅乾 🍪'], 50: ['💌', 'postcard', '👑 第 50 顆！你是氣球大師，送你島主的明信片 💌'] }[n];
+  if (prize) { S.bag[prize[1]] = (S.bag[prize[1]] || 0) + 1; saveBag(); toast(prize[2]); }
+  else toast(`${POP_LINES[(n - 1) % POP_LINES.length]}（已刺破 ${n} 顆）`);
+}
 function startNet() {
   const M = C.multiplayer; if (!M || !M.enabled || !M.firebase || !PL) return;
-  import('./net.js?v=20261117l').then(({ createNet }) => {
+  import('./net.js?v=20261117n').then(({ createNet }) => {
     NET = createNet(M.firebase, {
       myPos: () => PL.myPos(), upsert: (id, info, pos) => PL.upsert(id, info, pos), remove: (id) => PL.remove(id),
       onCount: (c) => { COUNT = c; const el = $('#onlineChip'); el.hidden = false; $('#onlineCount').textContent = c.players; el.setAttribute('aria-label', `市集島上 ${c.players} 人，開著網站 ${c.viewers} 人，點一下看各身分人數`); },
@@ -1034,7 +1045,7 @@ async function boot() {
   if (Q.has('nogl') || !webglOK()) { textOnly(Q.has('nogl') ? '已切換為文字清單版' : '這台裝置無法顯示 3D 畫面'); applyTheme(); updateClock(); setInterval(updateClock, 10000); window.__ready = true; return; }
   let mods;
   try {
-    mods = await Promise.all([import('./world.js?v=20261117l'), import('./life.js?v=20261117l'), import('./cam.js?v=20261117l'), import('./players.js?v=20261117l'), import('./signs.js?v=20261117l'), import('./festival.js?v=20261117l'), import('./fauna.js?v=20261117l')]);
+    mods = await Promise.all([import('./world.js?v=20261117n'), import('./life.js?v=20261117n'), import('./cam.js?v=20261117n'), import('./players.js?v=20261117n'), import('./signs.js?v=20261117n'), import('./festival.js?v=20261117n'), import('./fauna.js?v=20261117n')]);
     const [{ createWorld, H: GROUND_H }, { createLife, makePerson }, { createCam }, { createPlayers }, { createSigns }, { createFestival }, { createFauna }] = mods;
     const mobile = isMobile();
     W = createWorld($('#gl'), { quality: S.quality, mobile });
@@ -1043,9 +1054,9 @@ async function boot() {
     CAM = createCam(W, $('#gl'), { onZoom: showZoom, onIntro: (k) => { L.setDeck(k < .3 ? 1 : Math.max(0, 1 - (k - .3) / .25)); if (k > .55) $('.intro-title').classList.add('show'); } });
     CAM.S.reduced = S.reduced; CAM.S.mobile = mobile;
     PL = createPlayers(W, GROUND_H); renderMe(); startNet();
-    SG = createSigns(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261117l')).rng, low: mobile || S.quality === 'low' });
-    FX = createFestival(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261117l')).rng, low: mobile || S.quality === 'low', avoid: SG.signs.map((s) => s.g.position) });
-    FA = createFauna(W, { H: GROUND_H, rng: (await import('./kit.js?v=20261117l')).rng });
+    SG = createSigns(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261117n')).rng, low: mobile || S.quality === 'low' });
+    FX = createFestival(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261117n')).rng, low: mobile || S.quality === 'low', avoid: SG.signs.map((s) => s.g.position) });
+    FA = createFauna(W, { H: GROUND_H, rng: (await import('./kit.js?v=20261117n')).rng });
   } catch (err) { console.warn(err); textOnly('3D 畫面載入失敗'); window.__ready = true; return; }
   if (S.quality === 'low') setQuality('low');
   buildTags();

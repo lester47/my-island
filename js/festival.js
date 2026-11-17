@@ -13,11 +13,19 @@ const BAL = ['#ff4d6d', '#ffd23a', '#3fa7ff', '#5ed37a', '#b06bff', '#ff8a3d', '
 const add = (parent, geo, c, x, y, z, sx, sy, sz, rx = 0, ry = 0, rz = 0, o) => { const m = new THREE.Mesh(geo, typeof c === 'string' ? mat(c, o) : c); m.position.set(x, y, z); m.scale.set(sx, sy, sz); m.rotation.set(rx, ry, rz); m.castShadow = true; parent.add(m); return m; };
 const line = (parent, a, b, c = '#e8e8e8', w = .012) => { const d = b.clone().sub(a); const m = new THREE.Mesh(G.cyl, mat(c)); m.position.copy(a).add(b).multiplyScalar(.5); m.scale.set(w, d.length(), w); m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize()); parent.add(m); return m; };
 
+// 可以刺破的氣球：每顆氣球的球體記錄自己屬於哪一組，點擊用的透明大球比氣球大一點（手機比較好點）
+const HIT_GEO = new THREE.SphereGeometry(.5, 8, 6), HIT_MAT = new THREE.MeshBasicMaterial({ visible: false });
+let BALLOONS = [];
+function markBalloon(mesh, group, color) {
+  const hit = new THREE.Mesh(HIT_GEO, HIT_MAT); hit.position.copy(mesh.position); hit.scale.copy(mesh.scale).multiplyScalar(1.6); mesh.parent.add(hit);
+  hit.userData.balloon = { group, color }; BALLOONS.push(hit);
+}
 // 一顆氣球（橢圓球＋小結）
 function balloon(parent, c, x, y, z, s = 1) {
   const g = new THREE.Group(); g.position.set(x, y, z); parent.add(g);
-  add(g, G.sph, mat(c, { roughness: .35, metalness: .05 }), 0, 0, 0, .34 * s, .42 * s, .34 * s);
+  const b = add(g, G.sph, mat(c, { roughness: .35, metalness: .05 }), 0, 0, 0, .34 * s, .42 * s, .34 * s);
   add(g, G.cone, c, 0, -.22 * s, 0, .07 * s, .07 * s, .07 * s, Math.PI);
+  markBalloon(b, g, c);
   return g;
 }
 
@@ -26,6 +34,7 @@ export function createFestival(W, content, H, opts = {}) {
   const low = !!opts.low, makePerson = opts.makePerson, rng = opts.rng;
   const R = rng ? rng(2026) : Math.random;
   const root = new THREE.Group(); scene.add(root);
+  BALLOONS = [];
   const anim = [];          // 每格要更新的東西
   const nightGlow = [];     // 晚上會亮的材質
   const kinds = new Set();  // 記錄放了幾種裝飾
@@ -81,7 +90,7 @@ export function createFestival(W, content, H, opts = {}) {
   for (const b of bridges) {
     const g = new THREE.Group(); const e = onBridge(b, .94, 0); g.position.set(e.x, H - .05, e.z); g.rotation.y = -b.a + Math.PI / 2; root.add(g);
     const n = low ? 14 : 22;
-    for (let i = 0; i <= n; i++) { const a = i / n * Math.PI; add(g, G.sph, mat(BAL[i % 6], { roughness: .35 }), Math.cos(a) * 1.15, Math.sin(a) * 2.0 + .1, 0, .34, .34, .34); }
+    for (let i = 0; i <= n; i++) { const a = i / n * Math.PI; const bg = new THREE.Group(); bg.position.set(Math.cos(a) * 1.15, Math.sin(a) * 2.0 + .1, 0); g.add(bg); const m = add(bg, G.sph, mat(BAL[i % 6], { roughness: .35 }), 0, 0, 0, .34, .34, .34); markBalloon(m, bg, BAL[i % 6]); }
     kinds.add('氣球拱門');
   }
 
@@ -130,17 +139,23 @@ export function createFestival(W, content, H, opts = {}) {
   }
   kinds.add('熱氣球');
 
-  // ⑧ 風箏：在海面上空飄，線拉回中央島
+  // ⑧ 風箏：和服務台的三尾鯉魚旗吹同一陣風——都飄向同一邊（鯉魚旗的方向），線拉回中央島
+  // 鯉魚旗在世界座標的方向：rotation.y = -0.9 ± 0.25 擺動，旗尾指向 (cos θ, -sin θ)
+  const windAt = (t, i) => { const th = -.9 + Math.sin(t * .9 + i) * .25 * .7; return new THREE.Vector3(Math.cos(th), 0, -Math.sin(th)); };
   for (let i = 0; i < 3; i++) {
     const g = new THREE.Group(); root.add(g);
     const k = add(g, G.box, ['#ff4d6d', '#3fa7ff', '#ffd23a'][i], 0, 0, 0, 1.0, 1.0, .03, 0, 0, Math.PI / 4);
-    for (let j = 0; j < 5; j++) add(g, G.tri, BAL[(j + i) % 6], 0, -.8 - j * .3, 0, .14, .2, .02, Math.PI);
-    const anchor = new THREE.Vector3(Math.cos(i * 2.1) * 3, H + .5, Math.sin(i * 2.1) * 3);
+    const tail = []; for (let j = 0; j < 5; j++) tail.push(add(g, G.tri, BAL[(j + i) % 6], 0, -.8 - j * .3, 0, .14, .2, .02, Math.PI));
+    // 放風箏的地方：中央島上三個點，排成一列（垂直於風向），風箏一起往下風處飄
+    const side = new THREE.Vector3(-.78, 0, .62);   // 和風向垂直
+    const anchor = new THREE.Vector3(1.5, H + .5, 1.0).addScaledVector(side, (i - 1) * 2.6);
     const str = new THREE.Mesh(G.cyl, mat('#f0f0f0')); root.add(str);
-    const base = new THREE.Vector3(Math.cos(i * 2.1 + .5) * 22, 13 + i * 2, Math.sin(i * 2.1 + .5) * 22);
+    const dist = 16 + i * 4, height = 11 + i * 2.5;
     anim.push((t) => {
-      g.position.set(base.x + Math.sin(t * .6 + i) * 1.5, base.y + Math.sin(t * .9 + i * 2) * .8, base.z + Math.cos(t * .5 + i) * 1.5);
-      g.lookAt(anchor); k.rotation.z = Math.PI / 4 + Math.sin(t * 1.3 + i) * .15;
+      const w = windAt(t, i);
+      g.position.copy(anchor).addScaledVector(w, dist).addScaledVector(side, Math.sin(t * .6 + i) * .8); g.position.y = height + Math.sin(t * .9 + i * 2) * .7;
+      g.lookAt(anchor); k.rotation.z = Math.PI / 4 + Math.sin(t * 1.3 + i) * .12;
+      tail.forEach((q, j) => { q.position.x = Math.sin(t * 3 + j * .8 + i) * .08 * j; });
       const d = g.position.clone().sub(anchor); str.position.copy(anchor).add(g.position).multiplyScalar(.5); str.scale.set(.012, d.length(), .012); str.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize());
     });
   }
@@ -363,5 +378,28 @@ export function createFestival(W, content, H, opts = {}) {
       if (p.bunch) p.bunch.rotation.z = Math.sin(t * 1.4) * .06;
     }
   }
-  return { root, update, kinds: [...kinds] };
+  // ------------------------------------------------ 刺破氣球（熱氣球不在名單裡，刺不破）
+  const bursts = [];
+  const BURST_GEO = new THREE.BoxGeometry(.07, .07, .015);
+  function pop(hit) {
+    const info = hit.userData.balloon; if (!info || info.group.userData.popped) return false;
+    const grp = info.group; grp.userData.popped = true; grp.visible = false;
+    const p = new THREE.Vector3(); hit.getWorldPosition(p);
+    const g = new THREE.Group(); g.position.copy(p); root.add(g);
+    const parts = [];
+    for (let i = 0; i < 18; i++) { const m = new THREE.Mesh(BURST_GEO, new THREE.MeshBasicMaterial({ color: i % 3 ? info.color : BAL[(i * 7) % BAL.length], transparent: true })); g.add(m); parts.push({ m, v: new THREE.Vector3(R() - .5, R() * .8, R() - .5).normalize().multiplyScalar(1.5 + R() * 1.5), r: R() * 10 }); }
+    bursts.push({ g, parts, t: 0 });
+    setTimeout(() => { grp.visible = true; grp.userData.popped = false; }, 25000);   // 25 秒後再長回來
+    return true;
+  }
+  anim.push((t, dt) => {
+    for (let i = bursts.length - 1; i >= 0; i--) {
+      const b = bursts[i]; b.t += dt;
+      for (const q of b.parts) { q.m.position.addScaledVector(q.v, dt); q.v.y -= dt * 3; q.m.rotation.x += dt * q.r; q.m.rotation.y += dt * q.r; q.m.material.opacity = Math.max(0, 1 - b.t / 1.2); }
+      if (b.t > 1.2) { root.remove(b.g); bursts.splice(i, 1); }
+    }
+  });
+  return { root, update, kinds: [...kinds], balloons: () => BALLOONS.filter((h) => !h.userData.balloon.group.userData.popped && h.parent && isVisible(h)), pop };
+}
+function isVisible(o) { for (let p = o; p; p = p.parent) if (!p.visible) return false; return true;
 }
