@@ -412,3 +412,30 @@ select.pp-in { width: auto; max-width: 160px; }
 
 .info-btn { margin-left: 10px; align-self: center; border: 0; border-radius: 999px; padding: 0 14px; min-height: 40px; background: #e3a33b; color: #3a2200; font-weight: 900; font-size: 14px; box-shadow: var(--shadow); white-space: nowrap; cursor: pointer; }
 @media (max-width: 760px) { .info-btn { margin-left: 6px; padding: 0 10px; min-height: 36px; font-size: 12px; } }
+
+/* 必逛清單 */
+.hud-left { align-items: flex-end; }
+.hchip.plan .tx { font-size: 13px; font-weight: 800; }
+.fav-btn { margin-left: 6px; border: 2px solid #e3a33b; background: #fff; color: #8a5a00; border-radius: 999px; padding: 2px 10px; font-weight: 800; font-size: 13px; cursor: pointer; }
+.fav-btn.on { background: #e3a33b; color: #fff; }
+.plan-budget { background: #fff7e0; border: 2px solid #e3a33b; border-radius: 14px; padding: 10px 12px; margin-bottom: 10px; }
+.plan-budget.over { background: #fdeaea; border-color: #dc4848; }
+.plan-budget .coins { display: flex; gap: 4px; margin-top: 6px; }
+.plan-budget .coins i { width: 18px; height: 18px; border-radius: 50%; background: #ffd23a; border: 2px solid #b8860b; }
+.plan-budget .coins i.used { background: #e8e2d0; border-color: #c9bfa5; }
+.plan-list { list-style: none; margin: 0 0 10px; padding: 0; display: grid; gap: 6px; }
+.plan-list li { display: flex; align-items: center; gap: 6px; border-left: 6px solid var(--pc); background: var(--surface2, #f4f4f0); border-radius: 10px; padding: 6px 8px; }
+.plan-go { flex: 1; text-align: left; border: 0; background: none; font: inherit; cursor: pointer; }
+.plan-go small { display: block; color: var(--muted, #666); font-size: 12px; }
+.plan-n { display: inline-flex; align-items: center; gap: 4px; }
+.plan-n button, .plan-x { width: 30px; height: 30px; border-radius: 50%; border: 0; background: #fff; box-shadow: var(--shadow); font-weight: 900; cursor: pointer; }
+.plan-ch ul { list-style: none; padding: 0; margin: 0; display: flex; gap: 10px; flex-wrap: wrap; }
+.plan-ch li { padding: 4px 10px; border-radius: 999px; background: #eee; font-weight: 700; font-size: 13px; }
+.plan-ch li.ok { background: #d9f2dc; color: #1e5d2a; }
+.plan-done { font-weight: 900; color: #1e5d2a; }
+/* 市集公告 */
+.notice-bar { position: fixed; z-index: 19; top: 132px; left: 16px; right: 16px; margin: 0 auto; width: fit-content; max-width: 600px; display: flex; align-items: center; gap: 8px; padding: 8px 10px 8px 14px; border-radius: 12px; background: #fffbe6; border: 2px solid #e3a33b; box-shadow: var(--shadow); font-weight: 800; }
+.notice-bar .nw { color: #8a6a2a; font-weight: 600; white-space: nowrap; }
+.notice-bar .nx { border: 0; background: none; font-size: 16px; cursor: pointer; }
+.nt-list { margin: 0; padding-left: 18px; } .nt-list small { color: #8a6a2a; }
+@media (max-width: 760px) { .notice-bar { top: 112px; font-size: 13px; } .hchip.plan .tx { display: none; } }

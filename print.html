@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>115 鯉魚市集紙本小導覽</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap">
+<style>
+  :root { --ink: #1b2a20; --muted: #5b6b5e; --line: #c9d3c4; --accent: #e3a33b; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #eef3e6; color: var(--ink); font: 14px/1.5 "Noto Sans TC", sans-serif; }
+  .bar { position: sticky; top: 0; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; padding: 10px 16px; background: #fff; border-bottom: 1px solid var(--line); }
+  .bar button { border: 0; border-radius: 999px; padding: 8px 16px; font: inherit; font-weight: 900; background: var(--accent); color: #3a2200; cursor: pointer; }
+  .bar label { font-weight: 700; }
+  .page { width: 210mm; min-height: 297mm; margin: 16px auto; padding: 12mm 13mm; background: #fff; box-shadow: 0 4px 20px rgba(0,0,0,.12); }
+  h1 { margin: 0; font-size: 26px; display: flex; align-items: center; gap: 10px; }
+  h1 img { width: 56px; height: 56px; }
+  .sub { margin: 2px 0 10px; color: var(--muted); }
+  h2 { font-size: 16px; margin: 12px 0 6px; padding-left: 8px; border-left: 6px solid var(--accent); }
+  .sched { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+  .sched div { border: 1.5px solid var(--line); border-radius: 8px; padding: 6px; text-align: center; }
+  .sched b { display: block; font-size: 15px; }
+  .rules { margin: 0; padding-left: 18px; }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  th, td { border: 1px solid var(--line); padding: 2px 6px; text-align: left; vertical-align: top; }
+  th { background: #f4f1e6; }
+  td.no { width: 34px; text-align: center; font-weight: 900; }
+  td.ck { width: 30px; text-align: center; font-size: 15px; }
+  .isl { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
+  .want { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .want div { border: 2px dashed var(--accent); border-radius: 10px; height: 64px; padding: 6px 8px; color: var(--muted); font-weight: 700; }
+  .foot { color: var(--muted); font-size: 11.5px; margin-top: 8px; }
+  .qrs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6mm; }
+  .qr { border: 1.5px solid var(--line); border-radius: 10px; padding: 5mm 4mm 4mm; text-align: center; break-inside: avoid; }
+  .qr img { width: 40mm; height: 40mm; }
+  .qr .n { font-size: 26px; font-weight: 900; line-height: 1; }
+  .qr .nm { font-weight: 900; font-size: 14px; }
+  .qr .s { color: var(--muted); font-size: 11.5px; }
+  @media print {
+    @page { size: A4; margin: 0; }
+    body { background: #fff; }
+    .bar { display: none; }
+    .page { margin: 0; box-shadow: none; page-break-after: always; height: 297mm; min-height: 0; overflow: hidden; padding: 9mm 12mm; }
+    .qrs { gap: 4mm; } .qr { padding: 3mm; } .qr img { width: 33mm; height: 33mm; } .qr .n { font-size: 22px; }
+    h2 { margin: 8px 0 5px; } .foot { margin-top: 5px; }
+    .hide-qr .qrpage { display: none; }
+  }
+  @media screen and (max-width: 860px) { .page { width: auto; min-height: 0; margin: 12px 16px; padding: 16px; } .sched { grid-template-columns: repeat(2, 1fr); } .qrs { grid-template-columns: repeat(2, 1fr); } }
+</style>
+</head>
+<body>
+<div class="bar"><button type="button" onclick="print()">🖨️ 列印</button><label><input type="checkbox" id="withQr" checked> 一起印攤位 QR Code（給攤主貼在立牌）</label><a href="./">← 回到網站</a></div>
+<main id="out"><p style="padding:20px">載入中…</p></main>
+<script>
+const pad2 = (n) => String(n).padStart(2, '0');
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+document.getElementById('withQr').onchange = (e) => document.body.classList.toggle('hide-qr', !e.target.checked);
+fetch('data/content.json', { cache: 'no-cache' }).then((r) => r.json()).then((C) => {
+  const E = C.center.event, K = E.card || {}, isl = Object.fromEntries(C.islands.map((i) => [i.id, i]));
+  let fav = []; try { const p = JSON.parse(localStorage.getItem('isleforge.my-island.plan') || 'null'); fav = p && p.items ? p.items.map((x) => x.no) : []; } catch (e) {}
+  const stalls = C.stalls.slice().sort((a, b) => a.no - b.no);
+  const want = [0, 1, 2].map((i) => { const st = C.stalls.find((s) => s.no === fav[i]); return `<div>我最想逛 ${i + 1}<br>${st ? `<b style="color:#1b2a20">${pad2(st.no)} ${esc(st.name)}</b>` : '第 ____ 攤'}</div>`; }).join('');
+  const p1 = `<section class="page">
+    <h1><img src="assets/brand/koi-logo.png" alt="">115 鯉魚市集・紙本小導覽</h1>
+    <p class="sub">${esc(K.line || '')}</p>
+    <h2>活動時程</h2>
+    <div class="sched">${(E.schedule || []).map((s) => `<div><b>${esc(s.time)}</b>${esc(s.title)}</div>`).join('')}</div>
+    <h2>鯉魚幣規則</h2>
+    <ul class="rules">${(E.rules || []).map((r) => `<li>${esc(r)}</li>`).join('')}</ul>
+    <h2>20 攤對照表（勾選想去的攤位）</h2>
+    <table><thead><tr><th>✓</th><th>攤號</th><th>攤名</th><th>內容</th><th>在哪座島</th></tr></thead><tbody>
+    ${stalls.map((s) => `<tr><td class="ck">${fav.includes(s.no) ? '☑' : '☐'}</td><td class="no">${pad2(s.no)}</td><td>${esc(s.name)}</td><td>${esc(s.short || '')}</td><td><span class="isl" style="background:${isl[s.island].color}"></span>${isl[s.island].order} ${esc(isl[s.island].name)}</td></tr>`).join('')}
+    </tbody></table>
+    <h2>我最想逛的三攤</h2>
+    <div class="want">${want}</div>
+    <p class="foot">網站：lester47.github.io/my-island　｜　攤位內容與價格以現場為準；摸彩以實體闖關卡為準。</p>
+  </section>`;
+  const qrs = stalls.map((s) => `<div class="qr"><img src="assets/qr/stall-${pad2(s.no)}.svg" alt="第 ${s.no} 攤 QR Code"><div class="n">${pad2(s.no)}</div><div class="nm">${esc(s.name)}</div><div class="s">掃描看玩法與過關條件</div></div>`);
+  const pages = []; for (let i = 0; i < qrs.length; i += 12) pages.push(`<section class="page qrpage"><h2 style="margin-top:0">攤位 QR Code（剪下貼在攤位立牌，排隊時先讀玩法）</h2><div class="qrs">${qrs.slice(i, i + 12).join('')}</div></section>`);
+  document.getElementById('out').innerHTML = p1 + pages.join('');
+}).catch(() => { document.getElementById('out').innerHTML = '<p style="padding:20px">資料載入失敗，請重新整理。</p>'; });
+</script>
+</body>
+</html>

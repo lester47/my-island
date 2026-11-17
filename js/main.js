@@ -1,6 +1,6 @@
 // 115 鯉魚市集｜介面與流程
 import * as THREE from 'three';
-import { ROLES, OUTFITS } from './roles.js?v=20261117y';
+import { ROLES, OUTFITS } from './roles.js?v=20261117z';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -15,7 +15,7 @@ const pad2 = (n) => String(n).padStart(2, '0');
 const fmtH = (h) => { h = ((h % 24) + 24) % 24; return `${pad2(Math.floor(h))}:${pad2(Math.floor((h % 1) * 60))}`; };
 
 // 介面 Logo：低多邊形鯉魚（橘紅魚背、米白魚腹、魚頭朝右），首頁、怎麼逛、集章完成共用這一張
-const LOGO_SRC = 'assets/brand/koi-logo.png?v=20261117y';
+const LOGO_SRC = 'assets/brand/koi-logo.png?v=20261117z';
 const MASCOT = `<img src="${LOGO_SRC}" alt="115 鯉魚市集 Logo：低多邊形小鯉魚" decoding="async">`;
 
 let C = null;            // content.json
@@ -459,7 +459,7 @@ function stallDetailHTML(st) {
   const any = [st, ...(st.parts || [])].some((o) => keys.some((k) => String(o[k] ?? '').trim()) || o.photo);
   if (st.namePending) return photoHTML(st, st.name) + `<p class="sd-empty">${esc(N.pendingName)}</p>`;
   let h = S.legacyNote && S.legacyNote.no === st.no ? `<p class="sd-legacy" role="status">ℹ️ ${esc(S.legacyNote.msg)}</p>` : '';
-  h += `<p class="sd-tags"><span class="badge type">${esc(st.category || T.label)}</span>${st.sample ? `<span class="badge">${esc(N.sample)}</span>` : ''}</p>`;
+  h += `<p class="sd-tags"><span class="badge type">${esc(st.category || T.label)}</span>${st.sample ? `<span class="badge">${esc(N.sample)}</span>` : ''}${favBtnHTML(st.no)}</p>`;
   if (st.parts) h += photoHTML(st, st.name) + st.parts.map((pt) => `<section class="sd-part"><h4>${esc(pt.name)}</h4>${photoHTML(pt, pt.name)}${fieldsHTML(pt, T, st.template)}</section>`).join('');
   else h += photoHTML(st, st.name) + fieldsHTML(st, T, st.template);
   if (!any && !st.template) h += `<p class="sd-empty">${esc(N.pendingIntro)}</p>`;
@@ -988,10 +988,73 @@ function openMe() {
   if ($('#meLeave')) $('#meLeave').onclick = () => { store.set('me', null); $('#meDlg').close(); renderMe(); toast('已離開市集，你的人物從島上收起來了'); };
 }
 $('#meBtn').addEventListener('click', openMe);
+
+// ------------------------------------------------------------------ 我的必逛清單＋鯉魚幣預算＋10 枚幣挑戰（存在這台裝置）
+const PLAN_KEY = 'plan';
+const planGet = () => { const p = store.get(PLAN_KEY, null); return p && p.items ? p : { items: [] }; };   // items: [{ no, n }]
+const planSet = (p) => { store.set(PLAN_KEY, p); renderPlanChip(); refreshFavBtns(); };
+const isFav = (no) => planGet().items.some((x) => x.no === no);
+const coinOf = (st) => (st.no === 20 ? null : 1);   // 第 20 攤付款方式待確認
+function favBtnHTML(no) { const on = isFav(no); return `<button type="button" class="fav-btn${on ? ' on' : ''}" data-fav="${no}" aria-pressed="${on}">${on ? '★ 已加入必逛' : '☆ 加入必逛'}</button>`; }
+function refreshFavBtns() { document.querySelectorAll('[data-fav]').forEach((b) => { const on = isFav(+b.dataset.fav); b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); b.textContent = on ? '★ 已加入必逛' : '☆ 加入必逛'; }); }
+function toggleFav(no) {
+  const p = planGet(), i = p.items.findIndex((x) => x.no === no);
+  if (i >= 0) { p.items.splice(i, 1); toast(`已從必逛移除第 ${pad2(no)} 攤`); }
+  else { p.items.push({ no, n: 1 }); toast(`⭐ 第 ${pad2(no)} 攤加入必逛（共 ${p.items.length} 攤）`); }
+  planSet(p);
+}
+document.addEventListener('click', (e) => { const b = e.target instanceof Element && e.target.closest('[data-fav]'); if (!b) return; e.stopPropagation(); toggleFav(+b.dataset.fav); });
+function renderPlanChip() { const n = planGet().items.length; const el = $('#planCount'); if (el) el.textContent = n; }
+const COINS = 10;
+function planHTML() {
+  const p = planGet(), rows = p.items.map((x) => ({ ...x, st: stallByNo(x.no) })).filter((x) => x.st);
+  const spend = rows.reduce((s, x) => s + (coinOf(x.st) == null ? 0 : x.n * coinOf(x.st)), 0), left = COINS - spend;
+  const types = new Set(rows.map((x) => x.st.type));
+  const ch = [['food', '🍪 一樣美食'], ['craft', '✂️ 一次手作'], ['game', '🎯 一個遊戲']].map(([k, l]) => `<li class="${types.has(k) ? 'ok' : ''}">${types.has(k) ? '✓' : '○'} ${l}</li>`).join('');
+  const done = ['food', 'craft', 'game'].every((k) => types.has(k)) && left >= 0;
+  const list = rows.length ? `<ol class="plan-list">${rows.map((x) => { const I = islandById(x.st.island), c = coinOf(x.st);
+    return `<li style="--pc:${colorOf(x.st.island)}"><button type="button" class="plan-go" data-plan-go="${x.st.no}"><b>${pad2(x.st.no)}</b> ${esc(x.st.name)}<small>${esc(I.name)}${x.st.short ? `・${esc(x.st.short)}` : ''}</small></button>
+      <span class="plan-n">${c == null ? '<small>費用待確認</small>' : `<button type="button" data-plan-n="${x.st.no}" data-d="-1" aria-label="少一次">−</button><b>${x.n}</b><button type="button" data-plan-n="${x.st.no}" data-d="1" aria-label="多一次">＋</button>`}</span>
+      <button type="button" class="plan-x" data-fav="${x.st.no}" aria-label="移除">✕</button></li>`; }).join('')}</ol>`
+    : '<p class="foot">還沒有必逛攤位。打開任一攤的介紹，按「☆ 加入必逛」。建議先挑三攤！</p>';
+  return `<div class="plan-budget ${left < 0 ? 'over' : ''}"><b>預計花 ${spend} 枚，還有 ${left} 枚</b><div class="coins" aria-hidden="true">${Array.from({ length: COINS }, (_, i) => `<i class="${i < spend ? 'used' : ''}"></i>`).join('')}</div>
+      <p class="foot" style="margin:4px 0 0">${left < 0 ? '⚠ 超過 10 枚了，刪掉一些吧' : left > 0 ? `留 ${left} 枚給現場臨時發現的好物也不錯` : '剛好用完 10 枚'}</p></div>
+    ${list}
+    <div class="plan-ch"><h3>🪙 10 枚幣挑戰</h3><p class="foot" style="margin:0 0 4px">用 10 枚幣安排一趟市集，要包含：</p><ul>${ch}</ul>${done ? '<p class="plan-done">🎉 挑戰成功！你的安排有吃、有做、也有玩</p>' : ''}</div>
+    <div class="chal-btns"><button type="button" class="btn" id="planCopy">📋 複製我的安排（跟同學比比看）</button><button type="button" class="btn ghost" id="planPrint">🖨️ 紙本小導覽</button></div>
+    <p class="foot">清單只存在這台裝置。每個遊戲或物品 1 枚鯉魚幣，以現場為準。</p>`;
+}
+function openPlan() { $('#planBody').innerHTML = planHTML(); openDlg('#planDlg'); }
+$('#planBtn').addEventListener('click', openPlan);
+$('#planBody').addEventListener('click', (e) => {
+  const t = e.target instanceof Element ? e.target : null; if (!t) return;
+  const nb = t.closest('[data-plan-n]');
+  if (nb) { const p = planGet(), it = p.items.find((x) => x.no === +nb.dataset.planN); if (it) { it.n = Math.max(1, Math.min(10, it.n + +nb.dataset.d)); planSet(p); } $('#planBody').innerHTML = planHTML(); return; }
+  if (t.closest('[data-fav]')) { setTimeout(() => ($('#planBody').innerHTML = planHTML())); return; }
+  const go = t.closest('[data-plan-go]'); if (go) { $('#planDlg').close(); const st = stallByNo(+go.dataset.planGo); if (S.walking) exitWalk(true); openIsland(st.island, { no: st.no }); return; }
+  if (t.closest('#planPrint')) { window.open('print.html', '_blank'); return; }
+  if (t.closest('#planCopy')) {
+    const p = planGet(), rows = p.items.map((x) => stallByNo(x.no)).filter(Boolean);
+    const spend = p.items.reduce((s, x) => s + (x.no === 20 ? 0 : x.n), 0);
+    const txt = `我的 115 鯉魚市集安排（預計花 ${spend} 枚，還有 ${COINS - spend} 枚）\n` + p.items.map((x) => { const st = stallByNo(x.no); return `・${pad2(x.no)} ${st.name}（${islandById(st.island).name}）× ${x.n}`; }).join('\n');
+    (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => toast('📋 已複製，可以貼給同學比比看'), () => toast('這台裝置不能自動複製，請截圖分享'));
+  }
+});
+
+// ------------------------------------------------------------------ 現場市集公告（content.json 的 center.notices，最新一則顯示在首頁）
+function renderNotice() {
+  const list = (C.center.notices || []).filter((n) => n && n.text);
+  const el = $('#noticeBar'); if (!list.length) { el.hidden = true; return; }
+  const n = list[list.length - 1];
+  if (store.get('noticeSeen', '') === n.time + n.text) { el.hidden = true; return; }
+  el.hidden = false; el.querySelector('.nt').textContent = n.text; el.querySelector('.nw').textContent = `更新 ${n.time}`;
+  el.querySelector('.nx').onclick = () => { store.set('noticeSeen', n.time + n.text); el.hidden = true; };
+}
 // 首頁的「12/12 市集資訊」：不用先找服務台，直接看日期、地點、時程和鯉魚幣規則
 $('#infoBtn').addEventListener('click', () => {
   if (!C) return;
-  $('#infoBody').innerHTML = `${liveCardHTML()}<div class="p-sec"><h3>時程與規則</h3>${eventHTML()}</div>
+  const ns = (C.center.notices || []).filter((n) => n && n.text).slice().reverse();
+  $('#infoBody').innerHTML = `${ns.length ? `<div class="p-sec"><h3>📢 市集公告</h3><ul class="nt-list">${ns.map((n) => `<li><small>${esc(n.time)}</small> ${esc(n.text)}</li>`).join('')}</ul></div>` : ''}${liveCardHTML()}<div class="p-sec"><h3>時程與規則</h3>${eventHTML()}</div>
     <div class="chal-btns"><button type="button" class="btn ghost" id="infoGo">★ 到服務台看更多</button></div>`;
   openDlg('#infoDlg');
   $('#infoGo').onclick = () => { $('#infoDlg').close(); openIsland('center'); };
@@ -1009,7 +1072,7 @@ function balloonPopped() {
 }
 function startNet() {
   const M = C.multiplayer; if (!M || !M.enabled || !M.firebase || !PL) return;
-  import('./net.js?v=20261117y').then(({ createNet }) => {
+  import('./net.js?v=20261117z').then(({ createNet }) => {
     NET = createNet(M.firebase, {
       myPos: () => PL.myPos(), upsert: (id, info, pos) => PL.upsert(id, info, pos), remove: (id) => PL.remove(id),
       onCount: (c) => { COUNT = c; const el = $('#onlineChip'); el.hidden = false; $('#onlineCount').textContent = c.players; el.setAttribute('aria-label', `市集島上 ${c.players} 人，開著網站 ${c.viewers} 人，點一下看各身分人數`); },
@@ -1094,11 +1157,11 @@ async function boot() {
   if (route().errs.length) { console.warn('路線設定錯誤', route().errs); setTimeout(() => toast(`⚠ 路線設定錯誤 ${route().errs.length} 項：${route().errs[0]}（詳見護照頁）`), 1200); }
   S.autoStart = performance.now();
   S.hour = S.hourShown = targetHour(performance.now());
-  renderMe();
+  renderMe(); renderPlanChip(); renderNotice();
   if (Q.has('nogl') || !webglOK()) { textOnly(Q.has('nogl') ? '已切換為文字清單版' : '這台裝置無法顯示 3D 畫面'); applyTheme(); updateClock(); setInterval(updateClock, 10000); window.__ready = true; return; }
   let mods;
   try {
-    mods = await Promise.all([import('./world.js?v=20261117y'), import('./life.js?v=20261117y'), import('./cam.js?v=20261117y'), import('./players.js?v=20261117y'), import('./signs.js?v=20261117y'), import('./festival.js?v=20261117y'), import('./fauna.js?v=20261117y'), import('./interact.js?v=20261117y')]);
+    mods = await Promise.all([import('./world.js?v=20261117z'), import('./life.js?v=20261117z'), import('./cam.js?v=20261117z'), import('./players.js?v=20261117z'), import('./signs.js?v=20261117z'), import('./festival.js?v=20261117z'), import('./fauna.js?v=20261117z'), import('./interact.js?v=20261117z')]);
     const [{ createWorld, H: GROUND_H }, { createLife, makePerson }, { createCam }, { createPlayers }, { createSigns }, { createFestival }, { createFauna }, { createInteract }] = mods;
     const mobile = isMobile();
     W = createWorld($('#gl'), { quality: S.quality, mobile });
@@ -1107,9 +1170,9 @@ async function boot() {
     CAM = createCam(W, $('#gl'), { onZoom: showZoom, onIntro: (k) => { L.setDeck(k < .3 ? 1 : Math.max(0, 1 - (k - .3) / .25)); if (k > .55) $('.intro-title').classList.add('show'); } });
     CAM.S.reduced = S.reduced; CAM.S.mobile = mobile;
     PL = createPlayers(W, GROUND_H); renderMe(); startNet();
-    SG = createSigns(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261117y')).rng, low: mobile || S.quality === 'low' });
-    FX = createFestival(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261117y')).rng, low: mobile || S.quality === 'low', avoid: [...SG.signs.map((s) => s.g.position), ...Object.values(W.islands).flatMap((I) => (I.trees || []).filter((tr) => tr.visible).map((tr) => tr.position.clone().add(I.pos)))], carp: L.carp });
-    FA = createFauna(W, { H: GROUND_H, rng: (await import('./kit.js?v=20261117y')).rng });
+    SG = createSigns(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261117z')).rng, low: mobile || S.quality === 'low' });
+    FX = createFestival(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261117z')).rng, low: mobile || S.quality === 'low', avoid: [...SG.signs.map((s) => s.g.position), ...Object.values(W.islands).flatMap((I) => (I.trees || []).filter((tr) => tr.visible).map((tr) => tr.position.clone().add(I.pos)))], carp: L.carp });
+    FA = createFauna(W, { H: GROUND_H, rng: (await import('./kit.js?v=20261117z')).rng });
     IA = createInteract(W, C, GROUND_H, {
       toast, carp: L.carp,
       toastIf: (m) => { if (!S.intro) toast(m); },
