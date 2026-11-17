@@ -1,8 +1,8 @@
 // 登入者：自己的人物＋頭上名牌；之後接上連線服務時，其他人也用同一套顯示（upsert / remove）
 import * as THREE from 'three';
-import { rng } from './kit.js?v=20261117j';
-import { makePerson } from './life.js?v=20261117j';
-import { ROLES } from './roles.js?v=20261117j';
+import { rng } from './kit.js?v=20261117k';
+import { makePerson } from './life.js?v=20261117k';
+import { ROLES } from './roles.js?v=20261117k';
 const SPAWN = { x: 0, z: 7.4, yaw: Math.PI };
 
 const seedOf = (s) => { let h = 2166136261; for (const c of String(s)) h = Math.imul(h ^ c.codePointAt(0), 16777619); return h >>> 0; };

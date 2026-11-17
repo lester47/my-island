@@ -1,7 +1,7 @@
 // 3D 世界：天空、海、遠山、島嶼與地標、橋、日夜光影
 import * as THREE from 'three';
-import { TAU, clamp, lerp, smooth, rng, loopNoise, mat, Builder, GEO, glowTexture, C } from './kit.js?v=20261117j';
-import { makeScenery } from './scenery.js?v=20261117j';
+import { TAU, clamp, lerp, smooth, rng, loopNoise, mat, Builder, GEO, glowTexture, C } from './kit.js?v=20261117k';
+import { makeScenery } from './scenery.js?v=20261117k';
 
 export const H = 1.75;               // 島頂草地高度
 const SEG = 72;                      // 海岸線分段（6 的倍數，六角轉角落在頂點上）
@@ -444,14 +444,14 @@ function landmarkCenter(B, g, P, extras) {
   extras.market = new THREE.Vector3(Math.cos(-.45) * 5.3, H, Math.sin(-.45) * 5.3);
 }
 
-// 每座島外圈要放的東西（角度相對於連往中央島的橋）
+// 每座島外圈要放的東西（角度相對於連往中央島的橋）；'none' 是拿掉的房子，保留位置讓其他物件角度不變
 const OUTER = {
-  food:    ['house:#d9644a', 'treeR', 'bed', 'bench', 'treeP', 'lamp', 'crate', 'treeR', 'sign', 'bush'],
-  craft:   ['house:#6aa6c9', 'treeP', 'bed', 'lamp', 'treeR', 'bench', 'well', 'treeR', 'sign', 'fence'],
-  puzzle:  ['house:#e3a33b', 'treeR', 'fence', 'bench', 'treeP', 'lamp', 'popcorn', 'bed', 'treeR', 'sign'],
-  sport:   ['house:#6aa6c9', 'treeP', 'bench', 'bed', 'lamp', 'treeR', 'crate', 'treeP', 'sign', 'bush'],
-  recycle: ['house:#d9644a', 'treeR', 'bed', 'well', 'treeP', 'lamp', 'bench', 'treeR', 'sign', 'fence'],
-  center:  ['house:#d9644a', 'treeR', 'lamp', 'bench', 'treeP', 'house:#6aa6c9', 'lamp', 'treeR', 'bench', 'treeP', 'lamp', 'bed', 'crate', 'treeR', 'lamp', 'sign'],
+  food:    ['none', 'treeR', 'bed', 'bench', 'treeP', 'lamp', 'crate', 'treeR', 'sign', 'bush'],
+  craft:   ['none', 'treeP', 'bed', 'lamp', 'treeR', 'bench', 'well', 'treeR', 'sign', 'fence'],
+  puzzle:  ['none', 'treeR', 'fence', 'bench', 'treeP', 'lamp', 'none', 'bed', 'treeR', 'sign'],
+  sport:   ['none', 'treeP', 'bench', 'bed', 'lamp', 'treeR', 'crate', 'treeP', 'sign', 'bush'],
+  recycle: ['none', 'treeR', 'bed', 'well', 'treeP', 'lamp', 'bench', 'treeR', 'sign', 'fence'],
+  center:  ['none', 'treeR', 'lamp', 'bench', 'treeP', 'none', 'lamp', 'treeR', 'bench', 'treeP', 'lamp', 'bed', 'crate', 'treeR', 'lamp', 'sign'],
 };
 
 // ------------------------------------------------------------------ 可走範圍（依實際模型算出來，不再用手畫的圓）
@@ -558,6 +558,7 @@ function buildIsland(id, scene, quality) {
     if (isC && Math.hypot(Math.cos(a) * r - Math.cos(-.45) * 6.6, Math.sin(a) * r - Math.sin(-.45) * 6.6) < 3.0) return; // 讓出市集
     // 讓出每座橋的通道：物件外緣離橋的中線至少 1.1（玩家肩寬＋一點餘裕），不夠就往旁邊挪，挪不開就不放
     const [kind, arg] = it.split(':');
+    if (kind === 'none') return;                      // 原本的房子與爆米花攤已拿掉：攤位改由實體攤子呈現，讓出步道
     const rad = { popcorn: .75, house: 1.7, treeR: 1.0, treeP: .95, bed: 1.25, fence: 1.45, bench: .75, crate: .75, sign: .45, well: .95, lamp: .35, bush: .65 }[kind] || .8;
     const blocksBridge = (aa) => corridorA.some((b) => { const d = Math.atan2(Math.sin(aa - b), Math.cos(aa - b)); return Math.cos(d) > 0 && Math.abs(Math.sin(d)) * r < rad + 1.1; });
     if (blocksBridge(a)) { let ok = false; for (let k = 1; k <= 12 && !ok; k++) for (const sg of [1, -1]) { if (!blocksBridge(a + sg * k * .05)) { a += sg * k * .05; ok = true; break; } } if (!ok) return; }
