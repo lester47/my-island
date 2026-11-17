@@ -1,6 +1,6 @@
 // 115 鯉魚市集｜介面與流程
 import * as THREE from 'three';
-import { ROLES, OUTFITS } from './roles.js?v=20261117q';
+import { ROLES, OUTFITS } from './roles.js?v=20261117s';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -105,6 +105,7 @@ function syncSettings() {
   for (const b of document.querySelectorAll('#timeSeg button')) b.setAttribute('aria-checked', String(b.dataset.k === S.timeMode));
   $('#motionBtn').setAttribute('aria-pressed', String(S.reduced));
   $('#qualityBtn').setAttribute('aria-pressed', String(S.quality === 'low'));
+  $('#qualityBtn').textContent = `🖥️ 目前畫質：${S.quality === 'low' ? '低' : '高'}${S.qualityAuto ? '（自動調整）' : ''}・點一下切換`;
 }
 function toggleSettings(on) {
   const p = $('#settings'); on = on == null ? p.hidden : on; p.hidden = !on; $('#setBtn').setAttribute('aria-expanded', String(on));
@@ -134,7 +135,7 @@ function updateLive() {
 function updateClock() {
   const d = nowDate();
   $('#clockNow').textContent = `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
-  $('#clockSky').textContent = `天色：${PNAME[periodOf(S.hourShown)]} ${fmtH(S.hourShown)}`;
+  $('#clockSky').textContent = `島上時間 ${fmtH(S.hourShown)}・${PNAME[periodOf(S.hourShown)]}`;
   updateLive();
 }
 
@@ -245,7 +246,7 @@ function chalInner(no) {
   if (rec) return `<p class="chal-h">🎫 闖關登記 ${who}</p><p class="chal-ok">✓ ${esc(lab)}</p><p class="chal-meta">第 ${pad2(no)} 攤・完成時間 ${fmtDone(rec.completedAt)}</p>
     <div class="chal-btns"><button type="button" class="btn ghost" data-chal-undo="${no}">取消登記</button><button type="button" class="btn ghost" data-pass-open>看我的護照</button></div>`;
   return `<p class="chal-h">🎫 闖關登記 ${who}</p><p class="chal-meta">完成這攤的活動後，按下面的按鈕記到${a ? '你的' : ''}闖關護照（自行回報）。</p>
-    <div class="chal-btns"><button type="button" class="btn" data-chal-do="${no}">登記完成</button>${a ? '<button type="button" class="btn ghost" data-pass-open>看我的護照</button>' : ''}</div>`;
+    <div class="chal-btns"><button type="button" class="btn" data-chal-do="${no}">🎫 記入闖關護照</button>${a ? '<button type="button" class="btn ghost" data-pass-open>看我的護照</button>' : ''}</div>`;
 }
 function refreshChal(focusSel) {
   document.querySelectorAll('[data-mis]').forEach((el) => { el.innerHTML = misInner(el.dataset.mis); });
@@ -319,7 +320,7 @@ function misInner(mid) {
     <div class="chal-btns"><button type="button" class="btn" data-mis-undo-yes="${esc(mid)}">確定取消</button><button type="button" class="btn ghost" data-mis-undo-no="${esc(mid)}">保留登記</button></div>`;
   if (rec) return head + `<p class="chal-ok">✓ 任務完成・自行回報</p><p class="chal-meta">完成時間 ${fmtDone(rec.completedAt)}${a ? `・護照：${esc(a.name)}` : ''}</p>
     <div class="chal-btns">${nextMission() ? '<button type="button" class="btn" data-mis-next>下一站 →</button>' : '<span class="mis-done">🎉 路線完成</span>'}<button type="button" class="btn ghost" data-mis-undo="${esc(mid)}">取消登記</button></div>`;
-  return head + `<div class="chal-btns"><button type="button" class="btn" data-mis-do="${esc(mid)}">登記完成</button>${a ? '<button type="button" class="btn ghost" data-pass-open>看我的路線</button>' : ''}</div>`;
+  return head + `<div class="chal-btns"><button type="button" class="btn" data-mis-do="${esc(mid)}">🧭 記入五島探索</button>${a ? '<button type="button" class="btn ghost" data-pass-open>看我的路線</button>' : ''}</div>`;
 }
 function refreshMis(focusSel) {
   document.querySelectorAll('[data-mis]').forEach((el) => { el.innerHTML = misInner(el.dataset.mis); });
@@ -379,7 +380,7 @@ function renderPass() {
   const body = $('#passBody'), a = ppActive(), note = C.passport ? C.passport.note : '紀錄保存在目前瀏覽器。';
   if (PP.view === 'create' || !a) {
     const back = a ? '<button type="button" class="btn ghost" id="ppBack">返回</button>' : '';
-    const pend = PP.pendingNo ? `<p class="pp-pend">建立後會回到第 ${pad2(PP.pendingNo)} 攤 ${esc(stallByNo(PP.pendingNo)?.name || '')}，再按「登記完成」就好。</p>` : '';
+    const pend = PP.pendingNo ? `<p class="pp-pend">建立後會回到第 ${pad2(PP.pendingNo)} 攤 ${esc(stallByNo(PP.pendingNo)?.name || '')}，再按「記入闖關護照」或「記入五島探索」就好。</p>` : '';
     body.innerHTML = `<form id="ppForm" class="pp-form" novalidate>
       <p style="margin:0 0 10px">${PP.data.profiles.length ? '新增一本護照' : '第一次使用，取一個暱稱就能建立護照。'}</p>${pend}
       <label for="ppName" class="pp-lab">暱稱</label>
@@ -415,7 +416,7 @@ function renderPass() {
     <div class="pp-prog"><b>已完成 ${done.length}／${list.length}</b><div class="bar" aria-hidden="true"><i style="width:${(pct * 100).toFixed(1)}%"></i></div></div>
     <p class="foot" style="margin:2px 0 12px">闖關紀錄為自行回報，未經攤主核驗。${esc(note)}<br>六枚逛島章另外計算（看「🏮 集章」）。</p>
     <h3 class="pp-h">最近完成</h3>
-    ${recent.length ? `<ol class="pp-recent">${recent.map((r) => `<li><button type="button" class="pp-link" data-pp-go="${r.stallNo}">第 ${pad2(r.stallNo)} 攤 ${esc(stallByNo(r.stallNo).name)}</button><span>${fmtDone(r.completedAt)}・自行回報</span></li>`).join('')}</ol>` : '<p class="foot" style="margin:0 0 10px">還沒有紀錄。到有「闖關登記」的攤位完成活動後按「登記完成」。</p>'}
+    ${recent.length ? `<ol class="pp-recent">${recent.map((r) => `<li><button type="button" class="pp-link" data-pp-go="${r.stallNo}">第 ${pad2(r.stallNo)} 攤 ${esc(stallByNo(r.stallNo).name)}</button><span>${fmtDone(r.completedAt)}・自行回報</span></li>`).join('')}</ol>` : '<p class="foot" style="margin:0 0 10px">還沒有紀錄。到有「闖關登記」的攤位完成活動後按「記入闖關護照」。</p>'}
     <h3 class="pp-h">各島闖關攤位</h3>
     ${groups.map((g) => `<section class="pp-grp" style="--pc:${colorOf(g.I.id)}"><h4>${esc(g.I.name)} <small>${g.st.filter((x) => ppDone(x.no)).length}／${g.st.length}</small></h4>
       <ul>${g.st.map((x) => { const r = ppRec(x.no); return `<li class="${r ? 'ok' : ''}"><button type="button" class="pp-link" data-pp-go="${x.no}"><span class="pp-mk" aria-hidden="true">${r ? '✓' : '○'}</span>${pad2(x.no)} ${esc(x.name)}</button><span class="pp-st">${r ? '已完成' : '未完成'}</span></li>`; }).join('')}</ul></section>`).join('')}
@@ -457,7 +458,7 @@ function fieldsHTML(o, T, tmpl) {
   if (rows) h += `<dl class="sd-fields">${rows}</dl>`;
   return h;
 }
-const stallTexts = (st) => [st, ...(st.parts || [])].flatMap((o) => [o.name, o.intro, o.desc, o.items, o.takeaway, o.rules]).filter(Boolean);
+const stallTexts = (st) => [st, ...(st.parts || [])].flatMap((o) => [o.name, o.short, o.intro, o.desc, o.items, o.takeaway, o.rules]).filter(Boolean);
 function stallDetailHTML(st) {
   const N = C.stallNotes, I = islandById(st.island), T = C.stallTypes[st.type || I.stallType];
   const keys = ['intro', ...T.fields.map((f) => f[0])];
@@ -473,7 +474,7 @@ function stallDetailHTML(st) {
   return h + `<p class="sd-foot">攤位內容與價格以現場為準。</p>`;
 }
 function stallListHTML(id) {
-  return `<ol class="stalls">${stallsOf(id).map((st) => `<li data-no="${st.no}"><button type="button" class="stall-row" id="sr-${st.no}" aria-expanded="false" aria-controls="sd-${st.no}"><span class="num" aria-hidden="true">${pad2(st.no)}</span><span class="nm ${st.namePending ? 'pending' : ''}"><span class="sr-only">攤號 ${st.no}，</span>${esc(st.name)}</span>${st.challengeEnabled ? `<span class="chk" data-chk="${st.no}">${ppDone(st.no) ? '✓ 已登記' : ''}</span>` : ''}<span class="chev" aria-hidden="true"></span></button><div class="stall-detail stall-detail-body" id="sd-${st.no}" role="region" aria-labelledby="sr-${st.no}" hidden>${stallDetailHTML(st)}</div></li>`).join('')}</ol>`;
+  return `<ol class="stalls">${stallsOf(id).map((st) => `<li data-no="${st.no}"><button type="button" class="stall-row" id="sr-${st.no}" aria-expanded="false" aria-controls="sd-${st.no}"><span class="num" aria-hidden="true">${pad2(st.no)}</span><span class="nm ${st.namePending ? 'pending' : ''}"><span class="sr-only">攤號 ${st.no}，</span>${esc(st.name)}${st.short ? `<small class="short">｜${esc(st.short)}</small>` : ''}</span>${st.challengeEnabled ? `<span class="chk" data-chk="${st.no}">${ppDone(st.no) ? '✓ 已登記' : ''}</span>` : ''}<span class="chev" aria-hidden="true"></span></button><div class="stall-detail stall-detail-body" id="sd-${st.no}" role="region" aria-labelledby="sr-${st.no}" hidden>${stallDetailHTML(st)}</div></li>`).join('')}</ol>`;
 }
 function setStall(no, open, scroll = true) {
   const p = $('#panel');
@@ -496,6 +497,7 @@ function panelHTML(id) {
   const resHTML = `<div class="p-sec"><h3>島上的人 <span class="badge">示意</span></h3><div class="residents">${res.map((r) => `<div class="res"><b>${esc(r.name)}</b>・${esc(r.job)}<br>「${esc(r.lines[0])}」</div>`).join('')}</div><p class="foot" style="margin-top:6px">${esc(C.residentsNote)}</p></div>`;
   if (id === 'center') {
     return `<div class="p-hd" style="--pc:${c};--ptint:#e9f4e4;--pink:#234a20"><p class="eyebrow">★ ${esc(I.role)}</p><h2 id="panelTitle">${esc(I.name)}</h2><button type="button" class="x" data-panel-close aria-label="關閉">✕</button></div>
+      ${liveCardHTML()}
       <div class="p-sec"><h3>活動總覽</h3><p class="intro-line">${esc(I.intro)}</p><p style="margin-top:6px">${esc(I.overview)}</p></div>
       <div class="p-sec"><h3>活動資訊</h3>${eventHTML()}</div>
       ${guideHTML()}
@@ -531,6 +533,12 @@ document.addEventListener('click', (e) => {
   else if (k === 'next') { if (!ppActive()) { PP.view = 'create'; openPass(); } else goNext(); }
   else if (k === 'search') { renderList(); openDlg('#listDlg'); $('#searchInput').focus(); }
 });
+// 服務台最上面的「現場活動資訊」卡：日期地點時間一眼看到，並說明三種紀錄各記到哪裡
+function liveCardHTML() {
+  const K = C.center.event && C.center.event.card; if (!K) return '';
+  return `<div class="p-sec live-card"><h3>📍 ${esc(K.title)}</h3><p class="lc-line">${esc(K.line)}</p><p class="lc-sub">${esc(K.sub)}</p>
+    <dl class="lc-sys">${K.systems.map(([a, b]) => `<dt>${esc(a)}</dt><dd>${esc(b)}</dd>`).join('')}</dl></div>`;
+}
 function eventHTML() {
   const E = C.center.event, P = E.pending;
   const sched = E.schedule && E.schedule.length ? `<ol class="sched">${E.schedule.map((x) => `<li><b>${esc(x.time)}</b> ${esc(x.title)}</li>`).join('')}</ol>` : esc(P);
@@ -539,7 +547,8 @@ function eventHTML() {
     <dt>集章方式</dt><dd>${esc(E.stampWeb)}<br>現場集章：${esc(E.stampOnsite || P)}</dd></dl>`;
 }
 function showPanel(id, highlightNo) {
-  const p = $('#panel'); p.innerHTML = panelHTML(id); p.hidden = false; S.open = id; stamp(id);
+  stamp(id);                                   // 先蓋章，面板、右下角與通知才會是同一個數字
+  const p = $('#panel'); p.innerHTML = panelHTML(id); p.hidden = false; S.open = id;
   p.querySelector('[data-panel-close]').onclick = () => closePanel(true);
   p.querySelectorAll('[data-go]').forEach((b) => (b.onclick = () => openIsland(b.dataset.go)));
   p.querySelectorAll('[data-stamps]').forEach((b) => (b.onclick = openStamps));
@@ -557,6 +566,7 @@ function closePanel(goHome) {
   for (const k in tags) tags[k].setAttribute('aria-expanded', 'false');
   if (CAM) CAM.S.follow = null;
   if (goHome && CAM && !S.tour && !S.walking) CAM.home();
+  if (S.tour && S.tourPanel) { S.tourPanel = false; pauseTour(false); }   // 從導覽卡打開的面板：關掉後回到原站繼續導覽
   if (panelOpener && document.contains(panelOpener)) panelOpener.focus({ preventScroll: true });
 }
 function openIsland(id, opts = {}) {
@@ -573,14 +583,14 @@ function openIsland(id, opts = {}) {
 // ------------------------------------------------------------------ 鯉魚號：像島一樣可以點選、鏡頭跟著船、登船漫遊
 function boatStatus() {
   const s = L.carp.status();
-  if (s.docked) return { short: s.gang ? '停靠中・可上船' : '靠港中', long: s.gang ? `⚓ 停在益智闖關島的鯉魚號碼頭，跳板已放下，現在可以上下船。約 ${s.leave} 秒後出航。` : '⚓ 正在靠港，跳板快放下了。', s };
+  if (s.docked) return { short: s.gang ? '停靠中・可上船' : '靠港中', long: s.gang ? `⚓ 停在手作體驗二島西側的鯉魚號碼頭，跳板已放下，現在可以上下船。約 ${s.leave} 秒後出航。` : '⚓ 正在靠港，跳板快放下了。', s };
   return { short: '航行中', long: `⛵ 繞五島航行中，約 ${s.eta} 秒後回到碼頭。`, s };
 }
 function boatPanelHTML() {
   const B = C.carpBoat, c = B.color, st = boatStatus();
   return `<div class="p-hd" style="--pc:${c};--ptint:#fde8e1;--pink:#7a2412"><p class="eyebrow">⛵ ${esc(B.role)}</p><h2 id="panelTitle">${esc(B.name)}</h2><button type="button" class="x" data-panel-close aria-label="關閉">✕</button></div>
     <div class="p-sec" style="--pc:${c}"><h3>現在在哪裡</h3><p class="boat-stat" id="boatStat" aria-live="polite">${esc(st.long)}</p><p class="foot" id="boatPax">船上 ${st.s.seated} 位小朋友（示意角色）</p>
-      <div class="chal-btns"><button type="button" class="btn" data-boat="board">🚶 登船（漫遊）</button><button type="button" class="btn ghost" data-boat="pier">⚓ 去碼頭（益智闖關島）</button></div></div>
+      <div class="chal-btns"><button type="button" class="btn" data-boat="board">🚶 登船（漫遊）</button><button type="button" class="btn ghost" data-boat="pier">⚓ 前往手作體驗二島碼頭</button></div></div>
     <div class="p-sec" style="--pc:${c}"><h3>介紹</h3><p class="intro-line">${esc(B.intro)}</p></div>
     <div class="p-sec"><h3>怎麼玩</h3><ul class="boat-how">${B.how.map((t) => `<li>${esc(t)}</li>`).join('')}</ul><p class="foot" style="margin-top:8px">${esc(B.note)}</p></div>`;
 }
@@ -591,11 +601,18 @@ function refreshBoatPanel(now) {
   if (a && a.textContent !== st.long) a.textContent = st.long;
   if (b) b.textContent = `船上 ${st.s.seated} 位小朋友（示意角色）`;
 }
+// 前往鯉魚號碼頭：鏡頭飛到手作體驗二島西側的木棧道（從湖面這側斜看棧道和停靠的船）
+function goPier() {
+  closePanel(false);
+  const P = W.pier, T = P.E.clone().addScaledVector(P.d, (P.ST1 + P.P1) / 2).setY(.8);
+  const cam = T.clone().addScaledVector(P.s, 11).addScaledVector(P.d, -4).setY(9);
+  CAM.flight({ t: T, p: cam }, 1600, 2, () => toast('⚓ 這裡是手作體驗二島西側的鯉魚號碼頭，木棧道從島上的階梯走下來'));
+}
 function showBoatPanel() {
   const p = $('#panel'); p.innerHTML = boatPanelHTML(); p.hidden = false; S.open = 'carp';
   p.querySelector('[data-panel-close]').onclick = () => closePanel(true);
   p.querySelector('[data-boat="board"]').onclick = boardBoat;
-  p.querySelector('[data-boat="pier"]').onclick = () => openIsland('puzzle');
+  p.querySelector('[data-boat="pier"]').onclick = goPier;
   for (const k in tags) tags[k].setAttribute('aria-expanded', String(k === 'carp'));
   p.focus({ preventScroll: true });
 }
@@ -610,7 +627,8 @@ function openBoat(opts = {}) {
 }
 function boardBoat() {
   if (!W || !L) return;
-  enterWalk(L.carp.boardSpot());
+  const bs = L.carp.boardSpot(); bs.yaw += Math.PI * .62;   // 一上船先朝向船的右舷（湖景那一側），不是看乘客的背影和桅杆
+  enterWalk(bs); CAM.walk.pitch = -.32; S.disHint = false;
   const s = L.carp.status();
   toast(s.docked ? '⛵ 登上鯉魚號！待會兒就出航，想下船就從船尾左側走上跳板' : '⛵ 登上鯉魚號！船靠港放下跳板後，就能走上碼頭');
 }
@@ -756,7 +774,9 @@ function placeTags() {
     if (y < 70) { y = B.y; n = 0; while ((r = hit(y)) && n++ < 8) y = r.y + r.h + 4; }
     rects.push({ t: B.t, x: B.x, y, w: B.w, h: B.h });
   }
-  for (const r of rects) r.t.style.transform = `translate(${Math.round(Math.max(4, Math.min(w - r.w - 4, r.x)))}px,${Math.round(r.y)}px)`;
+  // 名牌不要壓到下方固定的介面（比例說明、時鐘、背包；手機還有底部工具列）
+  const maxY = h - (isMobile() ? 196 : 96);
+  for (const r of rects) r.t.style.transform = `translate(${Math.round(Math.max(4, Math.min(w - r.w - 4, r.x)))}px,${Math.round(Math.min(r.y, maxY - r.h))}px)`;
 }
 
 // ------------------------------------------------------------------ 對話泡泡（居民、動物）
@@ -863,7 +883,8 @@ function goStation(i) {
   const id = TOUR[T.i], I = islandById(id);
   $('#tourStep').textContent = `第 ${T.i + 1} 站／共 ${TOUR.length} 站`;
   $('#tourName').textContent = id === 'center' ? `★ ${I.name}` : `${I.order}　${I.name}`;
-  $('#tourText').textContent = id === 'center' ? `${I.intro}` : `${I.intro}　第一攤：${pad2(stallsOf(id)[0].no)} ${stallsOf(id)[0].name}`;
+  $('#tourText').textContent = id === 'center' ? `${I.intro}` : `${I.intro}　共 ${stallsOf(id).length} 攤：${stallsOf(id).map((s) => pad2(s.no)).join('、')}`;
+  $('#tourMore').textContent = id === 'center' ? '🕘 看活動時程' : '📋 看本島攤位';
   $('#tourBar').style.width = '0%';
   CAM.flight(CAM.islandView(W.islands[id]), 1800, 10, () => { if (S.tour) { S.tour.flying = false; S.tour.last = performance.now(); } });
 }
@@ -879,6 +900,8 @@ $('#tourBtn').addEventListener('click', () => (S.tour ? endTour(true) : startTou
 $('#tourPrev').addEventListener('click', () => goStation(S.tour.i - 1));
 $('#tourNext').addEventListener('click', () => { if (S.tour.i === TOUR.length - 1) endTour(true); else goStation(S.tour.i + 1); });
 $('#tourPause').addEventListener('click', () => pauseTour(!S.tour.paused));
+// 導覽卡上的「看本島攤位／看活動時程」：暫停導覽、打開這一站的面板，關掉面板後接著導覽
+$('#tourMore').addEventListener('click', () => { if (!S.tour) return; const id = TOUR[S.tour.i]; pauseTour(true); S.tourPanel = true; showPanel(id); });
 $('#tourEnd').addEventListener('click', () => endTour(true));
 
 // ------------------------------------------------------------------ 地面漫遊
@@ -961,7 +984,7 @@ function balloonPopped() {
 }
 function startNet() {
   const M = C.multiplayer; if (!M || !M.enabled || !M.firebase || !PL) return;
-  import('./net.js?v=20261117q').then(({ createNet }) => {
+  import('./net.js?v=20261117s').then(({ createNet }) => {
     NET = createNet(M.firebase, {
       myPos: () => PL.myPos(), upsert: (id, info, pos) => PL.upsert(id, info, pos), remove: (id) => PL.remove(id),
       onCount: (c) => { COUNT = c; const el = $('#onlineChip'); el.hidden = false; $('#onlineCount').textContent = c.players; el.setAttribute('aria-label', `市集島上 ${c.players} 人，開著網站 ${c.viewers} 人，點一下看各身分人數`); },
@@ -1015,7 +1038,7 @@ $('#homeBtn').addEventListener('click', () => { closeBubble(); closePanel(false)
 
 // ------------------------------------------------------------------ 畫質
 function setQuality(q, auto) {
-  S.quality = q; store.set('quality', q); syncSettings();
+  S.quality = q; S.qualityAuto = !!auto; store.set('quality', q); syncSettings();
   if (!W) return;
   W.renderer.shadowMap.enabled = q !== 'low';
   W.scene.traverse((o) => { if (o.material) { (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => (m.needsUpdate = true)); } });
@@ -1050,7 +1073,7 @@ async function boot() {
   if (Q.has('nogl') || !webglOK()) { textOnly(Q.has('nogl') ? '已切換為文字清單版' : '這台裝置無法顯示 3D 畫面'); applyTheme(); updateClock(); setInterval(updateClock, 10000); window.__ready = true; return; }
   let mods;
   try {
-    mods = await Promise.all([import('./world.js?v=20261117q'), import('./life.js?v=20261117q'), import('./cam.js?v=20261117q'), import('./players.js?v=20261117q'), import('./signs.js?v=20261117q'), import('./festival.js?v=20261117q'), import('./fauna.js?v=20261117q')]);
+    mods = await Promise.all([import('./world.js?v=20261117s'), import('./life.js?v=20261117s'), import('./cam.js?v=20261117s'), import('./players.js?v=20261117s'), import('./signs.js?v=20261117s'), import('./festival.js?v=20261117s'), import('./fauna.js?v=20261117s')]);
     const [{ createWorld, H: GROUND_H }, { createLife, makePerson }, { createCam }, { createPlayers }, { createSigns }, { createFestival }, { createFauna }] = mods;
     const mobile = isMobile();
     W = createWorld($('#gl'), { quality: S.quality, mobile });
@@ -1059,9 +1082,9 @@ async function boot() {
     CAM = createCam(W, $('#gl'), { onZoom: showZoom, onIntro: (k) => { L.setDeck(k < .3 ? 1 : Math.max(0, 1 - (k - .3) / .25)); if (k > .55) $('.intro-title').classList.add('show'); } });
     CAM.S.reduced = S.reduced; CAM.S.mobile = mobile;
     PL = createPlayers(W, GROUND_H); renderMe(); startNet();
-    SG = createSigns(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261117q')).rng, low: mobile || S.quality === 'low' });
-    FX = createFestival(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261117q')).rng, low: mobile || S.quality === 'low', avoid: SG.signs.map((s) => s.g.position) });
-    FA = createFauna(W, { H: GROUND_H, rng: (await import('./kit.js?v=20261117q')).rng });
+    SG = createSigns(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261117s')).rng, low: mobile || S.quality === 'low' });
+    FX = createFestival(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261117s')).rng, low: mobile || S.quality === 'low', avoid: SG.signs.map((s) => s.g.position), carp: L.carp });
+    FA = createFauna(W, { H: GROUND_H, rng: (await import('./kit.js?v=20261117s')).rng });
   } catch (err) { console.warn(err); textOnly('3D 畫面載入失敗'); window.__ready = true; return; }
   if (S.quality === 'low') setQuality('low');
   buildTags();
@@ -1093,6 +1116,8 @@ async function boot() {
     stepTour(now);
     PL.update(dt, t, CAM.walk, S.walking, !CAM.walk.third, innerWidth, innerHeight);
     if (NET) NET.tick(now);
+    // 在船上、船靠港放下跳板時提醒可以下船（每次靠港提醒一次）
+    if (S.walking && L.carp && W.onBoat(CAM.walk.pos.x, CAM.walk.pos.z)) { const cs = L.carp.status(); if (cs.gang && !S.disHint) { S.disHint = true; toast('⚓ 靠岸了！可下船，從船尾左側走上跳板'); } else if (!cs.docked) S.disHint = false; }
     SG.update(t, moving);
     FX.update(t, dt, moving, W.state.n);
     FA.update(t, dt, moving, W.state.n);

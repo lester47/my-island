@@ -1,7 +1,7 @@
 // 生活感：居民、送貨員、商人、路人、動物、雲、鳥群、帆船、螢火蟲、貝殼
 import * as THREE from 'three';
-import { TAU, clamp, lerp, rng, mat, GEO, glowTexture, C } from './kit.js?v=20261117q';
-import { H, PIER_Y } from './world.js?v=20261117q';
+import { TAU, clamp, lerp, rng, mat, GEO, glowTexture, C } from './kit.js?v=20261117s';
+import { H, PIER_Y } from './world.js?v=20261117s';
 
 const SKIN = ['#ffd9b8', '#f2c49b', '#e0ad84', '#ffe3c8'];
 const SHIRT = ['#e8762b', '#8a5cd0', '#2f7fd1', '#dc4848', '#3e9b4f', '#e3a33b', '#f2f2f2', '#4fb3b0'];
@@ -321,7 +321,7 @@ export function createLife(W, content, opts) {
     g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
     scene.add(g); boats.push({ g, a: 3.95, rad: 46, sp: .016, carp: true, kids, kr });
   }
-  // ------------------------------------------------------------ 鯉魚號：停靠益智闖關島的鯉魚號碼頭，小朋友上下船；繞群島一圈再倒退入泊
+  // ------------------------------------------------------------ 鯉魚號：停靠手作體驗二島的鯉魚號碼頭，小朋友上下船；繞群島一圈再倒退入泊
   const CARP = boats.find((b) => b.carp), pier = W.pier, BS = 1.3;
   {
     const d = pier.d, sv = pier.s, berth = pier.berth.pos.clone();

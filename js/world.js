@@ -1,7 +1,7 @@
 // 3D 世界：天空、海、遠山、島嶼與地標、橋、日夜光影
 import * as THREE from 'three';
-import { TAU, clamp, lerp, smooth, rng, loopNoise, mat, Builder, GEO, glowTexture, C } from './kit.js?v=20261117q';
-import { makeScenery } from './scenery.js?v=20261117q';
+import { TAU, clamp, lerp, smooth, rng, loopNoise, mat, Builder, GEO, glowTexture, C } from './kit.js?v=20261117s';
+import { makeScenery } from './scenery.js?v=20261117s';
 
 export const H = 1.75;               // 島頂草地高度
 const SEG = 72;                      // 海岸線分段（6 的倍數，六角轉角落在頂點上）
@@ -565,7 +565,7 @@ function buildIsland(id, scene, quality) {
   ({ food: landmarkFood, craft: landmarkCraft, puzzle: landmarkPuzzle, sport: landmarkSport, recycle: landmarkRecycle, center: landmarkCenter })[id](B, lmGroup, P, info.extras);
   info.colliders.push({ x: 0, z: isC ? 0 : -.3, r: isC ? 3.0 : 2.6 });
   if (isC) { info.colliders.push({ x: info.extras.windmill.x, z: info.extras.windmill.z, r: 1.2 }, { x: 7.0, z: 4.3, r: 2.0 }, { x: 3.6, z: -2.6, r: .4 }); }
-  // 益智闖關島西側是「鯉魚號碼頭」：石板小路、物件與草叢都要讓出通往碼頭的路
+  // 手作體驗二島西側是「鯉魚號碼頭」：石板小路、物件與草叢都要讓出通往碼頭的路
   const pierA = id === 'puzzle' ? bridgeAngles[0] + Math.PI : null; info.pierA = pierA;
   const corridorA = pierA == null ? bridgeAngles : [...bridgeAngles, pierA];
   stonePath(B, P, info.ring, rand, corridorA, L.R, L.seed, isC ? 1.1 : .95);
@@ -622,7 +622,7 @@ function buildIsland(id, scene, quality) {
   return info;
 }
 
-// ------------------------------------------------------------------ 鯉魚號碼頭（益智闖關島西側）：階梯從島頂走下去，木棧道伸進湖裡
+// ------------------------------------------------------------------ 鯉魚號碼頭（手作體驗二島西側）：階梯從島頂走下去，木棧道伸進湖裡
 export const PIER_Y = .8, GANG = 1.65;           // 棧道高度、跳板長度
 function buildPier(scene, I) {
   const A = I.pierA, d = new THREE.Vector3(Math.cos(A), 0, Math.sin(A)), s = new THREE.Vector3(Math.sin(A), 0, -Math.cos(A));

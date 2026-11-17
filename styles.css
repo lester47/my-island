@@ -395,3 +395,17 @@ select.pp-in { width: auto; max-width: 160px; }
 .tag.far { opacity: .38; font-size: 12px; padding: 2px 8px 2px 3px; }
 .tag.far .ct, .tag.far .st { display: none; }
 .tag.far:hover, .tag.far:focus-visible { opacity: 1; }
+
+/* 服務台：現場活動資訊卡 */
+.live-card { background: #fff7e0; border: 2px solid #e3a33b; border-radius: 14px; padding: 12px 14px; }
+.live-card h3 { margin: 0 0 4px; }
+.live-card .lc-line { margin: 0; font-size: 18px; font-weight: 900; color: #7a3d00; }
+.live-card .lc-sub { margin: 4px 0 8px; font-size: 13px; color: #6b5a3a; }
+.live-card .lc-sys { display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; margin: 0; font-size: 13px; }
+.live-card .lc-sys dt { font-weight: 800; white-space: nowrap; }
+.live-card .lc-sys dd { margin: 0; }
+
+.tour-more { margin: 4px 0 8px; border: 0; border-radius: 999px; padding: 6px 14px; min-height: 36px; background: var(--primary); color: var(--primary-ink, #fff); font-weight: 800; }
+.clock .now::before { content: '現在時間 '; font-size: 11px; font-weight: 700; opacity: .7; }
+
+.stall-row .short { font-weight: 600; color: var(--muted, #6b6b6b); font-size: .88em; }

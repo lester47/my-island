@@ -378,6 +378,51 @@ export function createFestival(W, content, H, opts = {}) {
       if (p.bunch) p.bunch.rotation.z = Math.sin(t * 1.4) * .06;
     }
   }
+  // ㉔ 橋頭路牌：服務台這一端的每座橋頭，立一支「島號＋島名＋箭頭」的路牌（島色），漫遊時看得出橋通往哪一島
+  for (const b of bridges) {
+    const I0 = (content.islands || []).find((x) => x.id === b.to); if (!I0) continue;
+    const dir = new THREE.Vector3(Math.cos(b.a), 0, Math.sin(b.a)), side = new THREE.Vector3(-dir.z, 0, dir.x);
+    const pos = b.p0.clone().addScaledVector(dir, -.9).addScaledVector(side, 1.35);
+    const g = new THREE.Group(); g.position.set(pos.x, H, pos.z); root.add(g);
+    add(g, G.cyl, '#7a4a22', 0, .8, 0, .08, 1.6, .08);
+    // 正面箭頭在右、背面箭頭在左：從兩邊看，箭頭都指向橋
+    const makeTex = (rev) => {
+      const cv = document.createElement('canvas'); cv.width = 512; cv.height = 160;
+      const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
+      const paint = () => { const c = cv.getContext('2d'); c.clearRect(0, 0, 512, 160); c.save(); if (rev) { c.translate(512, 0); c.scale(-1, 1); }
+        c.fillStyle = I0.dark || I0.color; c.beginPath(); c.moveTo(8, 12); c.lineTo(430, 12); c.lineTo(504, 80); c.lineTo(430, 148); c.lineTo(8, 148); c.closePath(); c.fill(); c.restore();
+        const cx = rev ? 442 : 70, tx = rev ? 384 : 128;
+        c.fillStyle = '#ffffff'; c.beginPath(); c.arc(cx, 80, 46, 0, TAU); c.fill(); c.fillStyle = I0.dark || I0.color; c.font = '900 60px "Noto Sans TC", sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(String(I0.order), cx, 84);
+        c.fillStyle = '#ffffff'; c.textAlign = rev ? 'right' : 'left'; let s = 58; c.font = `900 ${s}px "Noto Sans TC", sans-serif`; while (c.measureText(I0.name).width > 300 && s > 30) { s -= 2; c.font = `900 ${s}px "Noto Sans TC", sans-serif`; } c.fillText(I0.name, tx, 84);
+        c.textAlign = 'center'; c.font = '900 50px sans-serif'; c.fillText(rev ? '⬅' : '➜', rev ? 40 : 470, 82); tex.needsUpdate = true; };
+      paint(); if (document.fonts) document.fonts.ready.then(paint);
+      return tex;
+    };
+    const bw = 1.6, bh = bw * 160 / 512;
+    const brd = new THREE.Group(); brd.position.y = 1.45; brd.rotation.y = -b.a + .7; g.add(brd);   // 斜 40° 面向走過來的人，箭頭仍指向橋
+    for (const [z, rev] of [[.03, false], [-.03, true]]) {
+      const tex = makeTex(rev);
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(bw, bh), new THREE.MeshStandardMaterial({ map: tex, transparent: true, alphaTest: .4, emissive: '#ffffff', emissiveMap: tex, emissiveIntensity: .25 }));
+      m.position.set(bw / 2 - .1, 0, z); if (rev) m.rotation.y = Math.PI;
+      brd.add(m);
+    }
+  }
+  kinds.add('橋頭路牌');
+
+  // ㉕ 鯉魚號碼頭的低亮度燈：棧道入口、棧道盡頭、船尾兩側（晚上亮，看得出可以走的地方）
+  if (W.pier) {
+    const P = W.pier, lampMat = new THREE.MeshStandardMaterial({ color: '#fff2c4', emissive: '#ffd27a', emissiveIntensity: 0 }); nightGlow.push(lampMat);
+    const post = (p, y0) => { add(root, G.cyl, '#5a3a1a', p.x, y0 + .4, p.z, .06, .8, .06); add(root, G.sph, lampMat, p.x, y0 + .86, p.z, .18, .18, .18); };
+    for (const a of [P.ST0 - .2, P.ST1 + .2, P.P1 - .4]) for (const sd of [-1, 1]) { const p = P.E.clone().addScaledVector(P.d, a).addScaledVector(P.s, sd * (P.PW + .05)); post(p, a <= P.ST0 ? H : .8); }
+    if (opts.carp && opts.carp.g) {
+      // 船舷兩側的小燈＋一盞只在晚上亮的暖光，照亮船尾甲板和跳板那一側
+      for (const [x, z] of [[-1.15, -1.3], [1.1, -1.3], [-1.0, -2.6]]) { const m = add(opts.carp.g, G.sph, lampMat, x, 1.0, z, .1, .1, .1); m.castShadow = false; }
+      const pl = new THREE.PointLight('#ffd9a0', 0, 7, 1.6); pl.position.set(0, 1.6, -1.9); opts.carp.g.add(pl);
+      anim.push(() => { pl.intensity = night * 2.2; });
+    }
+    kinds.add('碼頭夜燈');
+  }
+
   // ------------------------------------------------ 刺破氣球（熱氣球不在名單裡，刺不破）
   const bursts = [];
   const BURST_GEO = new THREE.BoxGeometry(.07, .07, .015);
