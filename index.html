@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261117b">
+<link rel="stylesheet" href="styles.css?v=20261117c">
 <script type="importmap">{"imports":{"three":"./vendor/three/three.module.js","three/addons/":"./vendor/three/addons/"}}</script>
 </head>
 <body>
@@ -67,7 +67,7 @@
   <button type="button" class="clock" id="clock" aria-label="目前時間與天色，點一下切換晝夜"><span class="now" id="clockNow">--:--</span><span class="sky" id="clockSky">白天 12:00</span></button>
 </div>
 <div class="hud hud-right">
-  <span class="hchip online" id="onlineChip" hidden aria-live="polite"><span aria-hidden="true">🧑‍🤝‍🧑</span><b id="onlineCount">0</b></span>
+  <button type="button" class="hchip online" id="onlineChip" hidden aria-label="市集裡的人數"><span aria-hidden="true">🧑‍🤝‍🧑</span><b id="onlineCount">0</b><small>人</small></button>
   <button type="button" class="hchip me" id="meBtn" aria-label="用暱稱加入市集" aria-haspopup="dialog"><span aria-hidden="true">👤</span><b id="meName">加入</b></button>
   <button type="button" class="hchip" id="bagBtn" aria-label="背包"><span aria-hidden="true">🎒</span><b id="bagCount">0</b></button>
   <button type="button" class="hchip" id="stampBtn" aria-label="集章進度"><span aria-hidden="true">🏮</span><b id="stampCount">0/6</b></button>
@@ -149,6 +149,6 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <noscript><p class="noscript">這個網站需要開啟 JavaScript。</p></noscript>
-<script type="module" src="js/main.js?v=20261117b"></script>
+<script type="module" src="js/main.js?v=20261117c"></script>
 </body>
 </html>

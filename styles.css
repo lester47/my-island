@@ -387,3 +387,6 @@ select.pp-in { width: auto; max-width: 160px; }
 #zoomPill b { width: 7px; height: 14px; border-radius: 2px; background: #d7dccf; }
 #zoomPill b.on { background: #3f7d3a; }
 @media (prefers-reduced-motion: reduce) { #zoomPill { transition: none; } }
+.hchip.online small { font-size: 12px; font-weight: 700; margin-left: -3px; }
+.hchip.online.off { opacity: .55; }
+@media (max-width: 760px) { .hchip.online small { display: none; } .hud-right { gap: 6px; } .hud-right .hchip { min-width: 52px; padding: 0 8px; } }

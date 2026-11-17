@@ -1,5 +1,5 @@
 {
-  "assetVersion": "20261117b",
+  "assetVersion": "20261117c",
   "site": {
     "title": "115 鯉魚市集",
     "tagline": "跳上五座六角小島，逛美食、玩手作、闖關挑戰，還能挖二手好物！",
@@ -1190,6 +1190,19 @@
         "6": "手作DIY",
         "14": "二手跳蚤市場"
       }
+    }
+  },
+  "multiplayer": {
+    "enabled": true,
+    "note": "多人連線：Firebase Realtime Database（liyu-market）。要暫停時把 enabled 改成 false。",
+    "firebase": {
+      "apiKey": "AIzaSyAFPJcjQ9GcFeb6rRoKJet9nQFDm8A6wW0",
+      "authDomain": "liyu-market-7fc1c.firebaseapp.com",
+      "databaseURL": "https://liyu-market-7fc1c-default-rtdb.asia-southeast1.firebasedatabase.app",
+      "projectId": "liyu-market-7fc1c",
+      "storageBucket": "liyu-market-7fc1c.firebasestorage.app",
+      "messagingSenderId": "46254965731",
+      "appId": "1:46254965731:web:030b0a7457aaac014b16d6"
     }
   }
 }
