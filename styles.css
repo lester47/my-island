@@ -78,6 +78,12 @@ html[data-theme="deep"] h1 { color: #9fd99a; }
 .hchip b { font-size: 15px; }
 .hchip.bump { animation: bump .5s; }
 @keyframes bump { 30% { transform: scale(1.25); } 60% { transform: scale(.95); } }
+.live-note { position: fixed; z-index: 19; top: 84px; left: 16px; right: 16px; width: fit-content; max-width: 560px; margin: 0 auto; padding: 8px 14px; border-radius: 12px; font-size: 14px; font-weight: 700; line-height: 1.5; text-align: center; color: #1e4d1b; background: #e4f4dc; border: 2px solid #8cc47e; box-shadow: 0 4px 14px rgba(0,0,0,.12); }
+.live-note[data-level="info"] { color: #164c85; background: #e7f2ff; border-color: #8fbbe8; }
+.live-note[data-level="warn"] { color: #7a3d00; background: #fff1d6; border-color: #f0b04a; }
+.live-note[data-level="end"] { color: #5a2a2a; background: #fbe6e6; border-color: #e19a9a; }
+.ev-rules { margin: 0; padding-left: 18px; }
+.walking .live-note { top: 12px; }
 .layout-note { position: fixed; z-index: 14; left: 50%; bottom: 20px; transform: translateX(-50%); margin: 0; font-size: 12px; color: var(--muted); background: color-mix(in srgb, var(--surface) 80%, transparent); padding: 4px 10px; border-radius: 999px; pointer-events: none; }
 
 /* 島嶼面板 */
@@ -235,6 +241,7 @@ html[data-theme="deep"] .stamp.got { color: var(--ink); }
   .tbtn > span:first-child { font-size: 18px; }
   .hud { bottom: 76px; } .hud-left { left: 10px; } .hud-right { right: 10px; }
   .layout-note { bottom: 136px; font-size: 11px; }
+  .live-note { top: 68px; font-size: 13px; padding: 6px 12px; }
   .pop { top: auto; bottom: 74px; right: 8px; left: 8px; width: auto; max-width: none; max-height: 70vh; overflow: auto; }
   .panel { left: 0; right: 0; top: auto; bottom: 0; width: auto; max-height: 72vh; border-radius: 24px 24px 0 0; animation-name: sheet; z-index: 35; }
   .panel .p-hd { padding-top: 22px; }

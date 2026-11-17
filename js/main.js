@@ -112,10 +112,29 @@ function toggleSettings(on) {
 $('#setBtn').addEventListener('click', () => toggleSettings());
 $('#clock').addEventListener('click', () => toggleSettings(true));
 document.addEventListener('pointerdown', (e) => { if (!$('#settings').hidden && !e.target.closest('#settings,#setBtn,#clock')) toggleSettings(false); });
+// 活動當天依現場時間顯示提示（content.json 的 center.event.live）；網址加 ?now=2026-12-12T11:20 可預覽
+const NOW_OVERRIDE = (() => { const v = new URLSearchParams(location.search).get('now'); const d = v ? new Date(v) : null; return d && !isNaN(d) ? d.getTime() - Date.now() : 0; })();
+const nowDate = () => new Date(Date.now() + NOW_OVERRIDE);
+function liveNotice() {
+  const L = C.center.event && C.center.event.live; if (!L || !L.notices) return null;
+  const d = nowDate(), day = `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+  if (day !== L.day) return null;
+  const hm = `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+  const n = L.notices.find((x) => hm < x.until); if (!n) return null;
+  return { ...n, blockNext: n.level === 'warn' || n.level === 'end' };
+}
+function updateLive() {
+  const el = $('#liveNote'); if (!el) return;
+  const n = liveNotice();
+  if (!n) { el.hidden = true; return; }
+  el.hidden = false; el.dataset.level = n.level;
+  if (el.textContent !== n.text) el.textContent = n.text;
+}
 function updateClock() {
-  const d = new Date();
+  const d = nowDate();
   $('#clockNow').textContent = `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
   $('#clockSky').textContent = `天色：${PNAME[periodOf(S.hourShown)]} ${fmtH(S.hourShown)}`;
+  updateLive();
 }
 
 // ------------------------------------------------------------------ 集章與背包
@@ -326,7 +345,7 @@ function misUndo(mid) {
   refreshMis(ok ? `[data-mis-do="${mid}"]` : `[data-mis-undo="${mid}"]`);
   if (ok) toast('已取消這一站的任務登記');
 }
-function goNext() { const m = nextMission(); if (!m) { toast('🎉 路線完成，五島都走過了！'); return; } if ($('#passDlg').open) $('#passDlg').close(); goStall(m.stallNo, true, `[data-mis="${m.id}"] [data-mis-do]`); }
+function goNext() { const lv = liveNotice(); if (lv && lv.blockNext) { toast(`⏰ ${C.center.event.live.nextBlocked}`); return; } const m = nextMission(); if (!m) { toast('🎉 路線完成，五島都走過了！'); return; } if ($('#passDlg').open) $('#passDlg').close(); goStall(m.stallNo, true, `[data-mis="${m.id}"] [data-mis-do]`); }
 document.addEventListener('click', (e) => {
   const t = e.target instanceof Element ? e.target.closest('[data-mis-do],[data-mis-undo],[data-mis-undo-yes],[data-mis-undo-no],[data-mis-next],[data-pp-next]') : null;
   if (!t) return;
@@ -515,6 +534,7 @@ function eventHTML() {
   const E = C.center.event, P = E.pending;
   const sched = E.schedule && E.schedule.length ? `<ol class="sched">${E.schedule.map((x) => `<li><b>${esc(x.time)}</b> ${esc(x.title)}</li>`).join('')}</ol>` : esc(P);
   return `<dl class="sd-fields ev"><dt>日期</dt><dd>${esc(E.date || P)}</dd><dt>地點</dt><dd>${esc(E.place || P)}</dd><dt>時程</dt><dd>${sched}</dd>
+    ${E.rules && E.rules.length ? `<dt>鯉魚幣</dt><dd><ul class="ev-rules">${E.rules.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></dd>` : ''}
     <dt>集章方式</dt><dd>${esc(E.stampWeb)}<br>現場集章：${esc(E.stampOnsite || P)}</dd></dl>`;
 }
 function showPanel(id, highlightNo) {
@@ -938,7 +958,7 @@ async function boot() {
   if (Q.has('nogl') || !webglOK()) { textOnly(Q.has('nogl') ? '已切換為文字清單版' : '這台裝置無法顯示 3D 畫面'); applyTheme(); updateClock(); setInterval(updateClock, 10000); window.__ready = true; return; }
   let mods;
   try {
-    mods = await Promise.all([import('./world.js?v=20261116e'), import('./life.js?v=20261116e'), import('./cam.js?v=20261116e')]);
+    mods = await Promise.all([import('./world.js?v=20261117a'), import('./life.js?v=20261117a'), import('./cam.js?v=20261117a')]);
     const [{ createWorld }, { createLife }, { createCam }] = mods;
     const mobile = isMobile();
     W = createWorld($('#gl'), { quality: S.quality, mobile });
