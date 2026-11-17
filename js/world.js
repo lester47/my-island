@@ -1,7 +1,7 @@
 // 3D 世界：天空、海、遠山、島嶼與地標、橋、日夜光影
 import * as THREE from 'three';
-import { TAU, clamp, lerp, smooth, rng, loopNoise, mat, Builder, GEO, glowTexture, C } from './kit.js?v=20261117o';
-import { makeScenery } from './scenery.js?v=20261117o';
+import { TAU, clamp, lerp, smooth, rng, loopNoise, mat, Builder, GEO, glowTexture, C } from './kit.js?v=20261117p';
+import { makeScenery } from './scenery.js?v=20261117p';
 
 export const H = 1.75;               // 島頂草地高度
 const SEG = 72;                      // 海岸線分段（6 的倍數，六角轉角落在頂點上）
@@ -416,26 +416,24 @@ function landmarkCenter(B, g, P, extras) {
     blades.add(arm);
   }
   const hub = new THREE.Mesh(GEO.sph, mat(WOOD2)); hub.scale.setScalar(.35); blades.add(hub);
-  // 鯉魚造型裝飾：每片風車葉前後各畫一尾小鯉魚，中心是一顆鯉魚頭
-  const koiFlat = (c1, c2, s = 1) => {
-    const k = new THREE.Group();
-    const body = new THREE.Mesh(GEO.sph, mat(c1)); body.scale.set(.46 * s, .24 * s, .05); k.add(body);
-    const belly = new THREE.Mesh(GEO.sph, mat(c2)); belly.scale.set(.3 * s, .1 * s, .055); belly.position.set(-.02 * s, -.05 * s, 0); k.add(belly);
-    for (const dx of [-.08, .06]) { const sc = new THREE.Mesh(GEO.sph, mat(c2)); sc.scale.set(.08 * s, .08 * s, .056); sc.position.set(dx * s, .06 * s, 0); k.add(sc); }
-    const tail = new THREE.Mesh(GEO.cone4, mat(c1)); tail.rotation.z = Math.PI / 2; tail.scale.set(.26 * s, .2 * s, .04); tail.position.x = -.3 * s; k.add(tail);
-    const fin = new THREE.Mesh(GEO.cone4, mat(c2)); fin.scale.set(.1 * s, .12 * s, .04); fin.position.set(0, .14 * s, 0); k.add(fin);
-    const eye = new THREE.Mesh(GEO.sph, mat('#ffffff')); eye.scale.set(.07 * s, .07 * s, .06); eye.position.set(.24 * s, .04 * s, 0); k.add(eye);
-    const pupil = new THREE.Mesh(GEO.sph, mat('#222222')); pupil.scale.set(.035 * s, .035 * s, .07); pupil.position.set(.25 * s, .04 * s, 0); k.add(pupil);
-    return k;
-  };
-  const KOI = [['#e8473f', '#ffffff'], ['#2f7fd1', '#ffffff'], ['#e8762b', '#fff1e2'], ['#2a2a2a', '#e8473f']];
+  // 鯉魚造型裝飾（照參考圖的低多邊形錦鯉：紅白、黃金、藍橘、三色、紅黑）
+  // 每片風車葉前後各貼一尾，塔身前後各一尾大的
+  const koiTex = [1, 2, 3, 4, 5].map((n) => { const tx = new THREE.TextureLoader().load(`assets/koi/koi-${n}.png`); tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 4; return tx; });
+  const koiMat = koiTex.map((tx) => new THREE.MeshStandardMaterial({ map: tx, transparent: true, alphaTest: .5, roughness: .8 }));
+  const KOI_AR = 512 / 182;
+  const koiPlane = (n, w) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, w / KOI_AR), koiMat[n]); m.castShadow = true; return m; };
   blades.children.forEach((arm, i) => {
     if (!arm.isGroup) return;
-    for (const z of [.035, -.035]) { const k = koiFlat(KOI[i % 4][0], KOI[i % 4][1], 1.05); k.position.set(.34, 1.35, z); k.rotation.z = Math.PI / 2; arm.add(k); }
+    for (const [z, ry] of [[.022, 0], [-.022, Math.PI]]) {
+      const k = koiPlane(i % 5, 1.5); k.position.set(.34, 1.35, z); k.rotation.set(0, ry, Math.PI / 2); arm.add(k);
+    }
   });
-  { const face = koiFlat('#e8473f', '#ffffff', .9); face.position.z = .3; face.rotation.z = Math.PI / 2; blades.add(face); }
-  // 塔身上兩尾鯉魚彩繪，塔頂一根小旗竿掛兩尾小鯉魚旗（和服務台的鯉魚旗吹同一陣風）
-  for (const [y, a, c] of [[1.4, .5, 0], [3.0, .5 + Math.PI, 2]]) { const k = koiFlat(KOI[c][0], KOI[c][1], 1.3); const r = .55 + (1 - y / 4) * .45 + .03; k.position.set(wm.x + Math.sin(a) * r, H + y, wm.z + Math.cos(a) * r); k.rotation.y = a; g.add(k); }
+  { const k = koiPlane(4, .9); k.position.set(0, 0, .2); blades.add(k); }
+  // 塔身：前後各一尾大的錦鯉，貼在塔的外牆上
+  for (const [y, a, n] of [[1.5, .5, 0], [2.7, .5 + Math.PI, 3]]) {
+    const r = 1.0 - (y / 4) * .45 + .04; const k = koiPlane(n, 1.7);
+    k.position.set(wm.x + Math.sin(a) * r, H + y, wm.z + Math.cos(a) * r); k.rotation.y = a; g.add(k);
+  }
   const mpole = new THREE.Mesh(GEO.cyl6, mat('#d8d2c4')); mpole.scale.set(.06, 1.6, .06); mpole.position.set(wm.x, H + 5.6, wm.z); g.add(mpole);
   const mini = [['#2f7fd1', '#ffffff'], ['#e8473f', '#ffffff']].map(([c1, c2], i) => {
     const koi = new THREE.Group(); koi.position.set(wm.x, H + 6.2 - i * .5, wm.z);
