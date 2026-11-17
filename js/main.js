@@ -1,6 +1,6 @@
 // 115 鯉魚市集｜介面與流程
 import * as THREE from 'three';
-import { ROLES, OUTFITS } from './roles.js?v=20261117g';
+import { ROLES, OUTFITS } from './roles.js?v=20261117h';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -945,7 +945,7 @@ $('#meBtn').addEventListener('click', openMe);
 let NET = null, COUNT = null, SG = null;
 function startNet() {
   const M = C.multiplayer; if (!M || !M.enabled || !M.firebase || !PL) return;
-  import('./net.js?v=20261117g').then(({ createNet }) => {
+  import('./net.js?v=20261117h').then(({ createNet }) => {
     NET = createNet(M.firebase, {
       myPos: () => PL.myPos(), upsert: (id, info, pos) => PL.upsert(id, info, pos), remove: (id) => PL.remove(id),
       onCount: (c) => { COUNT = c; const el = $('#onlineChip'); el.hidden = false; $('#onlineCount').textContent = c.players; el.setAttribute('aria-label', `市集島上 ${c.players} 人，開著網站 ${c.viewers} 人，點一下看各身分人數`); },
@@ -1034,7 +1034,7 @@ async function boot() {
   if (Q.has('nogl') || !webglOK()) { textOnly(Q.has('nogl') ? '已切換為文字清單版' : '這台裝置無法顯示 3D 畫面'); applyTheme(); updateClock(); setInterval(updateClock, 10000); window.__ready = true; return; }
   let mods;
   try {
-    mods = await Promise.all([import('./world.js?v=20261117g'), import('./life.js?v=20261117g'), import('./cam.js?v=20261117g'), import('./players.js?v=20261117g'), import('./signs.js?v=20261117g')]);
+    mods = await Promise.all([import('./world.js?v=20261117h'), import('./life.js?v=20261117h'), import('./cam.js?v=20261117h'), import('./players.js?v=20261117h'), import('./signs.js?v=20261117h')]);
     const [{ createWorld, H: GROUND_H }, { createLife }, { createCam }, { createPlayers }, { createSigns }] = mods;
     const mobile = isMobile();
     W = createWorld($('#gl'), { quality: S.quality, mobile });

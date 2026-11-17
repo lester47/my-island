@@ -197,17 +197,17 @@ export function createSigns(W, content, H) {
     // 候選位置：石板小路外側的草地，四周空間要夠放一座攤子；空間不夠時逐步放寬
     // 每個角度試幾個不同的距離（離小路近一點或遠一點），挑空間最大的
     let cand = [];
-    for (const need of [.9, .75, .6, .48]) {
+    for (const need of [.9, .75, .6, .48, .38, .3]) {
       cand = [];
       for (let k = 0; k < 180; k++) {
         const th = toC + .55 + k / 180 * (TAU - 1.1);   // 從橋頭右邊開始繞一圈，攤號照順序排
         if (near(th)) continue;
         let best = null;
-        // 正數：小路外側；負數：小路內側（攤子正面一樣朝向小路）。外側優先
-        for (const off of [1.15, .9, 1.4, .7, -.8, -1.0, -1.25]) {
-          const r = Math.min(I.walk.radAt(th) + off, I.top(th) * .86);
-          const x = Math.cos(th) * r, z = Math.sin(th) * r, cl = I.walk.clear(x, z), score = cl - (off < 0 ? .3 : 0);
-          if (cl >= need && (!best || score > best.score)) best = { th, x, z, cl, score, inner: off < 0 };
+        // 一律放在步道外側，正面朝向步道
+        for (const off of [1.15, .95, 1.35, .8]) {
+          const r = Math.min(I.walk.radAt(th) + off, I.top(th) * .88);
+          const x = Math.cos(th) * r, z = Math.sin(th) * r, cl = I.walk.clear(x, z);
+          if (cl >= need && (!best || cl > best.cl)) best = { th, x, z, cl };
         }
         if (best) cand.push(best);
       }
@@ -232,7 +232,8 @@ export function createSigns(W, content, H) {
       chosen.push(c);
       const B = makeBooth(st, I0);
       B.g.position.set(I.pos.x + c.x, H, I.pos.z + c.z);
-      B.g.rotation.y = Math.atan2(-c.x, -c.z) + (c.inner ? Math.PI : 0);   // 攤子正面朝向小路
+      B.g.rotation.y = Math.atan2(-c.x, -c.z);          // 攤子正面朝向步道
+      if (c.cl < .55) B.g.scale.setScalar(.85);          // 空間比較擠的位置，攤子小一號
       scene.add(B.g);
       const s = { g: B.g, st, island: I0.id };
       signs.push(s); for (const o of [B.hit, B.face, B.back]) pickables.push({ obj: o, sign: s });
