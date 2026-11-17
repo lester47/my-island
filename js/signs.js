@@ -135,9 +135,138 @@ const PROPS = {
   },
 };
 
-function makeBooth(st, I0) {
+// 價目小立牌「1 鯉魚幣」（共用一張貼圖）
+let priceTex = null;
+function priceTexture() {
+  if (priceTex) return priceTex;
+  const cv = document.createElement('canvas'); cv.width = 256; cv.height = 128;
+  priceTex = new THREE.CanvasTexture(cv); priceTex.colorSpace = THREE.SRGBColorSpace;
+  const paint = () => { const g = cv.getContext('2d'); g.fillStyle = '#ffe58a'; g.beginPath(); g.roundRect(4, 4, 248, 120, 20); g.fill(); g.lineWidth = 8; g.strokeStyle = '#b8860b'; g.stroke();
+    g.fillStyle = '#5a3a0a'; g.font = `900 52px ${FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('1 鯉魚幣', 128, 68); priceTex.needsUpdate = true; };
+  paint(); if (document.fonts) document.fonts.ready.then(paint);
+  return priceTex;
+}
+
+// 攤子旁邊地上的大型主題擺設（x 負的那一側；+x 那一側有些攤已經擺了遊戲道具）
+const SIDE = -1.08;
+const EXTRA = {
+  1(add) {   // 大狗堡：立在旁邊的大熱狗招牌
+    add(G.cyl, '#7a4a22', SIDE, .5, 0, .06, 1, .06); add(G.box, '#e0a25a', SIDE, 1.05, 0, .62, .2, .22); add(G.cyl, '#b0452c', SIDE, 1.15, 0, .13, .74, .13, 0, 0, Math.PI / 2);
+    for (let i = 0; i < 5; i++) add(G.box, '#ffd23a', SIDE - .24 + i * .12, 1.23, .0, .06, .02, .14, 0, .6);
+    add(G.cyl, '#5a5f66', SIDE, .2, .45, .32, .4, .32); add(G.box, '#2a2a2a', SIDE, .41, .45, .38, .02, .38);   // 小烤爐
+    for (let i = 0; i < 3; i++) add(G.cyl, '#b0452c', SIDE - .1 + i * .1, .44, .45, .04, .22, .04, Math.PI / 2);
+  },
+  2(add) {   // 美食小食堂：小爐子＋冒煙的湯鍋、手寫菜單立牌
+    add(G.box, '#5a5f66', SIDE, .25, .1, .5, .5, .4); add(G.cyl, '#9aa3ad', SIDE, .62, .1, .36, .26, .36); add(G.cyl, '#ff7a2a', SIDE, .5, .31, .2, .04, .04, Math.PI / 2);
+    for (let i = 0; i < 3; i++) add(G.sph, '#f4f6f8', SIDE + (i - 1) * .08, .85 + i * .12, .1, .14, .12, .14);
+    add(G.box, '#2f3a2f', SIDE, .45, .55, .42, .55, .04, -.25); add(G.box, '#ffffff', SIDE, .55, .57, .3, .03, .01, -.25); add(G.box, '#ffffff', SIDE, .45, .58, .26, .03, .01, -.25); add(G.box, '#ffffff', SIDE, .35, .59, .3, .03, .01, -.25);
+  },
+  3(add) {   // 蜜糖小屋：超大棒棒糖＋糖果桶
+    add(G.cyl, '#ffffff', SIDE, .7, 0, .05, 1.4, .05);
+    for (let i = 0; i < 4; i++) add(G.cyl, ['#ff5d8f', '#ffffff', '#ffd23a', '#8a5cd0'][i], SIDE, 1.42, 0, .62 - i * .14, .06, .62 - i * .14, Math.PI / 2);
+    add(G.cyl, '#f6d6e6', SIDE + .1, .22, .5, .4, .44, .4); for (let i = 0; i < 6; i++) add(G.sph, ['#ff5d8f', '#ffd23a', '#7cd3a8', '#2f7fd1', '#f08a3c', '#8a5cd0'][i], SIDE + .1 + Math.cos(i) * .1, .46, .5 + Math.sin(i) * .1, .1, .08, .1);
+  },
+  4(add) {   // 鯉魚麻糬屋：木臼＋木槌（現場打麻糬），旁邊一桶冬瓜茶
+    add(G.cyl, '#a8743f', SIDE, .22, .2, .6, .44, .6); add(G.cyl, '#fbf7f2', SIDE, .45, .2, .44, .04, .44);
+    add(G.cyl, '#c48a4f', SIDE + .1, .75, .2, .05, .7, .05, 0, 0, .5); add(G.cyl, '#a8743f', SIDE + .27, 1.05, .2, .16, .34, .16, 0, 0, .5 + Math.PI / 2);
+    add(G.cyl, '#8b5a2b', SIDE, .3, -.45, .4, .6, .4); add(G.cyl, '#c97a2a', SIDE, .61, -.45, .36, .03, .36);
+  },
+  5(add) {   // 餅乾鋪：大餅乾招牌＋一籃手作材料
+    add(G.cyl, '#7a4a22', SIDE, .45, 0, .05, .9, .05); add(G.cyl, '#e7b46e', SIDE, 1.05, 0, .62, .08, .62, Math.PI / 2);
+    for (let i = 0; i < 5; i++) add(G.sph, '#6b3d1e', SIDE + Math.cos(i * 1.3) * .17, 1.05 + Math.sin(i * 1.3) * .17, .05, .07, .07, .04);
+    add(G.cyl, '#c9a06a', SIDE + .05, .14, .5, .5, .28, .36); for (let i = 0; i < 5; i++) add(G.box, ['#ff7aa8', '#ffd23a', '#7cd3a8', '#2f7fd1', '#f08a3c'][i], SIDE - .12 + i * .06, .32, .5, .05, .1, .2);
+  },
+  6(add) {   // 自己畫貼紙：畫架上一張貼紙作品
+    for (const s of [-1, 1]) add(G.cyl, '#7a4a22', SIDE + s * .22, .6, .05, .04, 1.2, .04, -.15, 0, s * -.15); add(G.cyl, '#7a4a22', SIDE, .55, -.15, .04, 1.1, .04, .35);
+    add(G.box, '#ffffff', SIDE, .95, .12, .62, .5, .03, -.15);
+    for (let i = 0; i < 6; i++) add(G.cyl, ['#ff5d8f', '#ffd23a', '#2f7fd1', '#7cd3a8', '#8a5cd0', '#f08a3c'][i], SIDE - .2 + (i % 3) * .2, .85 + Math.floor(i / 3) * .2, .15, .12, .01, .12, Math.PI / 2 - .15);
+  },
+  7(add) {   // 吉樂工作室：洞洞板展示架，掛滿手作小物
+    for (const s of [-1, 1]) add(G.cyl, '#7a4a22', SIDE + s * .3, .6, 0, .04, 1.2, .04);
+    add(G.box, '#e8d5b0', SIDE, .85, 0, .62, .6, .04);
+    for (let i = 0; i < 6; i++) { const x = SIDE - .2 + (i % 3) * .2, y = .7 + Math.floor(i / 3) * .28; add(G.cyl, '#5a3a1a', x, y + .08, .03, .01, .06, .01); add(i % 2 ? G.sph : G.box, ['#ff7aa8', '#2f7fd1', '#ffd23a', '#3e9b4f', '#8a5cd0', '#f08a3c'][i], x, y, .05, .11, .11, .05); }
+  },
+  8(add) {   // 有吃有玩真好玩：彩色轉盤遊戲
+    add(G.cyl, '#7a4a22', SIDE, .45, 0, .05, .9, .05);
+    for (let i = 0; i < 6; i++) add(G.cyl, ['#dc4848', '#ffd23a', '#2f7fd1', '#3e9b4f', '#8a5cd0', '#f08a3c'][i], SIDE + Math.cos(i / 6 * TAU) * .14, 1.0 + Math.sin(i / 6 * TAU) * .14, .04, .2, .03, .2, Math.PI / 2);
+    add(G.cyl, '#ffffff', SIDE, 1.0, .07, .08, .03, .08, Math.PI / 2); add(G.cone, '#2a2a2a', SIDE, 1.27, .06, .06, .1, .04, Math.PI);
+    for (let i = 0; i < 3; i++) add(G.box, ['#ffd23a', '#ff9f43', '#7cd3a8'][i], SIDE - .15 + i * .15, .15, .5, .12, .3, .08);
+  },
+  9(add) {   // 正反接球王：一堆彩色球
+    for (let i = 0; i < 9; i++) add(G.sph, ['#dc4848', '#2f7fd1', '#ffd23a', '#3e9b4f'][i % 4], SIDE + Math.cos(i * 2.4) * (.08 + i * .025), .1 + (i > 5 ? .15 : 0), .1 + Math.sin(i * 2.4) * (.08 + i * .025), .2, .2, .2);
+    add(G.box, '#ffffff', SIDE, .02, .65, .8, .02, .06);   // 站位線
+  },
+  10(add) {  // 好開心抽抽樂：獎品架，一格格小禮物
+    add(G.box, '#a8743f', SIDE, .5, -.05, .62, 1, .3);
+    for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) { add(G.box, ['#dc4848', '#2f7fd1', '#ffd23a', '#8a5cd0', '#3e9b4f'][(r * 3 + c) % 5], SIDE - .2 + c * .2, .22 + r * .3, .12, .14, .14, .14); add(G.box, '#ffffff', SIDE - .2 + c * .2, .22 + r * .3, .195, .02, .14, .01); }
+  },
+  11(add) {  // 彈珠迷宮：彈珠罐＋小獎盃
+    add(G.cyl, '#dff3ff', SIDE, .25, .1, .36, .5, .36); for (let i = 0; i < 8; i++) add(G.sph, ['#9fd3f5', '#ff7aa8', '#ffd23a', '#7cd3a8'][i % 4], SIDE + Math.cos(i * 2) * .09, .08 + Math.floor(i / 3) * .1, .1 + Math.sin(i * 2) * .09, .11, .11, .11);
+    add(G.box, '#7a4a22', SIDE, .4, .55, .3, .8, .3); add(G.cyl, '#f2c230', SIDE, .9, .55, .16, .2, .16); add(G.sph, '#f2c230', SIDE, 1.05, .55, .26, .18, .26);
+  },
+  12(add) {  // 鯉魚遊戲店：疊高的桌遊盒＋鯉魚旗
+    for (let i = 0; i < 5; i++) add(G.box, ['#2f7fd1', '#dc4848', '#3e9b4f', '#ffd23a', '#8a5cd0'][i], SIDE, .08 + i * .15, 0, .5 - i * .03, .14, .36 - i * .02, 0, i * .25);
+    add(G.cyl, '#ffffff', SIDE + .2, .9, .5, .03, 1.8, .03);
+    for (let i = 0; i < 2; i++) { add(G.cone, ['#f08a3c', '#dc4848'][i], SIDE + .45, 1.65 - i * .35, .5, .18, .44, .14, 0, 0, -Math.PI / 2); add(G.sph, '#ffffff', SIDE + .32, 1.67 - i * .35, .56, .05, .05, .02); }
+  },
+  13(add) {  // 鯉魚記憶王：大型翻牌牆
+    for (const s of [-1, 1]) add(G.cyl, '#7a4a22', SIDE + s * .32, .55, 0, .04, 1.1, .04);
+    add(G.box, '#2f7fd1', SIDE, .85, 0, .68, .6, .04);
+    for (let r = 0; r < 3; r++) for (let c = 0; c < 4; c++) add(G.box, (r * 4 + c) % 3 ? '#ffffff' : ['#ffd23a', '#ff7aa8', '#7cd3a8'][(r + c) % 3], SIDE - .24 + c * .16, .67 + r * .18, .03, .12, .14, .01);
+  },
+  14(add) {  // 娃！茶一點就中：一籃沙包＋茶壺
+    add(G.cyl, '#c9a06a', SIDE, .12, .2, .5, .24, .4); for (let i = 0; i < 5; i++) add(G.box, ['#dc4848', '#3e9b4f', '#ffd23a', '#2f7fd1', '#f08a3c'][i], SIDE - .12 + i * .06, .28, .2 + (i % 2) * .05, .1, .06, .1, 0, i);
+    add(G.sph, '#ffffff', SIDE, .35, -.4, .4, .34, .4); add(G.cyl, '#ffffff', SIDE + .25, .38, -.4, .04, .22, .04, 0, 0, -.8); add(G.sph, '#b9d98a', SIDE, .53, -.4, .1, .06, .1);
+  },
+  15(add) {  // 夏來寶／廢物市集：二手衣架＋鑽石貼紙畫畫架
+    add(G.cyl, '#5a5f66', SIDE - .3, .6, 0, .03, 1.2, .03); add(G.cyl, '#5a5f66', SIDE + .3, .6, 0, .03, 1.2, .03); add(G.cyl, '#5a5f66', SIDE, 1.18, 0, .03, .64, .03, 0, 0, Math.PI / 2);
+    for (let i = 0; i < 4; i++) add(G.box, ['#2f7fd1', '#dc4848', '#ffd23a', '#3e9b4f'][i], SIDE - .2 + i * .13, .9, 0, .12, .44, .2, 0, Math.PI / 2 - .3);
+    add(G.box, '#c48a4f', SIDE, .15, .55, .5, .3, .3); for (let i = 0; i < 3; i++) add(G.box, ['#8a5cd0', '#f08a3c', '#7cd3a8'][i], SIDE - .14 + i * .14, .36, .55, .1, .14, .22);
+  },
+  16(add) {  // 聖誕 DIY：大聖誕樹＋禮物盒
+    add(G.cyl, '#7a4a22', SIDE, .12, 0, .1, .24, .1);
+    add(G.cone, '#2f7a3a', SIDE, .55, 0, .8, .7, .8); add(G.cone, '#3e9b4f', SIDE, .95, 0, .6, .6, .6); add(G.cone, '#4fb35a', SIDE, 1.3, 0, .4, .5, .4); add(G.cone, '#ffd23a', SIDE, 1.62, 0, .12, .16, .12);
+    for (let i = 0; i < 8; i++) add(G.sph, ['#dc4848', '#ffd23a', '#2f7fd1', '#ffffff'][i % 4], SIDE + Math.cos(i * 2.2) * (.32 - i * .025), .5 + i * .1, Math.sin(i * 2.2) * (.32 - i * .025), .08, .08, .08);
+    add(G.box, '#dc4848', SIDE + .35, .1, .45, .22, .2, .22); add(G.box, '#ffd23a', SIDE + .35, .21, .45, .04, .02, .23); add(G.box, '#2f7fd1', SIDE - .05, .08, .55, .18, .16, .18);
+  },
+  17(add) {  // 名不虛傳 GG 手：高高的疊杯塔
+    add(G.box, '#a8743f', SIDE, .3, 0, .6, .6, .5);
+    for (let r = 0; r < 4; r++) for (let c = 0; c < 4 - r; c++) add(G.cyl, ['#dc4848', '#2f7fd1', '#ffd23a', '#3e9b4f'][r], SIDE - .2 + c * .13 + r * .065, .67 + r * .13, 0, .12, .12, .12);
+    add(G.cyl, '#ffffff', SIDE + .1, .1, .55, .2, .2, .2); add(G.cyl, '#dc4848', SIDE + .1, .21, .55, .08, .02, .08);   // 計時器
+  },
+  18(add) {  // 丟球者：地上一大籃球
+    add(G.cyl, '#c9a06a', SIDE, .2, .1, .62, .4, .62); for (let i = 0; i < 7; i++) add(G.sph, ['#dc4848', '#2f7fd1', '#ffd23a', '#ffffff'][i % 4], SIDE + Math.cos(i) * .14, .42 + (i > 3 ? .08 : 0), .1 + Math.sin(i) * .14, .18, .18, .18);
+  },
+  19(add) {  // 戰鬥陀螺：「3・2・1」倒數牌＋發射器架
+    add(G.cyl, '#7a4a22', SIDE, .5, 0, .05, 1, .05);
+    for (let i = 0; i < 3; i++) add(G.cyl, ['#3e9b4f', '#ffd23a', '#dc4848'][i], SIDE - .2 + i * .2, 1.08, .03, .17, .03, .17, Math.PI / 2);
+    add(G.box, '#3d5a80', SIDE, .25, .5, .5, .5, .2);
+    for (let i = 0; i < 3; i++) { add(G.box, ['#2f7fd1', '#8a5cd0', '#dc4848'][i], SIDE - .15 + i * .15, .55, .5, .1, .1, .06); add(G.box, '#ffffff', SIDE - .15 + i * .15, .62, .5, .02, .06, .12); }
+  },
+  20(add) {  // 女童軍：爆米花機
+    add(G.box, '#dc4848', SIDE, .3, 0, .5, .6, .4); for (const s of [-1, 1]) add(G.cyl, '#2a2a2a', SIDE + s * .2, .08, .22, .08, .02, .08, Math.PI / 2);
+    add(G.box, '#dff3ff', SIDE, .85, 0, .48, .5, .38); add(G.box, '#fff3c4', SIDE, .72, 0, .44, .2, .34);
+    for (let i = 0; i < 6; i++) add(G.sph, '#fff8dc', SIDE + Math.cos(i) * .14, .85 + (i % 2) * .06, Math.sin(i) * .1, .08, .08, .08);
+    add(G.box, '#dc4848', SIDE, 1.15, 0, .52, .1, .42);
+  },
+};
+
+// 每座攤子都有的布置：前緣三角彩旗、兩顆燈籠、價目小立牌
+function decorate(add, g, st, I0, W, D, TH) {
+  const cols = ['#dc4848', '#ffd23a', '#2f7fd1', '#3e9b4f', '#8a5cd0', '#f08a3c'];
+  for (let i = 0; i < 9; i++) { const x = -W / 2 + .1 + i * (W - .2) / 8, y = 1.36 - Math.sin(i / 8 * Math.PI) * .08; add(G.cone, cols[i % cols.length], x, y, D / 2 + .02, .1, .14, .02, Math.PI); }
+  for (const s of [-1, 1]) { add(G.cyl, '#2a2a2a', s * (W / 2 - .04), 1.42, D / 2 + .02, .01, .12, .01); add(G.sph, '#ff6a3d', s * (W / 2 - .04), 1.28, D / 2 + .02, .16, .2, .16); add(G.cyl, '#2a2a2a', s * (W / 2 - .04), 1.18, D / 2 + .02, .08, .02, .08); }
+  if (st.no !== 20) {
+    const tag = new THREE.Mesh(new THREE.PlaneGeometry(.32, .16), new THREE.MeshStandardMaterial({ map: priceTexture(), roughness: .8 }));
+    tag.position.set(W / 2 - .2, TH + .14, D / 2 - .05); tag.rotation.x = -.3; g.add(tag);
+    add(G.box, '#7a4a22', W / 2 - .2, TH + .05, D / 2 - .1, .02, .1, .02);
+  }
+}
+
+function makeBooth(st, I0, people) {
   const g = new THREE.Group();
-  const add = (geo, c, x, y, z, sx, sy, sz, rx = 0, ry = 0, rz = 0, parent = g) => { const o = new THREE.Mesh(geo, mat(c)); o.position.set(x, y, z); o.scale.set(sx, sy, sz); o.rotation.set(rx, ry, rz); o.castShadow = true; o.receiveShadow = true; parent.add(o); return o; };
+  let into = g;   // 道具放進哪一個群組
+  const add = (geo, c, x, y, z, sx, sy, sz, rx = 0, ry = 0, rz = 0, parent = into) => { const o = new THREE.Mesh(geo, mat(c)); o.position.set(x, y, z); o.scale.set(sx, sy, sz); o.rotation.set(rx, ry, rz); o.castShadow = true; o.receiveShadow = true; parent.add(o); return o; };
   const W = 1.5, D = .8, TH = .55;
   // 桌子：木頭桌面＋島色桌布（垂到地面）
   add(G.box, '#a8743f', 0, TH, 0, W, .06, D);
@@ -152,6 +281,8 @@ function makeBooth(st, I0) {
   for (let i = 0; i < N; i++) add(G.cone, i % 2 ? '#fffaf0' : I0.color, -W / 2 + (i + .5) * W / N, 1.5, D / 2 + .16, .25, .14, .06, Math.PI);
   // 依攤位內容擺專屬道具；沒有專屬設計的攤位用類型的通用道具
   const top = TH + .03, type = st.type || 'food';
+  // 道具放大一點，遠看也認得出是什麼（以桌面為基準放大）
+  const pg = new THREE.Group(), PS = 1.25; pg.scale.setScalar(PS); pg.position.y = top - top * PS; g.add(pg); into = pg;
   if (PROPS[st.no]) PROPS[st.no](add, top);
   else if (type === 'food') {
     add(G.cyl, '#ffffff', -.45, top + .02, .05, .3, .03, .3); add(G.sph, '#d9a35b', -.45, top + .08, .05, .22, .12, .22);
@@ -170,6 +301,19 @@ function makeBooth(st, I0) {
     add(G.torus, '#8a5cd0', .15, top + .03, .05, .26, .26, .26, Math.PI / 2); add(G.torus, '#f08a3c', .2, top + .07, .02, .24, .24, .24, Math.PI / 2);
     add(G.box, '#ffffff', .52, top + .18, -.15, .3, .36, .04); add(G.cyl, '#dc4848', .52, top + .24, -.125, .14, .02, .14, Math.PI / 2);
   }
+  into = g;
+  decorate(add, g, st, I0, W, D, TH);
+  if (EXTRA[st.no]) EXTRA[st.no](add);
+  // 顧攤的攤主：站在桌子後面面向客人；合併攤和部分攤位有兩位
+  const keepers = [];
+  if (people) {
+    const n = people.count(st), xs = n === 2 ? [-.38, .38] : [0];
+    xs.forEach((x, i) => {
+      const P = people.make(st.no * 7 + i, I0.color);
+      P.g.position.set(x, 0, -D / 2 - .24); g.add(P.g);
+      keepers.push({ P, ph: st.no * 1.7 + i * 2.3 });
+    });
+  }
   // 招牌：掛在遮雨棚上方，前後兩面
   const tex = drawBoard(st, I0.color, I0.dark), BW = 1.5, BH = BW * 200 / 512;
   const sign = new THREE.Group(); sign.position.set(0, 1.62 + .1 + BH / 2, .02); g.add(sign);
@@ -179,10 +323,16 @@ function makeBooth(st, I0) {
   const face2 = face.clone(); face2.position.z = -.03; face2.rotation.y = Math.PI; sign.add(face2);
   // 點擊用的透明大盒子（整座攤子）
   const hit = new THREE.Mesh(new THREE.BoxGeometry(W + .2, 2.4, D + .4), new THREE.MeshBasicMaterial({ visible: false })); hit.position.y = 1.2; g.add(hit);
-  return { g, hit, face, back };
+  return { g, hit, face, back, keepers };
 }
 
-export function createSigns(W, content, H) {
+export function createSigns(W, content, H, opts = {}) {
+  // 攤主：用和島民一樣的 Q 版小人；手機或低畫質時每攤只放一位
+  const people = opts.makePerson ? {
+    count: (st) => (opts.low ? 1 : (String(st.name).includes('／') || st.no % 3 === 0 ? 2 : 1)),
+    make: (seed, shirt) => { const P = opts.makePerson(opts.rng(1000 + seed), false, { shirt }); P.g.remove(P.hit); return P; },
+  } : null;
+  const keepers = [];
   const { scene, islands } = W;
   const signs = [], pickables = [];
   for (const I0 of content.islands) {
@@ -230,7 +380,7 @@ export function createSigns(W, content, H) {
       const target = th0 + (k + .5) / stalls.length * (th1 - th0);
       const c = pickFor(target, 2.6) || pickFor(target, 2.0) || pickFor(target, 1.4) || cand[Math.floor((k + .5) * cand.length / stalls.length)];
       chosen.push(c);
-      const B = makeBooth(st, I0);
+      const B = makeBooth(st, I0, people); keepers.push(...B.keepers);
       B.g.position.set(I.pos.x + c.x, H, I.pos.z + c.z);
       B.g.rotation.y = Math.atan2(-c.x, -c.z);          // 攤子正面朝向步道
       if (c.cl < .55) B.g.scale.setScalar(.85);          // 空間比較擠的位置，攤子小一號
@@ -239,5 +389,16 @@ export function createSigns(W, content, H) {
       signs.push(s); for (const o of [B.hit, B.face, B.back]) pickables.push({ obj: o, sign: s });
     });
   }
-  return { signs, pickables, update() {} };
+  // 攤主的小動作：左右看看、偶爾揮手招呼客人
+  function update(t, moving) {
+    if (!moving) return;
+    for (const k of keepers) {
+      const P = k.P, s = t + k.ph;
+      P.head.rotation.y = Math.sin(s * .7) * .45;
+      const wave = (s % 9) < 1.6;
+      P.arms[1].rotation.z = wave ? 2.5 + Math.sin(s * 10) * .35 : .1;
+      P.arms[0].rotation.z = -.1;
+    }
+  }
+  return { signs, pickables, update };
 }
