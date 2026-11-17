@@ -1,7 +1,7 @@
 // 3D 世界：天空、海、遠山、島嶼與地標、橋、日夜光影
 import * as THREE from 'three';
-import { TAU, clamp, lerp, smooth, rng, loopNoise, mat, Builder, GEO, glowTexture, C } from './kit.js?v=20261117s';
-import { makeScenery } from './scenery.js?v=20261117s';
+import { TAU, clamp, lerp, smooth, rng, loopNoise, mat, Builder, GEO, glowTexture, C } from './kit.js?v=20261117u';
+import { makeScenery } from './scenery.js?v=20261117u';
 
 export const H = 1.75;               // 島頂草地高度
 const SEG = 72;                      // 海岸線分段（6 的倍數，六角轉角落在頂點上）
@@ -225,7 +225,7 @@ function popcornStand(B) {
   B.add(GEO.box, '#cfe8ff', 0, 1.12, -.05, 0, 0, 0, .42, .36, .36);
   for (let i = 0; i < 7; i++) B.add(GEO.ball0, '#fff3c4', -.12 + (i % 4) * .08, 1.0 + Math.floor(i / 4) * .07, -.05 + (i % 2) * .08, 0, 0, 0, .09);
 }
-function landmarkFood(B, g, P) {
+function landmarkFood(B, g, P, extras = {}) {
   // 條紋點心攤＋巨型果汁招牌
   B.push(0, H, -.3);
   for (const [x, z] of [[-1.6, -.7], [1.6, -.7], [-1.6, .7], [1.6, .7]]) B.add(GEO.box, WOOD2, x, 1.25, z, 0, 0, 0, .14, 2.5, .14);
@@ -247,7 +247,7 @@ function landmarkFood(B, g, P) {
   m(new THREE.CylinderGeometry(.5, .38, 1, 12), '#ff9e2c', -.08, 1.0, .95, 1.0);
   m(GEO.sph, '#fff6d8', .62, 1.15, .4, 1.15);
   m(GEO.cyl6, '#ff5a5a', 1.15, .1, 1.1, .1, .25);
-  g.add(cup); ANIM.push((t) => { cup.rotation.y = t * .5; });
+  g.add(cup); extras.cup = cup; extras.lm = g; ANIM.push((t) => { cup.rotation.y = t * .5; });
 }
 function landmarkCraft(B, g, P) {
   // 紫色手作帳篷（條紋圓錐頂）＋巨型剪刀＋調色盤
@@ -284,7 +284,7 @@ function landmarkCraft(B, g, P) {
   for (let i = 0; i < 6; i++) B.add(GEO.ball0, ['#ff6b6b', '#ffd25a', '#4aa3e8', '#5ec26a', '#b18cf0', '#ff9a3d'][i], Math.cos(i * 1.05) * .45, .16, Math.sin(i * 1.05) * .33, 0, 0, 0, .22, .1, .22);
   B.pop();
 }
-function landmarkPuzzle(B, g, P) {
+function landmarkPuzzle(B, g, P, extras = {}) {
   // 木製彈珠迷宮
   B.push(.3, H, .3);
   B.add(GEO.box, '#e0b47a', 0, .2, 0, 0, 0, 0, 3.4, .4, 2.6);
@@ -306,9 +306,10 @@ function landmarkPuzzle(B, g, P) {
   B.add(GEO.cyl12, '#5ec26a', -.75, 2.75, .2, Math.PI / 2, 0, 0, .36, .2, .36);
   B.pop();
   const marble = new THREE.Mesh(GEO.sph, mat('#ff5a8a', { roughness: .2 })); marble.scale.setScalar(.32); marble.castShadow = true; g.add(marble);
-  ANIM.push((t) => { const a = t * .8; marble.position.set(.3 + Math.cos(a) * 1.2, H + .6, .3 + Math.sin(a * 2) * .5); });
+  extras.marble = marble; extras.lm = g;
+  ANIM.push((t) => { if (extras.marbleHold) return; const a = t * .8; marble.position.set(.3 + Math.cos(a) * 1.2, H + .6, .3 + Math.sin(a * 2) * .5); });
 }
-function landmarkSport(B, g, P) {
+function landmarkSport(B, g, P, extras = {}) {
   // 沙包投擲洞洞板（往中間挪，讓出房子旁的環狀小路）
   B.push(-.7, H, -.35, .25);
   B.add(GEO.box, '#e7c48c', 0, 1.1, 0, -.5, 0, 0, 2.4, 2.6, .16);
@@ -332,11 +333,11 @@ function landmarkSport(B, g, P) {
     const top = new THREE.Group();
     const a = new THREE.Mesh(new THREE.ConeGeometry(.28, .4, 8), mat(c)); a.rotation.x = Math.PI; a.position.y = .25; top.add(a);
     const b = new THREE.Mesh(GEO.cyl8, mat('#fbf7ee')); b.scale.set(.6, .1, .6); b.position.y = .45; top.add(b);
-    top.traverse((o) => { o.castShadow = true; }); g.add(top);
-    ANIM.push((t) => { const q = t * 1.3 + i * Math.PI; top.position.set(1.6 + Math.cos(q) * .55, H + .42, -1.4 + Math.sin(q) * .55); top.rotation.y = t * 14; top.rotation.z = Math.sin(t * 3 + i) * .08; });
+    top.traverse((o) => { o.castShadow = true; }); g.add(top); (extras.tops = extras.tops || []).push(top); extras.lm = g;
+    ANIM.push((t) => { if (extras.topsHold) return; const q = t * 1.3 + i * Math.PI; top.position.set(1.6 + Math.cos(q) * .55, H + .42, -1.4 + Math.sin(q) * .55); top.rotation.y = t * 14; top.rotation.z = Math.sin(t * 3 + i) * .08; });
   }
 }
-function landmarkRecycle(B, g, P) {
+function landmarkRecycle(B, g, P, extras = {}) {
   // 交換小屋（開放式前廊）＋書櫃＋循環標誌
   B.push(-.4, H, -1.0);
   B.add(GEO.box, '#f1ead8', 0, 1.0, -.2, 0, 0, 0, 3.0, 2.0, 1.6);
@@ -346,6 +347,7 @@ function landmarkRecycle(B, g, P) {
   B.add(GEO.box, 'win', -.9, 1.35, .61, 0, 0, 0, .6, .5, .04);
   B.add(GEO.box, 'win', .9, 1.35, .61, 0, 0, 0, .6, .5, .04);
   B.pop();
+  extras.lm = g; extras.shelf = { x: 2.2, z: .3, ry: -.6 };
   B.push(2.2, H, .3, -.6);  // 書櫃
   B.add(GEO.box, WOOD, 0, .8, 0, 0, 0, 0, 1.2, 1.6, .5);
   for (let r = 0; r < 3; r++) for (let i = 0; i < 5; i++) B.add(GEO.box, ['#e0463a', '#3c8dea', '#ffcf3a', '#5ec26a', '#ff9a3d'][(i + r) % 5], -.42 + i * .2, .32 + r * .5, .08, 0, 0, 0, .16, .38, .32);
@@ -443,6 +445,7 @@ function landmarkCenter(B, g, P, extras) {
     g.add(koi); return koi;
   });
   blades.traverse((o) => { o.castShadow = true; }); g.add(blades);
+  extras.blades = blades; extras.lm = g;
   ANIM.push((t) => { blades.rotation.z = -t * 1.1; mini.forEach((k, i) => { k.rotation.y = -.9 + Math.sin(t * .9 + i) * .25; k.rotation.z = Math.sin(t * 2.1 + i) * .1; }); });
   extras.windmill = wm;
   // 花田（點綴）：一大片彩色花田

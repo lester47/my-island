@@ -77,12 +77,18 @@ export function createFestival(W, content, H, opts = {}) {
   }
   kinds.add('橋上三角彩旗');
 
-  // ② 橋上燈籠串：橋中間上方一串紅燈籠，晚上會亮
-  const lanternMat = new THREE.MeshStandardMaterial({ color: '#ff5a3c', emissive: '#ff6a2a', emissiveIntensity: 0, roughness: .6 });
-  nightGlow.push(lanternMat);
-  for (const b of bridges) for (let i = 1; i < 6; i++) {
-    const p = onBridge(b, i / 6, 0); p.y += 1.55;
-    add(root, G.sph, lanternMat, p.x, p.y, p.z, .26, .32, .26); add(root, G.cyl, '#2a2a2a', p.x, p.y + .17, p.z, .14, .04, .14); add(root, G.cyl, '#ffd23a', p.x, p.y - .2, p.z, .04, .1, .04);
+  // ② 橋上燈籠串：每座橋用自己那座島的顏色；晚上會亮。走過橋時從腳下往前依序亮起（跨橋迎賓）
+  const bridgeLights = [];
+  for (const b of bridges) {
+    const I0 = (content.islands || []).find((x) => x.id === b.to) || {};
+    const items = [];
+    for (let i = 1; i < 6; i++) {
+      const p = onBridge(b, i / 6, 0); p.y += 1.55;
+      const m = new THREE.MeshStandardMaterial({ color: I0.color || '#ff5a3c', emissive: I0.color || '#ff6a2a', emissiveIntensity: 0, roughness: .6 });
+      add(root, G.sph, m, p.x, p.y, p.z, .26, .32, .26); add(root, G.cyl, '#2a2a2a', p.x, p.y + .17, p.z, .14, .04, .14); add(root, G.cyl, '#ffd23a', p.x, p.y - .2, p.z, .04, .1, .04);
+      items.push({ m, t: i / 6, lit: 0 });
+    }
+    bridgeLights.push({ b, items, name: I0.name, order: I0.order });
   }
   kinds.add('橋上燈籠串');
 
@@ -362,6 +368,7 @@ export function createFestival(W, content, H, opts = {}) {
   function update(t, dt, moving, nightK) {
     night = nightK || 0;
     for (const m of nightGlow) m.emissiveIntensity = night * 1.4;
+    for (const bl of bridgeLights) for (const it of bl.items) { it.lit = Math.max(0, it.lit - dt * .35); it.m.emissiveIntensity = Math.max(night * 1.4, it.lit * 1.6); }
     if (!moving) return;
     for (const f of anim) f(t, dt);
     for (const w of walkers) {
@@ -444,7 +451,18 @@ export function createFestival(W, content, H, opts = {}) {
       if (b.t > 1.2) { root.remove(b.g); bursts.splice(i, 1); }
     }
   });
-  return { root, update, kinds: [...kinds], balloons: () => BALLOONS.filter((h) => !h.userData.balloon.group.userData.popped && h.parent && isVisible(h)), pop };
+  // 跨橋迎賓：傳入走路的人的位置，回傳正在走的那座橋與走到哪裡（0＝服務台端，1＝小島端）
+  function walkerAt(x, z) {
+    for (const bl of bridgeLights) {
+      const b = bl.b, ax = b.p1.x - b.p0.x, az = b.p1.z - b.p0.z, L2 = ax * ax + az * az;
+      const tt = ((x - b.p0.x) * ax + (z - b.p0.z) * az) / L2; if (tt < 0 || tt > 1) continue;
+      const lx = b.p0.x + ax * tt - x, lz = b.p0.z + az * tt - z; if (Math.hypot(lx, lz) > 1.1) continue;
+      for (const it of bl.items) if (it.t <= tt + .12) it.lit = Math.min(1.6, it.lit + .25);   // 腳下和前面一盞依序亮起
+      return { bl, t: tt };
+    }
+    return null;
+  }
+  return { root, update, walkerAt, bridgeLights, freeSpot: (id, n, r) => spotAny([id], n, r), kinds: [...kinds], balloons: () => BALLOONS.filter((h) => !h.userData.balloon.group.userData.popped && h.parent && isVisible(h)), pop };
 }
 function isVisible(o) { for (let p = o; p; p = p.parent) if (!p.visible) return false; return true;
 }

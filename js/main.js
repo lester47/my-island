@@ -1,6 +1,6 @@
 // 115 鯉魚市集｜介面與流程
 import * as THREE from 'three';
-import { ROLES, OUTFITS } from './roles.js?v=20261117s';
+import { ROLES, OUTFITS } from './roles.js?v=20261117u';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -602,6 +602,17 @@ function refreshBoatPanel(now) {
   if (b) b.textContent = `船上 ${st.s.seated} 位小朋友（示意角色）`;
 }
 // 前往鯉魚號碼頭：鏡頭飛到手作體驗二島西側的木棧道（從湖面這側斜看棧道和停靠的船）
+// 五島合照點：鏡頭轉到同時拍得到幾何鯉魚風車、木橋與鯉魚號航道的角度
+function photoSpot() {
+  if (S.walking) exitWalk(true);
+  closePanel(false);
+  const wm = W.islands.center.extras.windmill, br = W.bridges.find((b) => b.to === 'puzzle') || W.bridges[0];
+  const T = new THREE.Vector3((wm.x + br.p1.x) / 2, 3.2, (wm.z + br.p1.z) / 2);
+  const side = new THREE.Vector3(-(br.p1.z - wm.z), 0, br.p1.x - wm.x).normalize();
+  if (side.dot(T) < 0) side.negate();                        // 從島外往內拍，背景是湖和鯉魚號航道
+  const cam = T.clone().addScaledVector(side, 15).setY(8.5);
+  CAM.flight({ t: T, p: cam }, 1800, 2, () => toast('📸 合照角度到了！幾何鯉魚風車、木橋和鯉魚號航道都在畫面裡，按「⚙️ 設定 → 📤 分享卡片」存一張市集合照'));
+}
 function goPier() {
   closePanel(false);
   const P = W.pier, T = P.E.clone().addScaledVector(P.d, (P.ST1 + P.P1) / 2).setY(.8);
@@ -839,7 +850,9 @@ function onCanvasUp(e) {
   if (moved > 7 || S.intro) return;
   ndc.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
   // 氣球彩蛋：點氣球就刺破（漫遊時也可以）；熱氣球刺不破
-  if (FX) { ray.setFromCamera(ndc, W.camera); const bh = ray.intersectObjects(FX.balloons(), false)[0]; if (bh && FX.pop(bh.object)) { balloonPopped(); return; } }
+  ray.setFromCamera(ndc, W.camera);
+  if (FX) { const bh = ray.intersectObjects(FX.balloons(), false)[0]; if (bh && FX.pop(bh.object)) { balloonPopped(); return; } }
+  if (IA && IA.pick(ray)) return;                 // 可以互動的地標（果汁杯、貼紙牆、彈珠、書櫃、合照點）
   if (S.walking || (CAM.S.busy && !CAM.S.busy.custom)) return;
   ray.setFromCamera(ndc, W.camera);
   const life = ray.intersectObjects(L.pickables.filter((p) => p.obj.parent && p.obj.parent.visible).map((p) => p.obj), false)[0];
@@ -973,7 +986,7 @@ function openMe() {
 $('#meBtn').addEventListener('click', openMe);
 
 // ------------------------------------------------------------------ 多人連線與即時人數（content.json 的 multiplayer）
-let NET = null, COUNT = null, SG = null, FX = null, FA = null;
+let NET = null, COUNT = null, SG = null, FX = null, FA = null, IA = null;
 // 刺破氣球的彩蛋：每一顆都有一句話；第 5、10、20、50 顆有特別獎勵
 const POP_LINES = ['啵！氣球破掉了 🎈', '砰！嚇了小鯉魚一跳', '啵～裡面飄出一張小紙條：「祝你逛得開心！」', '砰！五彩紙片飛滿天', '啵！攤主說：「再來一顆？」', '砰！小心別嚇到旁邊的蝴蝶', '啵～聽說刺破很多顆會有驚喜…'];
 function balloonPopped() {
@@ -984,7 +997,7 @@ function balloonPopped() {
 }
 function startNet() {
   const M = C.multiplayer; if (!M || !M.enabled || !M.firebase || !PL) return;
-  import('./net.js?v=20261117s').then(({ createNet }) => {
+  import('./net.js?v=20261117u').then(({ createNet }) => {
     NET = createNet(M.firebase, {
       myPos: () => PL.myPos(), upsert: (id, info, pos) => PL.upsert(id, info, pos), remove: (id) => PL.remove(id),
       onCount: (c) => { COUNT = c; const el = $('#onlineChip'); el.hidden = false; $('#onlineCount').textContent = c.players; el.setAttribute('aria-label', `市集島上 ${c.players} 人，開著網站 ${c.viewers} 人，點一下看各身分人數`); },
@@ -1073,8 +1086,8 @@ async function boot() {
   if (Q.has('nogl') || !webglOK()) { textOnly(Q.has('nogl') ? '已切換為文字清單版' : '這台裝置無法顯示 3D 畫面'); applyTheme(); updateClock(); setInterval(updateClock, 10000); window.__ready = true; return; }
   let mods;
   try {
-    mods = await Promise.all([import('./world.js?v=20261117s'), import('./life.js?v=20261117s'), import('./cam.js?v=20261117s'), import('./players.js?v=20261117s'), import('./signs.js?v=20261117s'), import('./festival.js?v=20261117s'), import('./fauna.js?v=20261117s')]);
-    const [{ createWorld, H: GROUND_H }, { createLife, makePerson }, { createCam }, { createPlayers }, { createSigns }, { createFestival }, { createFauna }] = mods;
+    mods = await Promise.all([import('./world.js?v=20261117u'), import('./life.js?v=20261117u'), import('./cam.js?v=20261117u'), import('./players.js?v=20261117u'), import('./signs.js?v=20261117u'), import('./festival.js?v=20261117u'), import('./fauna.js?v=20261117u'), import('./interact.js?v=20261117u')]);
+    const [{ createWorld, H: GROUND_H }, { createLife, makePerson }, { createCam }, { createPlayers }, { createSigns }, { createFestival }, { createFauna }, { createInteract }] = mods;
     const mobile = isMobile();
     W = createWorld($('#gl'), { quality: S.quality, mobile });
     W.renderer.setPixelRatio(Math.min(devicePixelRatio, S.quality === 'low' ? 1 : (mobile ? 1.5 : 2)));
@@ -1082,9 +1095,18 @@ async function boot() {
     CAM = createCam(W, $('#gl'), { onZoom: showZoom, onIntro: (k) => { L.setDeck(k < .3 ? 1 : Math.max(0, 1 - (k - .3) / .25)); if (k > .55) $('.intro-title').classList.add('show'); } });
     CAM.S.reduced = S.reduced; CAM.S.mobile = mobile;
     PL = createPlayers(W, GROUND_H); renderMe(); startNet();
-    SG = createSigns(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261117s')).rng, low: mobile || S.quality === 'low' });
-    FX = createFestival(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261117s')).rng, low: mobile || S.quality === 'low', avoid: SG.signs.map((s) => s.g.position), carp: L.carp });
-    FA = createFauna(W, { H: GROUND_H, rng: (await import('./kit.js?v=20261117s')).rng });
+    SG = createSigns(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261117u')).rng, low: mobile || S.quality === 'low' });
+    FX = createFestival(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261117u')).rng, low: mobile || S.quality === 'low', avoid: SG.signs.map((s) => s.g.position), carp: L.carp });
+    FA = createFauna(W, { H: GROUND_H, rng: (await import('./kit.js?v=20261117u')).rng });
+    IA = createInteract(W, C, GROUND_H, {
+      toast, carp: L.carp,
+      toastIf: (m) => { if (!S.intro) toast(m); },
+      toastNear: (I, m) => { if (W.camera.position.distanceTo(I.pos) < 22) toast(m); },
+      openStalls: (id) => openIsland(id),
+      openStall: (no) => { const st = stallByNo(no); if (st) { if (S.walking) exitWalk(true); openIsland(st.island, { no }); } },
+      stallPos: (no) => SG.signs.find((s) => s.st.no === no),
+      photoSpot, freeSpot: (id) => FX.freeSpot(id, .7, 1.0),
+    });
   } catch (err) { console.warn(err); textOnly('3D 畫面載入失敗'); window.__ready = true; return; }
   if (S.quality === 'low') setQuality('low');
   buildTags();
@@ -1121,6 +1143,12 @@ async function boot() {
     SG.update(t, moving);
     FX.update(t, dt, moving, W.state.n);
     FA.update(t, dt, moving, W.state.n);
+    IA.update(t, dt, moving, S.walking ? CAM.walk.pos : null);
+    // 跨橋迎賓：走在橋上時燈籠依序亮起，走到橋尾才顯示島名
+    if (S.walking && FX.walkerAt) {
+      const r = FX.walkerAt(CAM.walk.pos.x, CAM.walk.pos.z);
+      if (r) { if (r.t > .86 && S.welcomed !== r.bl) { S.welcomed = r.bl; toast(`🏮 歡迎來到第 ${r.bl.order} 島・${r.bl.name}！`); } if (r.t < .1 && S.welcomed === r.bl) S.welcomed = null; }
+    }
     W.renderer.render(W.scene, W.camera);
     if (!S.walking) placeTags();
     refreshBoatPanel(now);
@@ -1132,7 +1160,7 @@ async function boot() {
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
-  window.__isle = { W, L, CAM, S, THREE, get PL() { return PL; }, get NET() { return NET; }, get SG() { return SG; }, get FX() { return FX; }, get FA() { return FA; } };   // 給自動測試讀取狀態用
+  window.__isle = { W, L, CAM, S, THREE, get PL() { return PL; }, get NET() { return NET; }, get SG() { return SG; }, get FX() { return FX; }, get FA() { return FA; }, get IA() { return IA; } };   // 給自動測試讀取狀態用
   await playIntro(false);
   const deep = Q.get('island') || location.hash.slice(1), lk = Q.get('stall') ? resolveStallLink(Q.get('stall'), Q.get('roster')) : null, dst = lk && lk.st;
   if (lk && lk.msg && dst) S.legacyNote = { no: dst.no, msg: lk.msg };   // 舊攤號連結：說明寫在攤位卡上（蓋章提示不會蓋掉它）
