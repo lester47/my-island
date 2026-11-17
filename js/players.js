@@ -1,8 +1,8 @@
 // 登入者：自己的人物＋頭上名牌；之後接上連線服務時，其他人也用同一套顯示（upsert / remove）
 import * as THREE from 'three';
-import { rng } from './kit.js?v=20261117c';
-import { makePerson } from './life.js?v=20261117c';
-import { ROLES } from './roles.js?v=20261117c';
+import { rng } from './kit.js?v=20261117d';
+import { makePerson } from './life.js?v=20261117d';
+import { ROLES } from './roles.js?v=20261117d';
 const SPAWN = { x: 0, z: 7.4, yaw: Math.PI };
 
 const seedOf = (s) => { let h = 2166136261; for (const c of String(s)) h = Math.imul(h ^ c.codePointAt(0), 16777619); return h >>> 0; };
@@ -51,17 +51,27 @@ export function createPlayers(W, H) {
   }
 
   const _v = new THREE.Vector3();
-  function pose(P, t, walking) {
+  // 姿勢：走路擺手腳；坐著（在鯉魚號上）時腿往前伸、身體放低，跟船上的小朋友一樣
+  const SIT_DROP = .2;
+  function pose(P, t, walking, sitting) {
+    if (sitting) {
+      for (const l of P.legs) l.rotation.x = -Math.PI / 2 + .25;
+      P.arms[0].rotation.set(0, 0, -.15); P.arms[1].rotation.set(0, 0, .15);
+      return;
+    }
     const s = walking ? Math.sin(t * 9) : 0;
     P.legs[0].rotation.x = s * .55; P.legs[1].rotation.x = -s * .55;
-    P.arms[0].rotation.x = -s * .5; P.arms[1].rotation.x = s * .5;
+    P.arms[0].rotation.set(-s * .5, 0, 0); P.arms[1].rotation.set(s * .5, 0, 0);
   }
+  const onBoat = (p) => !!(W.onBoat && W.onBoat(p.x, p.z));
   // walk：鏡頭漫遊狀態（自己的位置）；firstPerson 時藏起自己的人物
   function update(dt, t, walk, walking, firstPerson, w, h) {
     const m = me();
     if (m && walking) {
-      const moved = Math.hypot(walk.pos.x - m.pos.x, walk.pos.z - m.pos.z);
-      m.moving = moved > .002 ? .25 : Math.max(0, m.moving - dt);
+      // 只有真的按了前進／後退／側移才算走路；站在船上被船載著移動不算
+      const k = walk.keys, pd = walk.pad;
+      const input = !!(k.KeyW || k.KeyS || k.KeyA || k.KeyD || k.ArrowUp || k.ArrowDown || pd.up || pd.down);
+      m.moving = input ? .15 : Math.max(0, m.moving - dt);
       m.pos.copy(walk.pos); m.yaw = walk.yaw;
     } else if (m) m.moving = 0;
     for (const p of all.values()) {
@@ -73,8 +83,10 @@ export function createPlayers(W, H) {
       }
       const hide = p.id === meId && walking && firstPerson;
       p.P.g.visible = !hide;
-      p.P.g.position.copy(p.pos); p.P.g.rotation.y = p.yaw;
-      pose(p.P, t + p.phase, p.moving > 0);
+      // 在船上：自己沒按方向鍵就坐好；其他人在船上一律坐著（位置變動是船在動）
+      const sit = onBoat(p.pos) && (p.id === meId ? !(p.moving > 0) : true);
+      p.P.g.position.copy(p.pos); if (sit) p.P.g.position.y -= SIT_DROP; p.P.g.rotation.y = p.yaw;
+      pose(p.P, t + p.phase, p.moving > 0 && !sit, sit);
       // 名牌：投影到畫面上，在頭頂上方
       _v.set(p.pos.x, p.pos.y + 1.02, p.pos.z).project(camera);
       const dist = camera.position.distanceTo(p.pos);
