@@ -65,22 +65,45 @@ export function createInteract(W, content, H, api) {
     } });
   }
 
-  // ------------------------------------------------ ④ 彈珠迷宮：點一下，彈珠沿著軌道滾進終點，帶出第 11 攤的玩法
+  // ------------------------------------------------ ④ 彈珠迷宮：迷宮旁一支「▶ 看彈珠怎麼走」小牌子，點一下播放一趟，播完就停在終點
   const Pz = islands.puzzle;
   if (Pz && Pz.extras.marble) {
     const marble = Pz.extras.marble, lm = Pz.extras.lm;
+    Pz.extras.marbleHold = true;                       // 平常彈珠停在起點，不再亂繞
     const path = [[-1.35, 1.0], [-.35, 1.0], [-.35, -.05], [.45, -.05], [.45, .9], [1.35, .9], [1.35, -.2], [1.2, -.8]].map(([x, z]) => new THREE.Vector3(.3 + x, H + .62, .3 + z));
+    const toW = (v) => lm.localToWorld(v.clone());
+    marble.position.copy(path[0]);
+    // 起點綠旗、終點已經有紅圈
+    add(lm, G.cyl, '#ffffff', path[0].x - .15, H + .9, path[0].z + .2, .03, .6, .03); add(lm, G.box, '#3ed16a', path[0].x - .02, H + 1.1, path[0].z + .2, .24, .16, .02);
+    // 路線提示：播放時沿路亮起小點
+    const dots = []; for (let i = 1; i < path.length; i++) for (let k = 0; k < 3; k++) { const v = path[i - 1].clone().lerp(path[i], (k + .5) / 3); const d = add(lm, G.sph, '#ffd23a', v.x, H + .45, v.z, .09, .03, .09); d.visible = false; dots.push(d); }
+    // 播放牌子
+    const lbl = textTexture(320, 96, (g) => { g.fillStyle = '#2f7fd1'; g.beginPath(); g.roundRect(4, 4, 312, 88, 22); g.fill(); g.fillStyle = '#fff'; g.font = `900 40px ${FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('▶ 看彈珠怎麼走', 160, 52); });
+    lbl.paint();
+    const sign = new THREE.Group(); sign.position.set(.3 - 2.0, H, .3 + 1.6); lm.add(sign);
+    add(sign, G.cyl, '#7a4a22', 0, .55, 0, .06, 1.1, .06);
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: lbl.tex })); sp.scale.set(1.5, .45, 1); sp.position.y = 1.3; sign.add(sp);
     let run = null;
-    const start = () => { if (run) return; Pz.extras.marbleHold = true; run = { t: 0 }; api.toast('🔵 彈珠出發！沿著木軌道滾到紅色終點…'); };
+    const start = () => {
+      if (run) return; run = { t: 0 }; marble.position.copy(path[0]); dots.forEach((d) => (d.visible = false));
+      api.toast('🔵 彈珠從綠旗出發，沿著木軌道走到紅色終點就過關（第 11 攤玩法）');
+    };
     const hit = new THREE.Mesh(new THREE.BoxGeometry(3.6, 1.0, 2.8), new THREE.MeshBasicMaterial({ visible: false })); hit.position.set(.3, H + .45, .3); lm.add(hit);
-    picks.push({ obj: hit, act: start });
+    picks.push({ obj: sp, act: start }); picks.push({ obj: hit, act: start });
     const lens = []; let total = 0; for (let i = 1; i < path.length; i++) { const L = path[i].distanceTo(path[i - 1]); lens.push(L); total += L; }
     anim.push((t, dt) => {
+      sp.position.y = 1.3 + Math.sin(t * 2.2) * .06;
       if (!run) return;
-      run.t += dt * 1.6; let d = run.t;
-      if (d >= total) { marble.position.copy(path[path.length - 1]); marble.position.y += Math.abs(Math.sin(run.t * 8)) * .1 * Math.max(0, 1 - (run.t - total)); if (run.t > total + 1.2) { run = null; Pz.extras.marbleHold = false; api.toast('🎯 進洞了！第 11 攤「彈珠迷宮」：操控彈珠從起點走到終點就過關'); api.openStall(11); } return; }
+      run.t += dt * 1.4; let d = run.t;
+      if (d >= total) {
+        marble.position.copy(path[path.length - 1]); marble.position.y += Math.abs(Math.sin(run.t * 8)) * .1 * Math.max(0, 1 - (run.t - total));
+        if (run.t > total + 1.0 && !run.done) { run.done = true; api.toast('🎯 進洞了！這就是過關。到現場第 11 攤試試看吧'); }
+        if (run.t > total + 4) { run = null; marble.position.copy(path[0]); dots.forEach((q) => (q.visible = false)); }   // 播完就停，幾秒後彈珠回到起點
+        return;
+      }
       let i = 0; while (d > lens[i]) { d -= lens[i]; i++; }
       marble.position.lerpVectors(path[i], path[i + 1], d / lens[i]); marble.rotation.x += dt * 8;
+      const shown = Math.floor((i + d / lens[i]) * 3); dots.forEach((q, k) => (q.visible = k < shown));
     });
   }
 

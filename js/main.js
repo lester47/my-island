@@ -1,6 +1,6 @@
 // 115 鯉魚市集｜介面與流程
 import * as THREE from 'three';
-import { ROLES, OUTFITS } from './roles.js?v=20261117u';
+import { ROLES, OUTFITS } from './roles.js?v=20261117v';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -149,7 +149,7 @@ function stamp(id) {
   if (S.stamps.length === 6 && !store.get('doneShown', false)) { store.set('doneShown', true); setTimeout(showDone, 900); }
 }
 function showDone() {
-  $('#doneBody').innerHTML = `<div style="display:flex;gap:14px;align-items:center"><span class="mascot" style="width:84px;height:84px">${MASCOT}</span><p style="margin:0;line-height:1.7;font-weight:700">太厲害了！你已經逛完 115 鯉魚市集的六座島，集滿六枚章。<br>小鯉魚幫你把護照收好了，記得也到現場逛逛喔！</p></div><p class="foot">集章紀錄只存在這台裝置的瀏覽器裡。</p><button type="button" class="btn" data-close>好耶！</button>`;
+  $('#doneBody').innerHTML = `<div style="display:flex;gap:14px;align-items:center"><span class="mascot" style="width:84px;height:84px">${MASCOT}</span><p style="margin:0;line-height:1.7;font-weight:700">太厲害了！你已走訪服務台和五座主題島，集滿六枚章！<br>小鯉魚幫你把護照收好了，記得也到現場逛逛喔！</p></div><p class="foot">集章紀錄只存在這台裝置的瀏覽器裡。</p><button type="button" class="btn" data-close>好耶！</button>`;
   openDlg('#doneDlg');
 }
 function renderHud() {
@@ -925,8 +925,18 @@ function enterWalk(at) {
   // 已加入市集：從自己的人物所在位置出發，預設第三人稱看得到自己
   const mine = PL && PL.me() ? PL.spawnFor() : null;
   CAM.walk.third = !!mine && store.get('view', 'third') === 'third'; $('#walkView').hidden = !mine; syncViewBtn();
-  CAM.enterWalk(at && at.pos ? at : mine); const h = $('#walkHint'); h.classList.remove('fade'); clearTimeout(hintT); hintT = setTimeout(() => h.classList.add('fade'), 4500);
+  CAM.enterWalk(at && at.pos ? at : mine || startSpot()); const h = $('#walkHint'); h.classList.remove('fade'); clearTimeout(hintT); hintT = setTimeout(() => h.classList.add('fade'), 4500);
   $('#walkExit').focus({ preventScroll: true });
+}
+// 漫遊起點：站在服務台往第 1 島的橋頭前一小段，面向路口，一進來就看到橋、路牌和島名
+function startSpot() {
+  const b = W.bridges.find((x) => x.to === C.islands[0].id) || W.bridges[0];
+  const dx = Math.cos(b.a), dz = Math.sin(b.a);
+  for (const back of [5.2, 4.6, 4.0, 3.4, 2.8]) {
+    const x = b.p0.x - dx * back, z = b.p0.z - dz * back, h = W.ground(x, z);
+    if (h != null) return { pos: new THREE.Vector3(x, h, z), yaw: Math.atan2(dx, dz) };
+  }
+  return null;
 }
 function exitWalk(instant) {
   if (!S.walking) return; S.walking = false; document.body.classList.remove('walking'); $('#walkui').hidden = true; $('#walkBtn').classList.remove('on');
@@ -984,6 +994,14 @@ function openMe() {
   if ($('#meLeave')) $('#meLeave').onclick = () => { store.set('me', null); $('#meDlg').close(); renderMe(); toast('已離開市集，你的人物從島上收起來了'); };
 }
 $('#meBtn').addEventListener('click', openMe);
+// 首頁的「12/12 市集資訊」：不用先找服務台，直接看日期、地點、時程和鯉魚幣規則
+$('#infoBtn').addEventListener('click', () => {
+  if (!C) return;
+  $('#infoBody').innerHTML = `${liveCardHTML()}<div class="p-sec"><h3>時程與規則</h3>${eventHTML()}</div>
+    <div class="chal-btns"><button type="button" class="btn ghost" id="infoGo">★ 到服務台看更多</button></div>`;
+  openDlg('#infoDlg');
+  $('#infoGo').onclick = () => { $('#infoDlg').close(); openIsland('center'); };
+});
 
 // ------------------------------------------------------------------ 多人連線與即時人數（content.json 的 multiplayer）
 let NET = null, COUNT = null, SG = null, FX = null, FA = null, IA = null;
@@ -997,7 +1015,7 @@ function balloonPopped() {
 }
 function startNet() {
   const M = C.multiplayer; if (!M || !M.enabled || !M.firebase || !PL) return;
-  import('./net.js?v=20261117u').then(({ createNet }) => {
+  import('./net.js?v=20261117v').then(({ createNet }) => {
     NET = createNet(M.firebase, {
       myPos: () => PL.myPos(), upsert: (id, info, pos) => PL.upsert(id, info, pos), remove: (id) => PL.remove(id),
       onCount: (c) => { COUNT = c; const el = $('#onlineChip'); el.hidden = false; $('#onlineCount').textContent = c.players; el.setAttribute('aria-label', `市集島上 ${c.players} 人，開著網站 ${c.viewers} 人，點一下看各身分人數`); },
@@ -1086,7 +1104,7 @@ async function boot() {
   if (Q.has('nogl') || !webglOK()) { textOnly(Q.has('nogl') ? '已切換為文字清單版' : '這台裝置無法顯示 3D 畫面'); applyTheme(); updateClock(); setInterval(updateClock, 10000); window.__ready = true; return; }
   let mods;
   try {
-    mods = await Promise.all([import('./world.js?v=20261117u'), import('./life.js?v=20261117u'), import('./cam.js?v=20261117u'), import('./players.js?v=20261117u'), import('./signs.js?v=20261117u'), import('./festival.js?v=20261117u'), import('./fauna.js?v=20261117u'), import('./interact.js?v=20261117u')]);
+    mods = await Promise.all([import('./world.js?v=20261117v'), import('./life.js?v=20261117v'), import('./cam.js?v=20261117v'), import('./players.js?v=20261117v'), import('./signs.js?v=20261117v'), import('./festival.js?v=20261117v'), import('./fauna.js?v=20261117v'), import('./interact.js?v=20261117v')]);
     const [{ createWorld, H: GROUND_H }, { createLife, makePerson }, { createCam }, { createPlayers }, { createSigns }, { createFestival }, { createFauna }, { createInteract }] = mods;
     const mobile = isMobile();
     W = createWorld($('#gl'), { quality: S.quality, mobile });
@@ -1095,9 +1113,9 @@ async function boot() {
     CAM = createCam(W, $('#gl'), { onZoom: showZoom, onIntro: (k) => { L.setDeck(k < .3 ? 1 : Math.max(0, 1 - (k - .3) / .25)); if (k > .55) $('.intro-title').classList.add('show'); } });
     CAM.S.reduced = S.reduced; CAM.S.mobile = mobile;
     PL = createPlayers(W, GROUND_H); renderMe(); startNet();
-    SG = createSigns(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261117u')).rng, low: mobile || S.quality === 'low' });
-    FX = createFestival(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261117u')).rng, low: mobile || S.quality === 'low', avoid: SG.signs.map((s) => s.g.position), carp: L.carp });
-    FA = createFauna(W, { H: GROUND_H, rng: (await import('./kit.js?v=20261117u')).rng });
+    SG = createSigns(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261117v')).rng, low: mobile || S.quality === 'low' });
+    FX = createFestival(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261117v')).rng, low: mobile || S.quality === 'low', avoid: SG.signs.map((s) => s.g.position), carp: L.carp });
+    FA = createFauna(W, { H: GROUND_H, rng: (await import('./kit.js?v=20261117v')).rng });
     IA = createInteract(W, C, GROUND_H, {
       toast, carp: L.carp,
       toastIf: (m) => { if (!S.intro) toast(m); },

@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261117u">
+<link rel="stylesheet" href="styles.css?v=20261117v">
 <script type="importmap">{"imports":{"three":"./vendor/three/three.module.js","three/addons/":"./vendor/three/addons/"}}</script>
 </head>
 <body>
@@ -33,6 +33,7 @@
       <h1>115 鯉魚市集</h1>
       <p class="tagline">跳上五座六角小島，逛美食、玩手作、闖關挑戰，還能挖二手好物！</p>
     </div>
+    <button type="button" class="info-btn" id="infoBtn" aria-haspopup="dialog">📅 12/12 市集資訊</button>
   </div>
   <nav class="tools" aria-label="主要功能">
     <button type="button" class="tbtn" id="searchBtn" aria-label="搜尋島嶼與攤位"><span aria-hidden="true">🔍</span><span class="tx">搜尋</span></button>
@@ -143,6 +144,10 @@
   <div class="dlg-hd"><h2 id="meTitle">👤 用暱稱加入市集</h2><button type="button" class="x" data-close aria-label="關閉">✕</button></div>
   <div id="meBody"></div>
 </dialog>
+<dialog id="infoDlg" class="dlg" aria-labelledby="infoTitle">
+  <div class="dlg-hd"><h2 id="infoTitle">📅 12/12 市集資訊</h2><button type="button" class="x" data-close aria-label="關閉">✕</button></div>
+  <div id="infoBody"></div>
+</dialog>
 <dialog id="doneDlg" class="dlg" aria-labelledby="doneTitle">
   <div class="dlg-hd"><h2 id="doneTitle">🎉 集章完成！</h2><button type="button" class="x" data-close aria-label="關閉">✕</button></div>
   <div id="doneBody"></div>
@@ -150,6 +155,6 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <noscript><p class="noscript">這個網站需要開啟 JavaScript。</p></noscript>
-<script type="module" src="js/main.js?v=20261117u"></script>
+<script type="module" src="js/main.js?v=20261117v"></script>
 </body>
 </html>

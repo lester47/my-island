@@ -409,3 +409,6 @@ select.pp-in { width: auto; max-width: 160px; }
 .clock .now::before { content: '現在時間 '; font-size: 11px; font-weight: 700; opacity: .7; }
 
 .stall-row .short { font-weight: 600; color: var(--muted, #6b6b6b); font-size: .88em; }
+
+.info-btn { margin-left: 10px; align-self: center; border: 0; border-radius: 999px; padding: 0 14px; min-height: 40px; background: #e3a33b; color: #3a2200; font-weight: 900; font-size: 14px; box-shadow: var(--shadow); white-space: nowrap; cursor: pointer; }
+@media (max-width: 760px) { .info-btn { margin-left: 6px; padding: 0 10px; min-height: 36px; font-size: 12px; } }
