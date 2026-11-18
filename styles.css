@@ -440,3 +440,23 @@ select.pp-in { width: auto; max-width: 160px; }
 .nt-list { margin: 0; padding-left: 18px; } .nt-list small { color: #8a6a2a; }
 @media (max-width: 760px) { .notice-bar { top: 112px; font-size: 13px; } .hchip.plan .tx { display: none; } }
 .walk-hint { pointer-events: none; }   /* 提示文字不擋住點招牌 */
+
+/* 釣魚 */
+.fish-ui { position: fixed; z-index: 23; left: 16px; right: 16px; bottom: 96px; margin: 0 auto; width: fit-content; max-width: 560px; padding: 10px 14px; border-radius: 16px; background: var(--surface); box-shadow: var(--shadow); text-align: center; }
+.fish-ui .ft { margin: 0 0 8px; font-weight: 800; }
+.fish-ui .fbtns { display: flex; gap: 8px; justify-content: center; }
+.fish-ui .fb { border: 0; border-radius: 999px; min-height: 48px; padding: 0 22px; font-size: 18px; font-weight: 900; background: #2f7fd1; color: #fff; cursor: pointer; }
+.fish-ui .fb[data-state="bite"] { background: #e8473f; animation: fishpulse .35s infinite alternate; }
+.fish-ui .fb[data-state="wait"] { background: #8aa4bf; }
+.fish-ui .fx { border: 2px solid #2f7fd1; background: #fff; color: #1d5aa0; border-radius: 999px; padding: 0 12px; font-weight: 800; cursor: pointer; }
+@keyframes fishpulse { to { transform: scale(1.08); } }
+.fish-log { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.fish-log li { display: grid; grid-template-columns: 40px 1fr; grid-template-rows: auto auto; column-gap: 8px; align-items: center; padding: 8px; border-radius: 12px; background: #f1f1ec; color: #888; }
+.fish-log li.got { background: #e7f2ff; color: #1b2a20; }
+.fish-log .fi { grid-row: 1 / 3; font-size: 28px; text-align: center; }
+.fish-log small { color: inherit; opacity: .8; }
+/* 躲貓貓 */
+.hide-ui { position: fixed; z-index: 23; top: 136px; left: 16px; right: 16px; margin: 0 auto; width: fit-content; display: grid; grid-template-columns: auto auto; column-gap: 12px; align-items: center; padding: 8px 12px 8px 16px; border-radius: 14px; background: #f3ecff; border: 2px solid #8a5cd0; box-shadow: var(--shadow); }
+.hide-ui p { margin: 0; font-weight: 900; } .hide-ui .hm { grid-column: 1; font-weight: 800; color: #4b2a86; }
+.hide-ui .hq { grid-column: 2; grid-row: 1 / 3; border: 0; border-radius: 999px; padding: 6px 12px; background: #8a5cd0; color: #fff; font-weight: 800; cursor: pointer; }
+@media (max-width: 760px) { .fish-ui { bottom: 200px; } .hide-ui { top: 120px; font-size: 13px; } }

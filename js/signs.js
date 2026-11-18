@@ -385,6 +385,7 @@ export function createSigns(W, content, H, opts = {}) {
       B.g.rotation.y = Math.atan2(-c.x, -c.z);          // 攤子正面朝向步道
       if (c.cl < .55) B.g.scale.setScalar(.85);          // 空間比較擠的位置，攤子小一號
       scene.add(B.g);
+      B.g.userData.island = I0.id;
       const s = { g: B.g, st, island: I0.id };
       signs.push(s); for (const o of [B.hit, B.face, B.back]) pickables.push({ obj: o, sign: s });
     });
