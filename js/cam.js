@@ -1,9 +1,9 @@
 // 鏡頭：拖曳旋轉縮放、回到全景、點島飛近（電影史詩運鏡）、開場、導覽、地面漫遊
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { TAU, clamp, lerp, easeInOut, smooth } from './kit.js?v=20261118a';
-import { H } from './world.js?v=20261118a';
-import { SHORE } from './scenery.js?v=20261118a';
+import { TAU, clamp, lerp, easeInOut, smooth } from './kit.js?v=20261118b';
+import { H } from './world.js?v=20261118b';
+import { SHORE } from './scenery.js?v=20261118b';
 
 export function createCam(W, canvas, hooks) {
   const camera = W.camera;
@@ -167,8 +167,9 @@ export function createCam(W, canvas, hooks) {
     if (dx || dz) {
       // 分軸嘗試，碰到牆可以沿牆滑動；走到海邊或建築會被擋住
       // 萬一目前所在位置已經被判定為不可走（例如畫面切換時落在物件邊上），允許往外走出來，不會永遠卡住
-      const stuck = W.ground(walk.pos.x, walk.pos.z) == null;
-      const tryMove = (x, z) => { const h = W.ground(x, z); if (h == null && !stuck) return false; walk.pos.set(x, h == null ? walk.pos.y : h, z); return true; };
+      // 萬一目前位置不可走（例如落在海上），直接拉回最近的陸地，不讓人在海面上走
+      if (W.ground(walk.pos.x, walk.pos.z) == null) { const g = W.nearestGround(walk.pos.x, walk.pos.z); if (g) walk.pos.set(g.x, g.y, g.z); }
+      const tryMove = (x, z) => { const h = W.ground(x, z); if (h == null) return false; walk.pos.set(x, h, z); return true; };
       if (!tryMove(walk.pos.x + dx, walk.pos.z + dz)) { tryMove(walk.pos.x + dx, walk.pos.z) || tryMove(walk.pos.x, walk.pos.z + dz); }
     }
     placeWalk();

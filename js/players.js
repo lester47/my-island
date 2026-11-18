@@ -1,8 +1,8 @@
 // 登入者：自己的人物＋頭上名牌；之後接上連線服務時，其他人也用同一套顯示（upsert / remove）
 import * as THREE from 'three';
-import { rng } from './kit.js?v=20261118a';
-import { makePerson } from './life.js?v=20261118a';
-import { ROLES } from './roles.js?v=20261118a';
+import { rng } from './kit.js?v=20261118b';
+import { makePerson } from './life.js?v=20261118b';
+import { ROLES } from './roles.js?v=20261118b';
 const SPAWN = { x: 0, z: 7.4, yaw: Math.PI };
 
 const seedOf = (s) => { let h = 2166136261; for (const c of String(s)) h = Math.imul(h ^ c.codePointAt(0), 16777619); return h >>> 0; };
@@ -81,7 +81,9 @@ export function createPlayers(W, H) {
         p.pos.x += dx * k; p.pos.z += dz * k; p.pos.y += ((p.target.y ?? H) - p.pos.y) * k;
         let dy = (p.target.yaw || 0) - p.yaw; while (dy > Math.PI) dy -= Math.PI * 2; while (dy < -Math.PI) dy += Math.PI * 2; p.yaw += dy * k;
       }
-      const hide = p.id === meId && walking && firstPerson;
+      // 其他登入者若位置在水面上（不是陸地、橋、碼頭，也不在鯉魚號上），先不顯示——舊版網頁可能還在送海上的位置
+      const offLand = p.id !== meId && W.ground(p.pos.x, p.pos.z) == null && !onBoat(p.pos);
+      const hide = (p.id === meId && walking && firstPerson) || offLand;
       p.P.g.visible = !hide;
       // 在船上：自己沒按方向鍵就坐好；其他人在船上一律坐著（位置變動是船在動）
       const sit = onBoat(p.pos) && (p.id === meId ? !(p.moving > 0) : true);

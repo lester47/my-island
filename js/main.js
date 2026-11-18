@@ -1,6 +1,6 @@
 // 115 鯉魚市集｜介面與流程
 import * as THREE from 'three';
-import { ROLES, OUTFITS } from './roles.js?v=20261118a';
+import { ROLES, OUTFITS } from './roles.js?v=20261118b';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -15,7 +15,7 @@ const pad2 = (n) => String(n).padStart(2, '0');
 const fmtH = (h) => { h = ((h % 24) + 24) % 24; return `${pad2(Math.floor(h))}:${pad2(Math.floor((h % 1) * 60))}`; };
 
 // 介面 Logo：低多邊形鯉魚（橘紅魚背、米白魚腹、魚頭朝右），首頁、怎麼逛、集章完成共用這一張
-const LOGO_SRC = 'assets/brand/koi-logo.png?v=20261118a';
+const LOGO_SRC = 'assets/brand/koi-logo.png?v=20261118b';
 const MASCOT = `<img src="${LOGO_SRC}" alt="115 鯉魚市集 Logo：低多邊形小鯉魚" decoding="async">`;
 
 let C = null;            // content.json
@@ -922,7 +922,8 @@ function enterWalk(at) {
   if (!W) return; closeBubble(); closePanel(false); if (S.tour) endTour(false);
   S.walking = true; document.body.classList.add('walking'); $('#walkui').hidden = false; $('#walkBtn').classList.add('on');
   // 已加入市集：從自己的人物所在位置出發，預設第三人稱看得到自己
-  const mine = PL && PL.me() ? PL.spawnFor() : null;
+  let mine = PL && PL.me() ? PL.spawnFor() : null;
+  if (mine && W.ground(mine.pos.x, mine.pos.z) == null) { const g = W.nearestGround(mine.pos.x, mine.pos.z, 6); mine = g ? { pos: new THREE.Vector3(g.x, g.y, g.z), yaw: mine.yaw } : startSpot(); }   // 人物在海上（例如船開走了）就回到陸地
   CAM.walk.third = !!mine && store.get('view', 'third') === 'third'; $('#walkView').hidden = !mine; syncViewBtn();
   CAM.enterWalk(at && at.pos ? at : mine || startSpot()); const h = $('#walkHint'); h.classList.remove('fade'); clearTimeout(hintT); hintT = setTimeout(() => h.classList.add('fade'), 4500);
   $('#walkExit').focus({ preventScroll: true });
@@ -941,6 +942,13 @@ function exitWalk(instant) {
   if (!S.walking) return; S.walking = false; document.body.classList.remove('walking'); $('#walkui').hidden = true; $('#walkBtn').classList.remove('on');
   for (const k in CAM.walk.keys) CAM.walk.keys[k] = false; for (const k in CAM.walk.pad) CAM.walk.pad[k] = false;
   CAM.exitWalk(); if (instant) { CAM.setHome(true); CAM.S.busy = null; CAM.controls.enabled = true; }
+  // 離開漫遊時人物若站在鯉魚號上或水面，放回最近的陸地（船開走後才不會留在海上）
+  const m = PL && PL.me();
+  if (m && (W.onBoat(m.pos.x, m.pos.z) || W.ground(m.pos.x, m.pos.z) == null)) {
+    const P = W.pier, land = P ? P.E.clone().addScaledVector(P.d, P.ST0 - .4) : null;
+    const g = land && W.ground(land.x, land.z) != null ? { x: land.x, y: W.ground(land.x, land.z), z: land.z } : W.nearestGround(m.pos.x, m.pos.z);
+    if (g) m.pos.set(g.x, g.y, g.z);
+  }
 }
 $('#walkBtn').addEventListener('click', () => (S.walking ? exitWalk() : enterWalk()));
 $('#walkExit').addEventListener('click', () => exitWalk());
@@ -1077,7 +1085,7 @@ function balloonPopped() {
 }
 function startNet() {
   const M = C.multiplayer; if (!M || !M.enabled || !M.firebase || !PL) return;
-  import('./net.js?v=20261118a').then(({ createNet }) => {
+  import('./net.js?v=20261118b').then(({ createNet }) => {
     NET = createNet(M.firebase, {
       myPos: () => PL.myPos(), upsert: (id, info, pos) => PL.upsert(id, info, pos), remove: (id) => PL.remove(id),
       onCount: (c) => { COUNT = c; const el = $('#onlineChip'); el.hidden = false; $('#onlineCount').textContent = c.players; el.setAttribute('aria-label', `市集島上 ${c.players} 人，開著網站 ${c.viewers} 人，點一下看各身分人數`); },
@@ -1167,7 +1175,7 @@ async function boot() {
   if (Q.has('nogl') || !webglOK()) { textOnly(Q.has('nogl') ? '已切換為文字清單版' : '這台裝置無法顯示 3D 畫面'); applyTheme(); updateClock(); setInterval(updateClock, 10000); window.__ready = true; return; }
   let mods;
   try {
-    mods = await Promise.all([import('./world.js?v=20261118a'), import('./life.js?v=20261118a'), import('./cam.js?v=20261118a'), import('./players.js?v=20261118a'), import('./signs.js?v=20261118a'), import('./festival.js?v=20261118a'), import('./fauna.js?v=20261118a'), import('./interact.js?v=20261118a')]);
+    mods = await Promise.all([import('./world.js?v=20261118b'), import('./life.js?v=20261118b'), import('./cam.js?v=20261118b'), import('./players.js?v=20261118b'), import('./signs.js?v=20261118b'), import('./festival.js?v=20261118b'), import('./fauna.js?v=20261118b'), import('./interact.js?v=20261118b')]);
     const [{ createWorld, H: GROUND_H }, { createLife, makePerson }, { createCam }, { createPlayers }, { createSigns }, { createFestival }, { createFauna }, { createInteract }] = mods;
     const mobile = isMobile();
     W = createWorld($('#gl'), { quality: S.quality, mobile });
@@ -1176,9 +1184,9 @@ async function boot() {
     CAM = createCam(W, $('#gl'), { onZoom: showZoom, onIntro: (k) => { L.setDeck(k < .3 ? 1 : Math.max(0, 1 - (k - .3) / .25)); if (k > .55) $('.intro-title').classList.add('show'); } });
     CAM.S.reduced = S.reduced; CAM.S.mobile = mobile;
     PL = createPlayers(W, GROUND_H); renderMe(); startNet();
-    SG = createSigns(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261118a')).rng, low: mobile || S.quality === 'low' });
-    FX = createFestival(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261118a')).rng, low: mobile || S.quality === 'low', avoid: [...SG.signs.map((s) => s.g.position), ...Object.values(W.islands).flatMap((I) => (I.trees || []).filter((tr) => tr.visible).map((tr) => tr.position.clone().add(I.pos)))], carp: L.carp });
-    FA = createFauna(W, { H: GROUND_H, rng: (await import('./kit.js?v=20261118a')).rng });
+    SG = createSigns(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261118b')).rng, low: mobile || S.quality === 'low' });
+    FX = createFestival(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261118b')).rng, low: mobile || S.quality === 'low', avoid: [...SG.signs.map((s) => s.g.position), ...Object.values(W.islands).flatMap((I) => (I.trees || []).filter((tr) => tr.visible).map((tr) => tr.position.clone().add(I.pos)))], carp: L.carp });
+    FA = createFauna(W, { H: GROUND_H, rng: (await import('./kit.js?v=20261118b')).rng });
     IA = createInteract(W, C, GROUND_H, {
       toast, carp: L.carp,
       toastIf: (m) => { if (!S.intro) toast(m); },

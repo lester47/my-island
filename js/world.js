@@ -1,7 +1,7 @@
 // 3D 世界：天空、海、遠山、島嶼與地標、橋、日夜光影
 import * as THREE from 'three';
-import { TAU, clamp, lerp, smooth, rng, loopNoise, mat, Builder, GEO, glowTexture, C } from './kit.js?v=20261118a';
-import { makeScenery } from './scenery.js?v=20261118a';
+import { TAU, clamp, lerp, smooth, rng, loopNoise, mat, Builder, GEO, glowTexture, C } from './kit.js?v=20261118b';
+import { makeScenery } from './scenery.js?v=20261118b';
 
 export const H = 1.75;               // 島頂草地高度
 const SEG = 72;                      // 海岸線分段（6 的倍數，六角轉角落在頂點上）
@@ -885,6 +885,15 @@ function finishWorld(W) {
       if (Math.hypot(x - px, z - pz) < .72) return H + Math.sin(clamp(t, 0, 1) * Math.PI) * .9 + .06;
     }
     for (const f of W.surfaces) { const h = f(x, z); if (h != null) return h; }   // 碼頭、階梯、跳板、船尾甲板
+    return null;
+  };
+  // 最近的可走位置：從 (x, z) 往外一圈一圈找（找不到回傳 null）
+  W.nearestGround = (x, z, maxR = 40) => {
+    if (W.ground(x, z) != null) return { x, z, y: W.ground(x, z) };
+    for (let r = .3; r <= maxR; r += .3) {
+      const n = Math.max(8, Math.round(r * 8));
+      for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2, px = x + Math.cos(a) * r, pz = z + Math.sin(a) * r, h = W.ground(px, pz); if (h != null) return { x: px, z: pz, y: h }; }
+    }
     return null;
   };
   return W;
