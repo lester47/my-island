@@ -460,3 +460,7 @@ select.pp-in { width: auto; max-width: 160px; }
 .hide-ui p { margin: 0; font-weight: 900; } .hide-ui .hm { grid-column: 1; font-weight: 800; color: #4b2a86; }
 .hide-ui .hq { grid-column: 2; grid-row: 1 / 3; border: 0; border-radius: 999px; padding: 6px 12px; background: #8a5cd0; color: #fff; font-weight: 800; cursor: pointer; }
 @media (max-width: 760px) { .fish-ui { bottom: 200px; } .hide-ui { top: 120px; font-size: 13px; } }
+
+.rules-list { margin: 0 0 12px; padding-left: 22px; display: grid; gap: 6px; line-height: 1.55; }
+.hide-ui .hr { grid-column: 2; grid-row: 1; border: 2px solid #8a5cd0; background: #fff; color: #4b2a86; border-radius: 999px; padding: 4px 10px; font-weight: 800; cursor: pointer; }
+.hide-ui .hq { grid-row: 2; }

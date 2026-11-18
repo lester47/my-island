@@ -1,6 +1,6 @@
 // 115 鯉魚市集｜介面與流程
 import * as THREE from 'three';
-import { ROLES, OUTFITS } from './roles.js?v=20261118e';
+import { ROLES, OUTFITS } from './roles.js?v=20261118h';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -15,7 +15,7 @@ const pad2 = (n) => String(n).padStart(2, '0');
 const fmtH = (h) => { h = ((h % 24) + 24) % 24; return `${pad2(Math.floor(h))}:${pad2(Math.floor((h % 1) * 60))}`; };
 
 // 介面 Logo：低多邊形鯉魚（橘紅魚背、米白魚腹、魚頭朝右），首頁、怎麼逛、集章完成共用這一張
-const LOGO_SRC = 'assets/brand/koi-logo.png?v=20261118e';
+const LOGO_SRC = 'assets/brand/koi-logo.png?v=20261118h';
 const MASCOT = `<img src="${LOGO_SRC}" alt="115 鯉魚市集 Logo：低多邊形小鯉魚" decoding="async">`;
 
 let C = null;            // content.json
@@ -1020,6 +1020,16 @@ function openMe() {
   if ($('#meLeave')) $('#meLeave').onclick = () => { store.set('me', null); $('#meDlg').close(); renderMe(); toast('已離開市集，你的人物從島上收起來了'); };
 }
 $('#meBtn').addEventListener('click', openMe);
+// 小遊戲規則（content.json 的 games）；躲貓貓開始前先看規則，按「開始」才開始
+function openRules(kind, onStart) {
+  const R = (C.games || {})[kind]; if (!R) return;
+  $('#rulesTitle').textContent = R.title;
+  $('#rulesBody').innerHTML = `<ol class="rules-list">${R.rules.map((x) => `<li>${esc(x)}</li>`).join('')}</ol>
+    <div class="chal-btns">${onStart ? '<button type="button" class="btn" id="rulesGo">▶ 我看懂了，開始！</button>' : ''}<button type="button" class="btn ghost" id="rulesOk">${onStart ? '先不要' : '知道了'}</button></div>`;
+  openDlg('#rulesDlg');
+  $('#rulesOk').onclick = () => $('#rulesDlg').close();
+  if (onStart) $('#rulesGo').onclick = () => { $('#rulesDlg').close(); onStart(); };
+}
 // 釣魚圖鑑
 function openFishLog() {
   const L = store.get('fishlog', {}) || {};
@@ -1111,7 +1121,7 @@ function balloonPopped() {
 }
 function startNet() {
   const M = C.multiplayer; if (!M || !M.enabled || !M.firebase || !PL) return;
-  import('./net.js?v=20261118e').then(({ createNet }) => {
+  import('./net.js?v=20261118h').then(({ createNet }) => {
     NET = createNet(M.firebase, {
       myPos: () => PL.myPos(), upsert: (id, info, pos) => PL.upsert(id, info, pos), remove: (id) => PL.remove(id),
       onCount: (c) => { COUNT = c; const el = $('#onlineChip'); el.hidden = false; $('#onlineCount').textContent = c.players; el.setAttribute('aria-label', `市集島上 ${c.players} 人，開著網站 ${c.viewers} 人，點一下看各身分人數`); },
@@ -1201,7 +1211,7 @@ async function boot() {
   if (Q.has('nogl') || !webglOK()) { textOnly(Q.has('nogl') ? '已切換為文字清單版' : '這台裝置無法顯示 3D 畫面'); applyTheme(); updateClock(); setInterval(updateClock, 10000); window.__ready = true; return; }
   let mods;
   try {
-    mods = await Promise.all([import('./world.js?v=20261118e'), import('./life.js?v=20261118e'), import('./cam.js?v=20261118e'), import('./players.js?v=20261118e'), import('./signs.js?v=20261118e'), import('./festival.js?v=20261118e'), import('./fauna.js?v=20261118e'), import('./interact.js?v=20261118e'), import('./games.js?v=20261118e')]);
+    mods = await Promise.all([import('./world.js?v=20261118h'), import('./life.js?v=20261118h'), import('./cam.js?v=20261118h'), import('./players.js?v=20261118h'), import('./signs.js?v=20261118h'), import('./festival.js?v=20261118h'), import('./fauna.js?v=20261118h'), import('./interact.js?v=20261118h'), import('./games.js?v=20261118h')]);
     const [{ createWorld, H: GROUND_H }, { createLife, makePerson }, { createCam }, { createPlayers }, { createSigns }, { createFestival }, { createFauna }, { createInteract }, { createGames, FISH }] = mods;
     const mobile = isMobile();
     W = createWorld($('#gl'), { quality: S.quality, mobile });
@@ -1213,10 +1223,10 @@ async function boot() {
     W.canBoard = canBoardWalk;
     // 搭船中：只有靠港、跳板放下時才能走出船艙
     W.canLeave = () => { const s = L.carp.status(); if (s.docked && s.gang) return true; if (performance.now() - lastBlockToast > 3000) { lastBlockToast = performance.now(); toast('⛔ 航行中請待在船上，靠港放下跳板後再下船'); } return false; };
-    KIT = await import('./kit.js?v=20261118e');
-    SG = createSigns(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261118e')).rng, low: mobile || S.quality === 'low' });
-    FX = createFestival(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261118e')).rng, low: mobile || S.quality === 'low', avoid: [...SG.signs.map((s) => s.g.position), ...Object.values(W.islands).flatMap((I) => (I.trees || []).filter((tr) => tr.visible).map((tr) => tr.position.clone().add(I.pos)))], carp: L.carp });
-    FA = createFauna(W, { H: GROUND_H, rng: (await import('./kit.js?v=20261118e')).rng });
+    KIT = await import('./kit.js?v=20261118h');
+    SG = createSigns(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261118h')).rng, low: mobile || S.quality === 'low' });
+    FX = createFestival(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261118h')).rng, low: mobile || S.quality === 'low', avoid: [...SG.signs.map((s) => s.g.position), ...Object.values(W.islands).flatMap((I) => (I.trees || []).filter((tr) => tr.visible).map((tr) => tr.position.clone().add(I.pos)))], carp: L.carp });
+    FA = createFauna(W, { H: GROUND_H, rng: (await import('./kit.js?v=20261118h')).rng });
     IA = createInteract(W, C, GROUND_H, {
       toast, carp: L.carp,
       toastIf: (m) => { if (!S.intro) toast(m); },
@@ -1235,7 +1245,7 @@ async function boot() {
       nearBooth: (x, z, d) => SG.signs.some((s) => Math.hypot(s.g.position.x - x, s.g.position.z - z) < d),
       makePerson: (seed, shirt) => { const P = makePerson(KIT.rng(9000 + seed), false, { shirt }); P.g.remove(P.hit); return P; },
       reward: (k, n) => { S.bag[k] = (S.bag[k] || 0) + n; saveBag(); },
-      openFishLog,
+      openFishLog, openRules,
     });
   } catch (err) { console.warn(err); textOnly('3D 畫面載入失敗'); window.__ready = true; return; }
   if (S.quality === 'low') setQuality('low');

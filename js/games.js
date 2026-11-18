@@ -92,7 +92,8 @@ export function createGames(W, content, H, api) {
       fish.s.bob.visible = false;
     } else if (st === 'bite') catchFish();
   });
-  ui.querySelector('.fx').addEventListener('click', () => api.openFishLog());
+  ui.querySelector('.fl').addEventListener('click', () => api.openFishLog());
+  ui.querySelector('.frules').addEventListener('click', () => api.openRules('fish'));
   function pickFish() { const tot = FISH.reduce((a, f) => a + f.w, 0); let r = R() * tot; for (const f of FISH) { r -= f.w; if (r <= 0) return f; } return FISH[0]; }
   function catchFish() {
     const f = pickFish(), L = logGet(), first = !L[f.id];
@@ -137,16 +138,18 @@ export function createGames(W, content, H, api) {
   // ================================================================ 🙈 躲貓貓
   const HUI = document.getElementById('hideUI');
   const hTxt = HUI.querySelector('.ht'), hMeter = HUI.querySelector('.hm');
-  let hide = null;   // { list: [{ g, P, found, pos }], t0, limit }
+  let hide = null, hideSign = null;   // { list: [{ g, P, found, pos }], t0, limit }
   // 開始牌子：放在服務台
   {
-    const s = api.freeSpot('center');
+    // 服務台上找一塊空地；空地不夠時退而求其次，放在步道外側最近的可走位置
+    let s = api.freeSpot('center');
+    if (!s) { const C0 = islands.center; for (const a of [2.2, 2.8, 1.6, 3.4, 1.0, 4.0]) { const r = C0.walk.radAt(a) + .9, x = C0.pos.x + Math.cos(a) * r, z = C0.pos.z + Math.sin(a) * r; if (W.ground(x, z) != null && !api.nearBooth(x, z, 1.5)) { s = { x, z }; break; } } }
     if (s) {
       const g = new THREE.Group(); g.position.set(s.x, H, s.z); root.add(g);
       add(g, G.cyl, '#7a4a22', 0, .7, 0, .07, 1.4, .07);
-      const sp = label('🙈 躲貓貓', '#8a5cd0'); sp.position.y = 1.65; g.add(sp);
+      const sp = label('🙈 躲貓貓', '#8a5cd0'); sp.position.y = 1.65; g.add(sp); hideSign = g;
       const hit = new THREE.Mesh(new THREE.BoxGeometry(1.2, 2.2, 1.2), new THREE.MeshBasicMaterial({ visible: false })); hit.position.y = 1; g.add(hit);
-      picks.push({ obj: hit, act: () => startHide() }); picks.push({ obj: sp, act: () => startHide() });
+      picks.push({ obj: hit, act: () => (hide ? startHide() : api.openRules('hide', startHide)) }); picks.push({ obj: sp, act: () => (hide ? startHide() : api.openRules('hide', startHide)) });
       anim.push((t) => { sp.position.y = 1.65 + Math.sin(t * 2.4) * .06; });
     }
   }
@@ -208,6 +211,7 @@ export function createGames(W, content, H, api) {
     setTimeout(() => { for (const h of L) { root.remove(h.g); const i = picks.findIndex((p) => p.obj === h.hit); if (i >= 0) picks.splice(i, 1); } }, win ? 4000 : 8000);
     if (!win) for (const h of L) if (!h.found) { const s = label('我在這裡！', '#e8473f', 300); s.position.y = 1.4; h.g.add(s); }
   }
+  HUI.querySelector('.hr').addEventListener('click', () => api.openRules('hide'));
   HUI.querySelector('.hq').addEventListener('click', () => { if (hide) { api.toast('已結束躲貓貓'); endHide(false); } });
   function hideUpdate(t, dt, walkPos) {
     if (!hide) return;
@@ -238,5 +242,5 @@ export function createGames(W, content, H, api) {
     if (!hit) return false;
     picks.find((p) => p.obj === hit.object).act(); return true;
   }
-  return { update, pick, startHide, spots, onExitWalk: () => { if (hide) { api.toast('離開漫遊，躲貓貓結束'); endHide(false); } } };
+  return { update, pick, startHide, spots, hideSign: () => hideSign, onExitWalk: () => { if (hide) { api.toast('離開漫遊，躲貓貓結束'); endHide(false); } } };
 }
