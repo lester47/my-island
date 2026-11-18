@@ -1,5 +1,5 @@
 {
-  "assetVersion": "20261118o",
+  "assetVersion": "20261118r",
   "site": {
     "title": "115 鯉魚市集",
     "tagline": "跳上五座六角小島，逛美食、玩手作、闖關挑戰，還能挖二手好物！",
@@ -800,7 +800,14 @@
       "photoCaption": "示意插畫，非攤位實拍",
       "sample": true,
       "price": "1 個鯉魚幣",
-      "short": "正反手接球"
+      "short": "正反手接球",
+      "game": {
+        "url": "games/stall-09/",
+        "title": "正反接球王線上版",
+        "short": "正反接球",
+        "ready": true,
+        "beta": true
+      }
     },
     {
       "no": 10,
@@ -830,7 +837,14 @@
         }
       ],
       "sample": true,
-      "short": "套圈圈・戳洞洞抽獎"
+      "short": "套圈圈・戳洞洞抽獎",
+      "game": {
+        "url": "games/stall-10/",
+        "title": "套圈圈＋戳洞洞線上版",
+        "short": "套圈＋戳洞",
+        "ready": true,
+        "beta": true
+      }
     },
     {
       "no": 11,
@@ -846,7 +860,14 @@
       "photoCaption": "示意插畫，非攤位實拍",
       "sample": true,
       "price": "1 個鯉魚幣",
-      "short": "彈珠迷宮"
+      "short": "彈珠迷宮",
+      "game": {
+        "url": "games/stall-11/",
+        "title": "彈珠迷宮線上版",
+        "short": "彈珠迷宮",
+        "ready": true,
+        "beta": true
+      }
     },
     {
       "no": 12,
@@ -892,7 +913,14 @@
         }
       ],
       "sample": true,
-      "short": "記憶翻牌・聽聲辨豆"
+      "short": "記憶翻牌・聽聲辨豆",
+      "game": {
+        "url": "games/stall-13/",
+        "title": "記憶王＋好耳力線上版",
+        "short": "記憶＋聽聲",
+        "ready": true,
+        "beta": true
+      }
     },
     {
       "no": 14,
@@ -908,7 +936,14 @@
       "photoCaption": "示意插畫，非攤位實拍",
       "sample": true,
       "price": "1 個鯉魚幣",
-      "short": "投擲茶杯"
+      "short": "投擲茶杯",
+      "game": {
+        "url": "games/stall-14/",
+        "title": "娃！茶一點就中線上版",
+        "short": "投茶杯",
+        "ready": true,
+        "beta": true
+      }
     },
     {
       "no": 15,
@@ -984,7 +1019,14 @@
       "photoCaption": "示意插畫，非攤位實拍",
       "sample": true,
       "price": "1 個鯉魚幣",
-      "short": "投球進洞"
+      "short": "投球進洞",
+      "game": {
+        "url": "games/stall-18/",
+        "title": "丟球者線上版",
+        "short": "丟球進洞",
+        "ready": true,
+        "beta": true
+      }
     },
     {
       "no": 19,
@@ -1000,7 +1042,14 @@
       "photoCaption": "示意插畫，非攤位實拍",
       "sample": true,
       "price": "1 個鯉魚幣",
-      "short": "戰鬥陀螺對戰"
+      "short": "戰鬥陀螺對戰",
+      "game": {
+        "url": "games/stall-19/",
+        "title": "戰鬥陀螺線上版",
+        "short": "戰鬥陀螺",
+        "ready": true,
+        "beta": true
+      }
     },
     {
       "no": 20,

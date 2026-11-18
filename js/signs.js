@@ -20,6 +20,11 @@ function drawBoard(st, color, dark) {
     g.fillStyle = '#2a1d12'; g.textAlign = 'left';
     const maxW = 340, x = 148;
     const fit = (txt, size) => { let s = size; g.font = `900 ${s}px ${FONT}`; while (g.measureText(txt).width > maxW && s > 20) { s -= 2; g.font = `900 ${s}px ${FONT}`; } return s; };
+    if (st.game && st.game.ready) {                          // 有線上小遊戲：招牌右下角掛「🎮 線上玩」
+      g.beginPath(); g.roundRect(352, 156, 140, 34, 17); g.fillStyle = '#e8762b'; g.fill();
+      g.fillStyle = '#fff'; g.font = `900 24px ${FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('🎮 線上玩', 422, 174);
+      g.fillStyle = '#2a1d12'; g.textAlign = 'left';
+    }
     if (lines.length === 1) { fit(lines[0], 54); g.fillText(lines[0], x, 104); }
     else { const s = Math.min(fit(lines[0], 42), fit(lines[1], 42)); g.font = `900 ${s}px ${FONT}`; g.fillText(lines[0], x, 74); g.fillText(lines[1], x, 132); }
     tex.needsUpdate = true;

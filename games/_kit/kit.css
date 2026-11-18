@@ -1,0 +1,30 @@
+/* 🎮 115 鯉魚市集・攤位小遊戲共用樣式（和市集同一套顏色） */
+:root { --koi: #e8762b; --koi-dk: #b34a10; --ink: #2a1d12; --paper: #fff8ec; --green: #2f8a40; }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: #1f2a24; font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif; color: var(--ink); overscroll-behavior: none; }
+.lg-root { display: flex; flex-direction: column; height: 100dvh; }
+.lg-bar { display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: var(--koi); color: #fff; flex: none; }
+.lg-bar button { min-width: 44px; min-height: 44px; border: 0; border-radius: 12px; background: rgba(255, 255, 255, .92); color: var(--koi-dk); font-weight: 800; font-size: 15px; font-family: inherit; padding: 0 12px; cursor: pointer; }
+.lg-title { flex: 1; margin: 0; font-size: 17px; font-weight: 900; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lg-stage { position: relative; flex: 1; min-height: 0; display: grid; place-items: center; background: radial-gradient(circle at 50% 30%, #2f4a3a, #1f2a24); }
+.lg-cv { display: block; touch-action: none; border-radius: 14px; box-shadow: 0 8px 30px rgba(0, 0, 0, .35); background: var(--paper); user-select: none; -webkit-user-select: none; }
+.lg-over { position: absolute; inset: 0; display: grid; place-items: center; padding: 16px; background: rgba(20, 30, 25, .55); overflow: auto; }
+.lg-over[hidden] { display: none; }
+.lg-card { width: min(360px, 100%); background: var(--paper); border-radius: 22px; padding: 22px 20px; text-align: center; box-shadow: 0 10px 40px rgba(0, 0, 0, .35); border: 4px solid var(--koi); }
+.lg-card h2 { margin: 4px 0 10px; font-size: 26px; color: var(--koi-dk); }
+.lg-logo { width: 72px; height: 72px; object-fit: contain; }
+.lg-no { margin: 0; font-weight: 800; color: var(--koi); }
+.lg-how { text-align: left; margin: 0 0 10px; padding-left: 22px; line-height: 1.6; font-size: 15px; }
+.lg-clear { margin: 8px 0; padding: 8px 10px; border-radius: 12px; background: #fde8d6; font-weight: 800; font-size: 15px; }
+.lg-best { margin: 6px 0; font-weight: 800; color: var(--green); }
+.lg-line { margin: 6px 0; font-size: 16px; }
+.lg-credit { margin: 10px 0 0; font-size: 12px; color: #7a6a5a; }
+.lg-btns { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 12px; }
+.lg-btn { min-height: 48px; min-width: 120px; padding: 0 20px; border: 0; border-radius: 999px; background: var(--koi); color: #fff; font-weight: 900; font-size: 18px; font-family: inherit; cursor: pointer; margin-top: 8px; }
+.lg-btn.ghost { background: #fff; color: var(--koi-dk); border: 3px solid var(--koi); }
+.lg-btn:focus-visible, .lg-bar button:focus-visible { outline: 3px solid #2f7fd1; outline-offset: 2px; }
+.lg-toast { position: absolute; left: 50%; top: 14px; transform: translate(-50%, -20px); margin: 0; padding: 8px 16px; border-radius: 999px; background: rgba(42, 29, 18, .9); color: #fff; font-weight: 800; opacity: 0; transition: .25s; pointer-events: none; white-space: nowrap; }
+.lg-toast.on { opacity: 1; transform: translate(-50%, 0); }
+.lg-pad { position: absolute; display: grid; gap: 6px; }
+.lg-pad button { width: 56px; height: 56px; border: 0; border-radius: 16px; background: rgba(255, 255, 255, .9); font-size: 24px; touch-action: none; }
+.lg-bar button[hidden] { display: none; }

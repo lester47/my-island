@@ -1,6 +1,6 @@
 // 115 鯉魚市集｜介面與流程
 import * as THREE from 'three';
-import { ROLES, OUTFITS, HATS } from './roles.js?v=20261118o';
+import { ROLES, OUTFITS, HATS } from './roles.js?v=20261118r';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -15,7 +15,7 @@ const pad2 = (n) => String(n).padStart(2, '0');
 const fmtH = (h) => { h = ((h % 24) + 24) % 24; return `${pad2(Math.floor(h))}:${pad2(Math.floor((h % 1) * 60))}`; };
 
 // 介面 Logo：低多邊形鯉魚（橘紅魚背、米白魚腹、魚頭朝右），首頁、怎麼逛、集章完成共用這一張
-const LOGO_SRC = 'assets/brand/koi-logo.png?v=20261118o';
+const LOGO_SRC = 'assets/brand/koi-logo.png?v=20261118r';
 const MASCOT = `<img src="${LOGO_SRC}" alt="115 鯉魚市集 Logo：低多邊形小鯉魚" decoding="async">`;
 
 let C = null;            // content.json
@@ -165,7 +165,7 @@ function openBag() {
 function openStamps() {
   $('#stampBody').innerHTML = `<p style="margin:0 0 12px">逛過一座島（打開它的介紹）就能蓋一枚章。目前 <b>${S.stamps.length}/6</b>。</p>
     <div class="stampgrid">${STAMP_IDS.map((id) => { const i = islandById(id); const got = S.stamps.includes(id); return `<div class="stamp ${got ? 'got' : ''}" style="--c:${colorOf(id)}">${got ? '🏮<br>' : ''}${esc(i.name)}${got ? '' : '<br>未蓋章'}</div>`; }).join('')}</div>
-    <p class="foot">集章紀錄存在這台裝置的瀏覽器裡。</p><button type="button" class="btn ghost" id="stampReset">重置集章</button>`;
+    ${gameStampsHTML()}<p class="foot">集章紀錄存在這台裝置的瀏覽器裡。</p><button type="button" class="btn ghost" id="stampReset">重置集章</button>`;
   $('#stampReset').onclick = () => { S.stamps = []; store.set('stamps', []); store.set('doneShown', false); renderHud(); openStamps(); toast('集章已重置'); };
   openDlg('#stampDlg');
 }
@@ -464,8 +464,61 @@ function stallDetailHTML(st) {
   else h += photoHTML(st, st.name) + fieldsHTML(st, T, st.template);
   if (!any && !st.template) h += `<p class="sd-empty">${esc(N.pendingIntro)}</p>`;
   for (const m of missionsAt(st.no)) h += `<div class="mis" data-mis="${esc(m.id)}">${misInner(m.id)}</div>`;
+  h += gameHTML(st);
   if (st.challengeEnabled) h += `<div class="chal" data-chal="${st.no}">${chalInner(st.no)}</div>`;
   return h + `<p class="sd-foot">攤位內容與價格以現場為準。</p>`;
+}
+// ------------------------------------------------------------------ 🎮 攤位線上小遊戲：市集是入口，遊戲放在 games/stall-XX/，用全螢幕視窗打開
+// 遊戲過關時用 postMessage 通知市集（{ liyu:1, type:'clear', score }），市集蓋「線上通關章」；和現場蓋的章分開記
+const gameClears = () => store.get('gameClears', {}) || {};
+const gameStalls = () => C.stalls.filter((s) => s.game && s.game.ready && s.game.stamp !== false).sort((a, b) => a.no - b.no);
+function gameInner(no) {
+  const st = stallByNo(no), g = st.game, c = gameClears()[no];
+  if (!g.ready) return `<button type="button" class="btn" disabled>🚧 線上版製作中</button>`;
+  return `<button type="button" class="btn gm-play" data-game="${no}">🎮 玩線上版${g.beta ? '（試玩版）' : ''}</button>${c ? `<span class="gm-done">✅ 已線上通關${c.best != null ? `・最佳 ${c.best}` : ''}</span>` : `<span class="gm-hint">${esc(g.hint || '在網站上先練習，現場再挑戰！')}</span>`}`;
+}
+function gameHTML(st) { return st.game ? `<div class="gm-box" data-gm="${st.no}">${gameInner(st.no)}</div>` : ''; }
+let gameNo = null;
+function openGame(no) {
+  const st = stallByNo(+no); if (!st || !st.game || !st.game.ready) return;
+  gameNo = st.no;
+  $('#gameTitle').textContent = `第 ${pad2(st.no)} 攤・${st.game.title}`;
+  $('#gameLoad').hidden = false;
+  const u = st.game.url; $('#gameFrame').src = `${u}${u.includes('?') ? '&' : '?'}embed=1&v=${C.assetVersion || ''}`;
+  openDlg('#gameDlg');
+  setTimeout(() => { try { $('#gameFrame').focus(); } catch { /* 沒關係 */ } }, 300);
+}
+function closeGame() { const d = $('#gameDlg'); if (d.open) d.close(); }
+$('#gameDlg').addEventListener('close', () => {
+  $('#gameFrame').src = 'about:blank';
+  if (gameNo != null) document.querySelectorAll(`[data-gm="${gameNo}"]`).forEach((b) => (b.innerHTML = gameInner(gameNo)));
+  gameNo = null;
+});
+$('#gameBack').addEventListener('click', closeGame);
+document.addEventListener('click', (e) => { const b = e.target instanceof Element && e.target.closest('[data-game]'); if (b) openGame(b.dataset.game); });
+addEventListener('message', (e) => {
+  const m = e.data;
+  if (e.origin !== location.origin || !m || m.liyu !== 1 || e.source !== $('#gameFrame').contentWindow || gameNo == null) return;
+  if (m.type === 'ready') $('#gameLoad').hidden = true;
+  else if (m.type === 'close') closeGame();
+  else if (m.type === 'clear') onGameClear(gameNo, m.score);
+});
+function onGameClear(no, score) {
+  const all = gameClears(), first = !all[no], rec = all[no] || {};
+  if (typeof score === 'number' && isFinite(score) && (rec.best == null || score > rec.best)) rec.best = Math.round(score);
+  if (!rec.at) rec.at = new Date().toISOString();
+  all[no] = rec; store.set('gameClears', all);
+  if (!first) return;
+  const list = gameStalls(), n = list.filter((s) => all[s.no]).length;
+  S.bag.shell = (S.bag.shell || 0) + 1; saveBag();
+  toast(`✅ 線上通關章！第 ${pad2(no)} 攤（${n}/${list.length}）送你一個貝殼🐚`);
+  if (n === list.length && !store.get('gameAll', false)) { store.set('gameAll', true); S.bag.postcard = (S.bag.postcard || 0) + 1; saveBag(); setTimeout(() => toast('🏆 線上通關章全部集滿！送你島主的明信片 💌'), 2600); }
+}
+function gameStampsHTML() {
+  const list = gameStalls(); if (!list.length) return '';
+  const all = gameClears(), n = list.filter((s) => all[s.no]).length;
+  return `<h3 style="margin:18px 0 8px">🎮 線上通關章 ${n}/${list.length}</h3><p class="foot" style="margin:0 0 10px">在攤位介紹按「玩線上版」，過關就蓋一枚。這是網站上的章，不能換現場獎品。</p>
+    <div class="stampgrid gm-grid">${list.map((s) => `<button type="button" class="stamp ${all[s.no] ? 'got' : ''}" style="--c:#e8762b" data-game="${s.no}">${all[s.no] ? '✅<br>' : ''}${pad2(s.no)} ${esc(s.game.short || s.short || s.name)}${all[s.no] ? '' : '<br>未通關'}</button>`).join('')}</div>`;
 }
 function stallListHTML(id) {
   return `<ol class="stalls">${stallsOf(id).map((st) => `<li data-no="${st.no}"><button type="button" class="stall-row" id="sr-${st.no}" aria-expanded="false" aria-controls="sd-${st.no}"><span class="num" aria-hidden="true">${pad2(st.no)}</span><span class="nm ${st.namePending ? 'pending' : ''}"><span class="sr-only">攤號 ${st.no}，</span>${esc(st.name)}${st.short ? `<small class="short">｜${esc(st.short)}</small>` : ''}</span>${st.challengeEnabled ? `<span class="chk" data-chk="${st.no}">${ppDone(st.no) ? '✓ 已登記' : ''}</span>` : ''}<span class="chev" aria-hidden="true"></span></button><div class="stall-detail stall-detail-body" id="sd-${st.no}" role="region" aria-labelledby="sr-${st.no}" hidden>${stallDetailHTML(st)}</div></li>`).join('')}</ol>`;
@@ -1155,14 +1208,14 @@ function balloonPopped() {
 }
 function startNet() {
   const M = C.multiplayer; if (!M || !M.enabled || !M.firebase || !PL) return;
-  import('./net.js?v=20261118o').then(({ createNet }) => {
+  import('./net.js?v=20261118r').then(({ createNet }) => {
     NET = createNet(M.firebase, {
       myPos: () => PL.myPos(), upsert: (id, info, pos) => PL.upsert(id, info, pos), remove: (id) => PL.remove(id),
       onCount: (c) => { COUNT = c; const el = $('#onlineChip'); el.hidden = false; $('#onlineCount').textContent = c.players; el.setAttribute('aria-label', `市集島上 ${c.players} 人，開著網站 ${c.viewers} 人，點一下看各身分人數`); },
       onStatus: (s, msg) => { $('#onlineChip').classList.toggle('off', s !== 'online'); if (s === 'error') console.warn('連線錯誤', msg); },
     });
     NET.setMe(meProfile());
-    import('./hidemp.js?v=20261118o').then(({ createHideMP }) => {
+    import('./hidemp.js?v=20261118r').then(({ createHideMP }) => {
       HM = createHideMP(NET, {
         toast, profile: meProfile, enterWalk: () => { if (!S.walking) enterWalk(); },
         walkPos: () => (S.walking ? CAM.walk.pos : null), posOf: (id) => PL.posOf(id),
@@ -1265,7 +1318,7 @@ async function boot() {
   if (Q.has('nogl') || !webglOK()) { textOnly(Q.has('nogl') ? '已切換為文字清單版' : '這台裝置無法顯示 3D 畫面'); applyTheme(); updateClock(); setInterval(updateClock, 10000); window.__ready = true; return; }
   let mods;
   try {
-    mods = await Promise.all([import('./world.js?v=20261118o'), import('./life.js?v=20261118o'), import('./cam.js?v=20261118o'), import('./players.js?v=20261118o'), import('./signs.js?v=20261118o'), import('./festival.js?v=20261118o'), import('./fauna.js?v=20261118o'), import('./interact.js?v=20261118o'), import('./games.js?v=20261118o')]);
+    mods = await Promise.all([import('./world.js?v=20261118r'), import('./life.js?v=20261118r'), import('./cam.js?v=20261118r'), import('./players.js?v=20261118r'), import('./signs.js?v=20261118r'), import('./festival.js?v=20261118r'), import('./fauna.js?v=20261118r'), import('./interact.js?v=20261118r'), import('./games.js?v=20261118r')]);
     const [{ createWorld, H: GROUND_H }, { createLife, makePerson }, { createCam }, { createPlayers }, { createSigns }, { createFestival }, { createFauna }, { createInteract }, { createGames, FISH }] = mods;
     const mobile = isMobile();
     W = createWorld($('#gl'), { quality: S.quality, mobile });
@@ -1277,10 +1330,10 @@ async function boot() {
     W.canBoard = canBoardWalk;
     // 搭船中：只有靠港、跳板放下時才能走出船艙
     W.canLeave = () => { const s = L.carp.status(); if (s.docked && s.gang) return true; if (performance.now() - lastBlockToast > 3000) { lastBlockToast = performance.now(); toast('⛔ 航行中請待在船上，靠港放下跳板後再下船'); } return false; };
-    KIT = await import('./kit.js?v=20261118o');
-    SG = createSigns(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261118o')).rng, low: mobile || S.quality === 'low' });
-    FX = createFestival(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261118o')).rng, low: mobile || S.quality === 'low', avoid: [...SG.signs.map((s) => s.g.position), ...Object.values(W.islands).flatMap((I) => (I.trees || []).filter((tr) => tr.visible).map((tr) => tr.position.clone().add(I.pos)))], carp: L.carp });
-    FA = createFauna(W, { H: GROUND_H, rng: (await import('./kit.js?v=20261118o')).rng });
+    KIT = await import('./kit.js?v=20261118r');
+    SG = createSigns(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261118r')).rng, low: mobile || S.quality === 'low' });
+    FX = createFestival(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261118r')).rng, low: mobile || S.quality === 'low', avoid: [...SG.signs.map((s) => s.g.position), ...Object.values(W.islands).flatMap((I) => (I.trees || []).filter((tr) => tr.visible).map((tr) => tr.position.clone().add(I.pos)))], carp: L.carp });
+    FA = createFauna(W, { H: GROUND_H, rng: (await import('./kit.js?v=20261118r')).rng });
     IA = createInteract(W, C, GROUND_H, {
       toast, carp: L.carp,
       toastIf: (m) => { if (!S.intro) toast(m); },
