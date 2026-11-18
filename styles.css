@@ -448,7 +448,7 @@ select.pp-in { width: auto; max-width: 160px; }
 .fish-ui .fbtns { display: flex; gap: 8px; justify-content: center; }
 .fish-ui .fb { border: 0; border-radius: 999px; min-height: 48px; padding: 0 22px; font-size: 18px; font-weight: 900; background: #2f7fd1; color: #fff; cursor: pointer; }
 .fish-ui .fb[data-state="bite"] { background: #e8473f; animation: fishpulse .35s infinite alternate; }
-.fish-ui .fb[data-state="wait"] { background: #8aa4bf; }
+.fish-ui .fb[data-state="wait"], .fish-ui .fb[data-state="cast"] { background: #8aa4bf; }
 .fish-ui .fx { border: 2px solid #2f7fd1; background: #fff; color: #1d5aa0; border-radius: 999px; padding: 0 12px; font-weight: 800; cursor: pointer; }
 @keyframes fishpulse { to { transform: scale(1.08); } }
 .fish-log { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }

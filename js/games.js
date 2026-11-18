@@ -40,7 +40,7 @@ export function createGames(W, content, H, api) {
     add(g, G.cyl, '#2f7fd1', .45, .16, -.25, .38, .26, .38);                              // 水桶
     add(g, G.cyl, '#1d5aa0', .45, .3, -.25, .4, .03, .4);
     const rodHold = add(g, G.cyl, '#5a3a1a', -.45, .35, .35, .06, .5, .06);                // 竿架
-    add(g, G.cyl, '#3a2a1a', -.45, .95, .75, .03, 1.5, .03, .75);                         // 立著的釣竿
+    const rackRod = add(g, G.cyl, '#3a2a1a', -.45, .95, .75, .03, 1.5, .03, .75);         // 立著的釣竿（釣魚時拿起來）
     const sp = label('🎣 釣魚區', '#2f7fd1'); sp.position.set(0, 1.9, 0); g.add(sp);
     const hit = new THREE.Mesh(new THREE.BoxGeometry(1.6, 2.2, 1.4), new THREE.MeshBasicMaterial({ visible: false })); hit.position.y = 1; g.add(hit);
     // 浮標：釣魚時出現在前方水面
@@ -48,7 +48,15 @@ export function createGames(W, content, H, api) {
     add(bob, G.sph, '#ffffff', 0, 0, 0, .18, .18, .18); add(bob, G.sph, '#e8473f', 0, .08, 0, .19, .1, .19); add(bob, G.cyl, '#222', 0, .18, 0, .02, .16, .02);
     const ring = new THREE.Mesh(new THREE.RingGeometry(.2, .26, 20), new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0, side: THREE.DoubleSide })); ring.rotation.x = -Math.PI / 2; root.add(ring);
     const water = pos.clone().addScaledVector(dir, 3.2); water.y = .05;
-    const s = { g, pos, dir, name, bob, ring, water, stand: pos.clone().addScaledVector(dir, -.1) };
+    // 手上的釣竿：握把在人的右前方，往前倒是 rotation.x 變大
+    const side = new THREE.Vector3(-dir.z, 0, dir.x);
+    const rod = new THREE.Group(); rod.position.copy(pos).addScaledVector(dir, .45).addScaledVector(side, -.38); rod.position.y = pos.y + .6; rod.rotation.y = Math.atan2(dir.x, dir.z); rod.visible = false; root.add(rod);
+    const tilt = new THREE.Group(); rod.add(tilt);
+    add(tilt, G.cyl, '#2a2a2a', 0, .15, 0, .05, .3, .05); add(tilt, G.cyl, '#8b5a2b', 0, 1.25, 0, .028, 1.9, .028);   // 握把＋竿身
+    add(tilt, G.cyl, '#c0c0c0', .05, .32, 0, .1, .06, .1, 0, 0, Math.PI / 2);                                       // 捲線器
+    const tip = new THREE.Object3D(); tip.position.y = 2.2; tilt.add(tip);
+    const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]), new THREE.LineBasicMaterial({ color: '#f4f4f4' })); line.frustumCulled = false; line.visible = false; root.add(line);
+    const s = { g, pos, dir, name, bob, ring, water, rod, tilt, tip, line, rackRod, stand: pos.clone().addScaledVector(dir, -.1) };
     spots.push(s); picks.push({ obj: hit, act: () => goFish(s) }); picks.push({ obj: sp, act: () => goFish(s) });
     anim.push((t) => { sp.position.y = 1.9 + Math.sin(t * 2 + spots.length) * .05; });
   }
@@ -84,22 +92,53 @@ export function createGames(W, content, H, api) {
   uiBtn.addEventListener('click', () => {
     if (!fish) return;
     const st = fish.state;
-    if (st === 'idle' || st === 'done') {
-      fish.s.bob.visible = true; fish.s.bob.position.copy(fish.s.water); fish.t = 0; fish.biteAt = 2 + R() * 4.5;
-      setState('wait', '浮標下水了…耐心等魚上鉤（浮標往下沉就快按！）', '⏳ 等待中…');
-    } else if (st === 'wait') {
-      setState('idle', '太早拉起來了，魚還沒咬鉤！再拋一次吧', '🎣 拋竿');
-      fish.s.bob.visible = false;
-    } else if (st === 'bite') catchFish();
+    if (st === 'idle' || st === 'done') cast();
+    else if (st === 'wait') { reel(); setState('idle', '太早收竿了，魚還沒咬鉤！再拋一次吧', '🎣 拋竿'); }
+    else if (st === 'bite') { reel(); catchFish(); }
   });
   ui.querySelector('.fl').addEventListener('click', () => api.openFishLog());
   ui.querySelector('.frules').addEventListener('click', () => api.openRules('fish'));
+  // ---- 拋竿動畫：竿子往後舉 → 往前甩 → 浮標畫弧線飛出去落水；收竿：竿子往上提、浮標拉回來
+  // 等待 1～5 分鐘才會知道有沒有魚上鉤（約 4 次有 1 次沒有魚）
+  const FAST = /fishfast/.test(location.search);              // 測試用：?fishfast 縮短等待
+  const WAIT_MIN = FAST ? 3 : 60, WAIT_MAX = FAST ? 6 : 300, BITE_WIN = 3;
+  const mmss = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+  function cast() {
+    const s = fish.s; fish.t = 0; fish.anim = { kind: 'cast', t: 0 }; fish.lastSec = -1;
+    fish.biteAt = WAIT_MIN + R() * (WAIT_MAX - WAIT_MIN); fish.none = R() < .25; fish.nibbles = [];
+    for (let k = 8 + R() * 12; k < fish.biteAt - 4; k += 10 + R() * 25) fish.nibbles.push(k);     // 偶爾小魚啄一下
+    s.rackRod.visible = false; s.rod.visible = true; s.line.visible = true; s.bob.visible = true;
+    setState('cast', '揮竿！浮標飛出去了…', '🎣 拋竿中…');
+  }
+  function reel() { const s = fish.s; fish.anim = { kind: 'reel', t: 0, from: s.bob.position.clone() }; s.ring.material.opacity = 0; }
+  function rodDone(s) { s.rod.visible = false; s.line.visible = false; s.bob.visible = false; s.rackRod.visible = true; s.ring.material.opacity = 0; }
+  const _tip = new THREE.Vector3();
+  function rodAnim(dt) {
+    const s = fish.s, A = fish.anim; if (!A) return;
+    A.t += dt; const k = A.t;
+    s.tip.getWorldPosition(_tip);
+    if (A.kind === 'cast') {
+      // 0～0.4 秒往後舉，0.4～0.7 秒往前甩，0.55 秒浮標出手，1.4 秒落水
+      s.tilt.rotation.x = k < .4 ? .3 - (k / .4) * .9 : k < .7 ? -.6 + ((k - .4) / .3) * 1.9 : 1.3 - Math.min(1, (k - .7) / .5) * .1;
+      if (k < .55) s.bob.position.copy(_tip).y -= .25;
+      else { const u = Math.min(1, (k - .55) / .85); if (!A.from) A.from = _tip.clone(); s.bob.position.lerpVectors(A.from, s.water, u); s.bob.position.y = A.from.y + (s.water.y - A.from.y) * u + Math.sin(u * Math.PI) * 1.6; }
+      if (k >= 1.4) {
+        s.bob.position.copy(s.water); fish.anim = null; s.ring.position.set(s.water.x, .06, s.water.z); fish.splash = 0;
+        setState('wait', '浮標下水了…耐心等魚上鉤（1～5 分鐘），浮標往下沉、冒出水波就快按「收竿」！', '⏳ 等待中…（按了會收竿）');
+      }
+    } else if (A.kind === 'reel') {
+      const u = Math.min(1, k / .6);
+      s.tilt.rotation.x = 1.2 - u * 1.4;
+      s.bob.position.lerpVectors(A.from, _tip, u); s.bob.position.y += Math.sin(u * Math.PI) * .6;
+      if (k >= .7) { fish.anim = null; rodDone(s); s.tilt.rotation.x = .3; }
+    }
+  }
   function pickFish() { const tot = FISH.reduce((a, f) => a + f.w, 0); let r = R() * tot; for (const f of FISH) { r -= f.w; if (r <= 0) return f; } return FISH[0]; }
   function catchFish() {
     const f = pickFish(), L = logGet(), first = !L[f.id];
     const cm = f.size ? Math.round(f.size[0] + R() * (f.size[1] - f.size[0])) : 0;
     const rec = L[f.id] || { n: 0, best: 0 }; rec.n++; if (cm > rec.best) rec.best = cm; L[f.id] = rec; api.store.set('fishlog', L);
-    fish.s.bob.visible = false; jump(fish.s, f);
+    jump(fish.s, f);
     let msg = f.trash ? `${f.icon} 釣到${f.name}！撿起來丟回收桶，湖水更乾淨了 👍` : `${f.icon} 釣到${f.name}！${cm} 公分`;
     if (first) { msg += '　📖 新的圖鑑！'; api.reward('shell', 1); msg += ' 送你一個貝殼🐚'; }
     const done = FISH.every((q) => L[q.id]);
@@ -117,22 +156,31 @@ export function createGames(W, content, H, api) {
   }
   function fishUpdate(t, dt, walkPos) {
     const near = walkPos ? spots.find((s) => Math.hypot(s.pos.x - walkPos.x, s.pos.z - walkPos.z) < 1.8) : null;
-    if (near && (!fish || fish.s !== near)) { if (fish) fish.s.bob.visible = false; fish = { s: near }; setState('idle', `${near.name}：按「拋竿」，看到浮標往下沉就按「收竿」！`, '🎣 拋竿'); refreshLog(); }
-    if (!near && fish) { fish.s.bob.visible = false; fish.s.ring.material.opacity = 0; fish = null; }
+    if (near && (!fish || fish.s !== near)) { if (fish) rodDone(fish.s); fish = { s: near }; setState('idle', `${near.name}：按「拋竿」，看到浮標往下沉就按「收竿」！`, '🎣 拋竿'); refreshLog(); }
+    if (!near && fish) { rodDone(fish.s); fish = null; }
     ui.hidden = !fish;
     if (!fish) return;
     const s = fish.s;
+    rodAnim(dt);
+    if (s.line.visible) { s.tip.getWorldPosition(_tip); const a = s.line.geometry.attributes.position; a.setXYZ(0, _tip.x, _tip.y, _tip.z); a.setXYZ(1, s.bob.position.x, s.bob.position.y + .18, s.bob.position.z); a.needsUpdate = true; }
+    if (fish.splash != null) { fish.splash += dt; s.ring.scale.setScalar(1 + fish.splash * 5); s.ring.material.opacity = Math.max(0, .9 - fish.splash * 1.2); if (fish.splash > .8) fish.splash = null; }
     if (fish.state === 'wait' || fish.state === 'bite') {
       fish.t += dt;
       if (fish.state === 'wait') {
-        s.bob.position.y = .05 + Math.sin(t * 3) * .03;
-        if (fish.t > fish.biteAt) { setState('bite', '❗ 魚咬鉤了！快按「收竿」！', '🐟 收竿！'); fish.biteT = 0; }
+        const nb = fish.nibbles.find((k) => fish.t > k && fish.t < k + .6);          // 小魚啄一下：浮標輕輕抖
+        s.bob.position.y = .05 + Math.sin(t * 3) * .03 - (nb != null ? Math.abs(Math.sin(t * 25)) * .05 : 0);
+        if (!fish.anim) s.tilt.rotation.x = 1.2 + Math.sin(t * 1.5) * .02;
+        const sec = Math.floor(fish.t); if (sec !== fish.lastSec) { fish.lastSec = sec; uiTxt.textContent = `⏳ 已經等了 ${mmss(fish.t)}（1～5 分鐘才知道有沒有魚）${nb != null ? '　…浮標動了一下，還不是喔' : ''}　浮標往下沉、冒出水波就快按「收竿」！`; }
+        if (fish.t > fish.biteAt) {
+          if (fish.none) { reel(); setState('idle', `等了 ${mmss(fish.t)}，這次沒有魚上鉤…換個時間再拋一次吧！`, '🎣 拋竿'); }
+          else { setState('bite', '❗ 魚咬鉤了！快按「收竿」！（3 秒內）', '🐟 收竿！'); fish.biteT = 0; }
+        }
       } else {
-        fish.biteT += dt; s.bob.position.y = -.12 + Math.sin(t * 22) * .06;
+        fish.biteT += dt; s.bob.position.y = -.12 + Math.sin(t * 22) * .06; s.tilt.rotation.x = 1.1 + Math.sin(t * 18) * .06;
         s.ring.position.set(s.water.x, .06, s.water.z); s.ring.scale.setScalar(1 + (fish.biteT % .5) * 4); s.ring.material.opacity = .8 - (fish.biteT % .5) * 1.6;
-        if (fish.biteT > 1.8) { setState('idle', '哎呀，魚跑掉了！下次看到浮標下沉要快一點', '🎣 拋竿'); s.bob.visible = false; s.ring.material.opacity = 0; }
+        if (fish.biteT > BITE_WIN) { reel(); setState('idle', '哎呀，魚跑掉了！下次看到浮標下沉要快一點', '🎣 拋竿'); }
       }
-    } else s.ring.material.opacity = 0;
+    } else if (fish.splash == null) s.ring.material.opacity = 0;
   }
 
   // ================================================================ 🙈 躲貓貓
