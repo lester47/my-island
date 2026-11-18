@@ -1,7 +1,7 @@
 // 3D 世界：天空、海、遠山、島嶼與地標、橋、日夜光影
 import * as THREE from 'three';
-import { TAU, clamp, lerp, smooth, rng, loopNoise, mat, Builder, GEO, glowTexture, C } from './kit.js?v=20261118n';
-import { makeScenery } from './scenery.js?v=20261118n';
+import { TAU, clamp, lerp, smooth, rng, loopNoise, mat, Builder, GEO, glowTexture, C } from './kit.js?v=20261118o';
+import { makeScenery } from './scenery.js?v=20261118o';
 
 export const H = 1.75;               // 島頂草地高度
 const SEG = 72;                      // 海岸線分段（6 的倍數，六角轉角落在頂點上）
@@ -432,32 +432,52 @@ function landmarkCenter(B, g, P, extras) {
       const k = koiPlane(i % 5, 1.35); k.position.set(.34, 1.35, z); k.rotation.set(0, ry, Math.PI / 2); arm.add(k);
     }
   });
-  // 塔身：前後各一尾立體的錦鯉雕塑（低多邊形、有厚度），用短支架固定在塔的外牆上，尾巴微微擺動
-  const sculpt = [
-    { base: '#f7f3ea', spots: [['#e8402f', -.48, .07, .17, .14], ['#e8402f', .02, .08, .3, .16], ['#e8402f', .42, .04, .15, .1]], fin: '#f2d9c8' },        // 紅白
-    { base: '#f7f3ea', spots: [['#e8402f', -.46, .07, .16, .14], ['#1f1f24', -.12, .1, .12, .1], ['#e8402f', .18, .07, .24, .15], ['#1f1f24', .48, .03, .09, .07]], fin: '#ece4d6' },   // 三色
-  ];
-  const FM = new Map(); const fm = (c) => { if (!FM.has(c)) FM.set(c, new THREE.MeshStandardMaterial({ color: c, flatShading: true, roughness: .55, metalness: .05 })); return FM.get(c); };
-  const sph = new THREE.SphereGeometry(1, 10, 7), cone4 = new THREE.ConeGeometry(1, 1, 4), cyl8 = new THREE.CylinderGeometry(1, 1, 1, 8);
-  const part = (p, geo, c, x, y, z, sx, sy, sz, rx = 0, ry = 0, rz = 0) => { const m = new THREE.Mesh(geo, fm(c)); m.position.set(x, y, z); m.scale.set(sx, sy, sz); m.rotation.set(rx, ry, rz); m.castShadow = true; p.add(m); return m; };
-  function koiSculpture(S) {
-    const k = new THREE.Group();                                                         // 魚頭朝 -x、側面朝 +z（朝外）
-    part(k, sph, S.base, 0, 0, 0, .62, .25, .19);                                        // 身體
-    part(k, sph, S.base, -.5, -.01, 0, .3, .21, .17);                                    // 頭
-    for (const [c, x, y, sx, sy] of S.spots) part(k, sph, c, x, y, 0, sx, sy, .196);      // 花紋（微微凸出身體，像上了色的雕塑）
-    const tail = new THREE.Group(); tail.position.x = .55; k.add(tail);
-    part(tail, cone4, S.base, .12, 0, 0, .12, .32, .09, 0, 0, -Math.PI / 2);              // 尾柄
-    for (const s of [1, -1]) part(tail, cone4, S.fin, .38, s * .11, 0, .12, .34, .03, 0, 0, Math.PI / 2 + s * .6);   // 尾鰭兩片（像燕尾）
-    part(k, cone4, S.fin, .0, .27, 0, .14, .2, .025, 0, 0, .6);                         // 背鰭
-    for (const s of [1, -1]) part(k, cone4, S.fin, -.3, -.2, s * .13, .07, .16, .02, s * .5, 0, -.9);   // 胸鰭
-    for (const s of [1, -1]) {
-      part(k, sph, '#ffffff', -.66, .07, s * .12, .055, .055, .04);                      // 眼睛
-      part(k, sph, '#151515', -.69, .07, s * .145, .028, .03, .02);
-      part(k, cyl8, '#d9b58a', -.8, -.08, s * .06, .008, .14, .008, 0, 0, -.9);          // 鬍鬚
+  // 塔身：前後各一尾立體的錦鯉雕塑——照參考圖最上面那尾紅白錦鯉做成低多邊形（切面）立體造型
+  // 魚頭朝 -x、側面朝 +z（朝外）；身體用一圈圈橢圓斷面接起來，每個面依位置上色（紅白花紋），再加背鰭、胸鰭、燕尾形尾鰭
+  const cyl8 = new THREE.CylinderGeometry(1, 1, 1, 8), FM = new Map();
+  const part = (p, geo, c, x, y, z, sx, sy, sz, rx = 0) => { if (!FM.has(c)) FM.set(c, new THREE.MeshStandardMaterial({ color: c, flatShading: true, roughness: .6 })); const m = new THREE.Mesh(geo, FM.get(c)); m.position.set(x, y, z); m.scale.set(sx, sy, sz); m.rotation.x = rx; m.castShadow = true; p.add(m); return m; };
+  const RED = ['#e2452c', '#d63c25', '#ea5236'], CRM = ['#f0dcc2', '#e8d0b2', '#f6e6d0'];
+  function koiSculpture(seed) {
+    let sd = seed; const rnd = () => ((sd = (sd * 9301 + 49297) % 233280) / 233280);
+    const pos = [], col = [], C = new THREE.Color();
+    const tri = (a, b, c, pal) => { pos.push(...a, ...b, ...c); C.set(pal[Math.floor(rnd() * pal.length)]); for (let i = 0; i < 3; i++) col.push(C.r, C.g, C.b); };
+    // 花紋：t＝從魚嘴到尾柄的位置（0～1），yn＝上下（1 背、-1 肚）
+    const paint = (t, yn) => {                                            // 照參考圖：臉白、眼後到前背紅、腹側白；中段斜斜一大塊白斑（上後下前）、斑下一塊紅；後背紅；尾柄白
+      if (t < .14) return CRM;
+      if (Math.abs(t - (.41 + .1 * yn)) < .075 && t < .56) return CRM;   // 斜的白斑
+      if (t < .56) return yn > -.3 || t > .42 ? RED : CRM;
+      if (t < .74) return yn > -.4 ? RED : CRM;
+      if (t < .86) return yn > .5 ? RED : CRM;
+      return CRM;
+    };
+    const PROF = [[0, -.02, .035, .03], [.05, 0, .1, .085], [.12, .01, .155, .12], [.2, .02, .19, .14], [.3, .025, .205, .145], [.4, .025, .205, .145], [.5, .02, .19, .135], [.6, .01, .16, .12], [.7, 0, .12, .09], [.79, 0, .08, .06], [.88, 0, .05, .04]];
+    const SEC = [PROF[0]];                                               // 斷面加密，花紋邊界才會是斜的、不會變成直條紋
+    for (let i = 1; i < PROF.length; i++) { const p0 = PROF[i - 1], p1 = PROF[i], n = i === 1 ? 1 : 3; for (let k = 1; k <= n; k++) SEC.push(p0.map((v, j) => v + (p1[j] - v) * k / n)); }
+    const N = 10, rings = SEC.map(([x, cy, h, w]) => { const r = []; for (let i = 0; i < N; i++) { const a = i / N * TAU + Math.PI / N, sn = Math.sin(a); r.push([x, cy + h * sn * (sn < 0 ? .85 : 1), w * Math.cos(a)]); } return r; });
+    const tipP = [-.03, -.025, 0];
+    for (let i = 0; i < N; i++) { const a = rings[0][i], b = rings[0][(i + 1) % N]; tri(tipP, b, a, CRM); }   // 嘴尖
+    for (let s = 0; s < SEC.length - 1; s++) for (let i = 0; i < N; i++) {
+      const a = rings[s][i], b = rings[s][(i + 1) % N], c = rings[s + 1][(i + 1) % N], d = rings[s + 1][i];
+      const tm = (SEC[s][0] + SEC[s + 1][0]) / 2 / .88, yn = Math.sin((i + 1) / N * TAU), pal = paint(tm, yn);
+      tri(a, b, c, pal); tri(a, c, d, pal);
     }
-    part(k, sph, '#c96a5a', -.79, -.03, 0, .035, .03, .06);                               // 嘴
-    k.rotation.z = .08;                                                                   // 頭微微上揚，像躍起
-    return { k, tail };
+    // 燕尾形尾鰭：上葉外側紅、內側白；下葉同樣
+    const A = [.86, .045, 0], B = [.86, -.045, 0], Nn = [1.04, 0, 0], U = [1.3, .3, .015], L = [1.28, -.27, -.015], M1 = [1.06, .14, .025], M2 = [1.05, -.13, -.025];
+    tri(A, Nn, B, CRM); tri(A, M1, Nn, CRM); tri(M1, U, Nn, RED); tri(A, U, M1, RED); tri(B, Nn, M2, CRM); tri(M2, Nn, L, RED); tri(B, M2, L, RED);
+    // 背鰭（米白、三角切面）
+    const D0 = [.3, .2, 0], D1 = [.4, .37, .01], D2 = [.47, .22, 0], D3 = [.6, .29, -.01], D4 = [.58, .19, 0];
+    tri(D0, D1, D2, CRM); tri(D2, D1, D3, CRM); tri(D2, D3, D4, CRM);
+    // 胸鰭（左右各一，往後下方張開）
+    for (const z of [1, -1]) { const P0 = [.2, -.12, z * .12], P1 = [.34, -.15, z * .16], P2 = [.31, -.27, z * .2], P3 = [.22, -.22, z * .15]; tri(P0, P1, P2, CRM); tri(P0, P2, P3, CRM); }
+    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); geo.computeVertexNormals();
+    const body = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, side: THREE.DoubleSide, roughness: .6 }));
+    body.castShadow = true; body.position.x = -.6;
+    const k = new THREE.Group(); k.add(body);
+    for (const z of [1, -1]) {
+      const eye = new THREE.Mesh(new THREE.IcosahedronGeometry(.028, 0), new THREE.MeshStandardMaterial({ color: '#1a1414', flatShading: true, roughness: .3 })); eye.position.set(.11 - .6, .045, z * .115); k.add(eye);
+      const bar = new THREE.Mesh(new THREE.CylinderGeometry(.007, .004, .09, 4), new THREE.MeshStandardMaterial({ color: '#e8d0b2' })); bar.position.set(.03 - .6, -.08, z * .03); bar.rotation.z = -.25; k.add(bar);   // 鬍鬚
+    }
+    return k;
   }
   const sculptures = [];
   for (const [y, a, n] of [[1.5, .5, 0], [2.7, .5 + Math.PI, 1]]) {
@@ -465,10 +485,10 @@ function landmarkCenter(B, g, P, extras) {
     const holder = new THREE.Group(); holder.position.set(wm.x + Math.sin(a) * r, H + y, wm.z + Math.cos(a) * r); holder.rotation.y = a; g.add(holder);
     part(holder, cyl8, '#8a7a66', 0, 0, .14, .045, .3, .045, Math.PI / 2);              // 支架
     part(holder, cyl8, '#8a7a66', 0, 0, .02, .16, .04, .16, Math.PI / 2);               // 固定在牆上的圓座
-    const { k, tail } = koiSculpture(sculpt[n]); k.position.z = .36; k.scale.setScalar(1.2); holder.add(k);
-    sculptures.push({ k, tail, ph: n * 1.7 });
+    const k = koiSculpture(7 + n * 13); k.position.z = .36; k.scale.set(1.75, 1.3, 1.3); k.rotation.z = .06; holder.add(k);
+    sculptures.push({ k, ph: n * 1.7 });
   }
-  ANIM.push((t) => { for (const s of sculptures) { s.tail.rotation.y = Math.sin(t * 1.6 + s.ph) * .25; s.k.rotation.y = Math.sin(t * .8 + s.ph) * .06; } });
+  ANIM.push((t) => { for (const s of sculptures) s.k.rotation.y = Math.sin(t * .8 + s.ph) * .06; });
   const mpole = new THREE.Mesh(GEO.cyl6, mat('#d8d2c4')); mpole.scale.set(.06, 1.6, .06); mpole.position.set(wm.x, H + 5.6, wm.z); g.add(mpole);
   const mini = [['#2f7fd1', '#ffffff'], ['#e8473f', '#ffffff']].map(([c1, c2], i) => {
     const koi = new THREE.Group(); koi.position.set(wm.x, H + 6.2 - i * .5, wm.z);
