@@ -1,6 +1,6 @@
 // 115 鯉魚市集｜介面與流程
 import * as THREE from 'three';
-import { ROLES, OUTFITS } from './roles.js?v=20261118b';
+import { ROLES, OUTFITS } from './roles.js?v=20261118c';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -15,7 +15,7 @@ const pad2 = (n) => String(n).padStart(2, '0');
 const fmtH = (h) => { h = ((h % 24) + 24) % 24; return `${pad2(Math.floor(h))}:${pad2(Math.floor((h % 1) * 60))}`; };
 
 // 介面 Logo：低多邊形鯉魚（橘紅魚背、米白魚腹、魚頭朝右），首頁、怎麼逛、集章完成共用這一張
-const LOGO_SRC = 'assets/brand/koi-logo.png?v=20261118b';
+const LOGO_SRC = 'assets/brand/koi-logo.png?v=20261118c';
 const MASCOT = `<img src="${LOGO_SRC}" alt="115 鯉魚市集 Logo：低多邊形小鯉魚" decoding="async">`;
 
 let C = null;            // content.json
@@ -583,7 +583,7 @@ function boatStatus() {
 function boatPanelHTML() {
   const B = C.carpBoat, c = B.color, st = boatStatus();
   return `<div class="p-hd" style="--pc:${c};--ptint:#fde8e1;--pink:#7a2412"><p class="eyebrow">⛵ ${esc(B.role)}</p><h2 id="panelTitle">${esc(B.name)}</h2><button type="button" class="x" data-panel-close aria-label="關閉">✕</button></div>
-    <div class="p-sec" style="--pc:${c}"><h3>現在在哪裡</h3><p class="boat-stat" id="boatStat" aria-live="polite">${esc(st.long)}</p><p class="foot" id="boatPax">船上 ${st.s.seated} 位小朋友（示意角色）</p>
+    <div class="p-sec" style="--pc:${c}"><h3>現在在哪裡</h3><p class="boat-stat" id="boatStat" aria-live="polite">${esc(st.long)}</p><p class="foot" id="boatPax">船上 ${st.s.seated} 位小朋友（示意角色）・登入者 ${boatRiders()}／${BOAT_CAP} 人（最多 ${BOAT_CAP} 人，靠港放下跳板才能上船）</p>
       <div class="chal-btns"><button type="button" class="btn" data-boat="board">🚶 登船（漫遊）</button><button type="button" class="btn ghost" data-boat="pier">⚓ 前往手作體驗二島碼頭</button></div></div>
     <div class="p-sec" style="--pc:${c}"><h3>介紹</h3><p class="intro-line">${esc(B.intro)}</p></div>
     <div class="p-sec"><h3>怎麼玩</h3><ul class="boat-how">${B.how.map((t) => `<li>${esc(t)}</li>`).join('')}</ul><p class="foot" style="margin-top:8px">${esc(B.note)}</p></div>`;
@@ -593,7 +593,7 @@ function refreshBoatPanel(now) {
   if (S.open !== 'carp' || now - boatT < 500) return; boatT = now;
   const st = boatStatus(), a = $('#boatStat'), b = $('#boatPax');
   if (a && a.textContent !== st.long) a.textContent = st.long;
-  if (b) b.textContent = `船上 ${st.s.seated} 位小朋友（示意角色）`;
+  if (b) b.textContent = `船上 ${st.s.seated} 位小朋友（示意角色）・登入者 ${boatRiders()}／${BOAT_CAP} 人（最多 ${BOAT_CAP} 人，靠港放下跳板才能上船）`;
 }
 // 前往鯉魚號碼頭：鏡頭飛到手作體驗二島西側的木棧道（從湖面這側斜看棧道和停靠的船）
 // 五島合照點：鏡頭轉到同時拍得到幾何鯉魚風車、木橋與鯉魚號航道的角度
@@ -630,8 +630,25 @@ function openBoat(opts = {}) {
   $('#panel').hidden = true;
   CAM.flyToBoat(L.carp.anchor, showBoatPanel);
 }
+// 鯉魚號最多 8 位登入者同時在船上；只有靠港、跳板放下時才能上船
+const BOAT_CAP = 8;
+const boatRiders = () => (PL ? PL.onBoatCount() : 0) + (S.walking && W.onBoat(CAM.walk.pos.x, CAM.walk.pos.z) ? 1 : 0);
+function boardCheck() {
+  const s = L.carp.status();
+  if (!s.docked || !s.gang) return s.docked ? '鯉魚號正在靠港，等跳板放下就能上船' : `鯉魚號正在航行，約 ${s.eta} 秒後回到碼頭，靠港放下跳板才能上船`;
+  if (boatRiders() >= BOAT_CAP) return `鯉魚號已經坐滿 ${BOAT_CAP} 人了，請等下一班`;
+  return '';
+}
+let lastBlockToast = 0;
+function canBoardWalk() {
+  const why = boardCheck(); if (!why) return true;
+  if (performance.now() - lastBlockToast > 3000) { lastBlockToast = performance.now(); toast('⛔ ' + why); }
+  return false;
+}
 function boardBoat() {
   if (!W || !L) return;
+  const why = boardCheck();
+  if (why) { toast('⛔ ' + why); return; }
   const bs = L.carp.boardSpot(); bs.yaw += Math.PI * .62;   // 一上船先朝向船的右舷（湖景那一側），不是看乘客的背影和桅杆
   enterWalk(bs); CAM.walk.pitch = -.32; S.disHint = false;
   const s = L.carp.status();
@@ -1085,7 +1102,7 @@ function balloonPopped() {
 }
 function startNet() {
   const M = C.multiplayer; if (!M || !M.enabled || !M.firebase || !PL) return;
-  import('./net.js?v=20261118b').then(({ createNet }) => {
+  import('./net.js?v=20261118c').then(({ createNet }) => {
     NET = createNet(M.firebase, {
       myPos: () => PL.myPos(), upsert: (id, info, pos) => PL.upsert(id, info, pos), remove: (id) => PL.remove(id),
       onCount: (c) => { COUNT = c; const el = $('#onlineChip'); el.hidden = false; $('#onlineCount').textContent = c.players; el.setAttribute('aria-label', `市集島上 ${c.players} 人，開著網站 ${c.viewers} 人，點一下看各身分人數`); },
@@ -1175,7 +1192,7 @@ async function boot() {
   if (Q.has('nogl') || !webglOK()) { textOnly(Q.has('nogl') ? '已切換為文字清單版' : '這台裝置無法顯示 3D 畫面'); applyTheme(); updateClock(); setInterval(updateClock, 10000); window.__ready = true; return; }
   let mods;
   try {
-    mods = await Promise.all([import('./world.js?v=20261118b'), import('./life.js?v=20261118b'), import('./cam.js?v=20261118b'), import('./players.js?v=20261118b'), import('./signs.js?v=20261118b'), import('./festival.js?v=20261118b'), import('./fauna.js?v=20261118b'), import('./interact.js?v=20261118b')]);
+    mods = await Promise.all([import('./world.js?v=20261118c'), import('./life.js?v=20261118c'), import('./cam.js?v=20261118c'), import('./players.js?v=20261118c'), import('./signs.js?v=20261118c'), import('./festival.js?v=20261118c'), import('./fauna.js?v=20261118c'), import('./interact.js?v=20261118c')]);
     const [{ createWorld, H: GROUND_H }, { createLife, makePerson }, { createCam }, { createPlayers }, { createSigns }, { createFestival }, { createFauna }, { createInteract }] = mods;
     const mobile = isMobile();
     W = createWorld($('#gl'), { quality: S.quality, mobile });
@@ -1184,9 +1201,10 @@ async function boot() {
     CAM = createCam(W, $('#gl'), { onZoom: showZoom, onIntro: (k) => { L.setDeck(k < .3 ? 1 : Math.max(0, 1 - (k - .3) / .25)); if (k > .55) $('.intro-title').classList.add('show'); } });
     CAM.S.reduced = S.reduced; CAM.S.mobile = mobile;
     PL = createPlayers(W, GROUND_H); renderMe(); startNet();
-    SG = createSigns(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261118b')).rng, low: mobile || S.quality === 'low' });
-    FX = createFestival(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261118b')).rng, low: mobile || S.quality === 'low', avoid: [...SG.signs.map((s) => s.g.position), ...Object.values(W.islands).flatMap((I) => (I.trees || []).filter((tr) => tr.visible).map((tr) => tr.position.clone().add(I.pos)))], carp: L.carp });
-    FA = createFauna(W, { H: GROUND_H, rng: (await import('./kit.js?v=20261118b')).rng });
+    W.canBoard = canBoardWalk;
+    SG = createSigns(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261118c')).rng, low: mobile || S.quality === 'low' });
+    FX = createFestival(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261118c')).rng, low: mobile || S.quality === 'low', avoid: [...SG.signs.map((s) => s.g.position), ...Object.values(W.islands).flatMap((I) => (I.trees || []).filter((tr) => tr.visible).map((tr) => tr.position.clone().add(I.pos)))], carp: L.carp });
+    FA = createFauna(W, { H: GROUND_H, rng: (await import('./kit.js?v=20261118c')).rng });
     IA = createInteract(W, C, GROUND_H, {
       toast, carp: L.carp,
       toastIf: (m) => { if (!S.intro) toast(m); },

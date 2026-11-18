@@ -1,8 +1,8 @@
 // 登入者：自己的人物＋頭上名牌；之後接上連線服務時，其他人也用同一套顯示（upsert / remove）
 import * as THREE from 'three';
-import { rng } from './kit.js?v=20261118b';
-import { makePerson } from './life.js?v=20261118b';
-import { ROLES } from './roles.js?v=20261118b';
+import { rng } from './kit.js?v=20261118c';
+import { makePerson } from './life.js?v=20261118c';
+import { ROLES } from './roles.js?v=20261118c';
 const SPAWN = { x: 0, z: 7.4, yaw: Math.PI };
 
 const seedOf = (s) => { let h = 2166136261; for (const c of String(s)) h = Math.imul(h ^ c.codePointAt(0), 16777619); return h >>> 0; };
@@ -104,5 +104,7 @@ export function createPlayers(W, H) {
   // 給連線版：自己目前的位置
   function myPos() { const m = me(); return m ? { x: +m.pos.x.toFixed(2), y: +m.pos.y.toFixed(2), z: +m.pos.z.toFixed(2), yaw: +m.yaw.toFixed(2) } : null; }
   function spawnFor() { const m = me(); return m ? { pos: m.pos.clone(), yaw: m.yaw } : null; }
-  return { setMe, me, upsert, remove, update, myPos, spawnFor, count: () => all.size, layer };
+  // 鯉魚號上的登入者人數（不含自己；在海上而不顯示的人不算）
+  function onBoatCount() { let n = 0; for (const p of all.values()) if (p.id !== meId && onBoat(p.pos)) n++; return n; }
+  return { setMe, me, upsert, remove, update, myPos, spawnFor, onBoatCount, count: () => all.size, layer };
 }
