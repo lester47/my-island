@@ -1,5 +1,5 @@
 {
-  "assetVersion": "20261118u",
+  "assetVersion": "20261118v",
   "site": {
     "title": "115 鯉魚市集",
     "tagline": "跳上五座六角小島，逛美食、玩手作、闖關挑戰，還能挖二手好物！",
@@ -1037,8 +1037,8 @@
       "short": "手部挑戰",
       "game": {
         "url": "games/stall-17/",
-        "title": "穩穩手挑戰",
-        "short": "穩穩手",
+        "title": "穩穩手：小鯉魚回家",
+        "short": "小鯉魚回家",
         "ready": true
       }
     },
