@@ -439,3 +439,4 @@ select.pp-in { width: auto; max-width: 160px; }
 .notice-bar .nx { border: 0; background: none; font-size: 16px; cursor: pointer; }
 .nt-list { margin: 0; padding-left: 18px; } .nt-list small { color: #8a6a2a; }
 @media (max-width: 760px) { .notice-bar { top: 112px; font-size: 13px; } .hchip.plan .tx { display: none; } }
+.walk-hint { pointer-events: none; }   /* 提示文字不擋住點招牌 */

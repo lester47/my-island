@@ -1,6 +1,6 @@
 // 115 鯉魚市集｜介面與流程
 import * as THREE from 'three';
-import { ROLES, OUTFITS } from './roles.js?v=20261117z';
+import { ROLES, OUTFITS } from './roles.js?v=20261118a';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -15,7 +15,7 @@ const pad2 = (n) => String(n).padStart(2, '0');
 const fmtH = (h) => { h = ((h % 24) + 24) % 24; return `${pad2(Math.floor(h))}:${pad2(Math.floor((h % 1) * 60))}`; };
 
 // 介面 Logo：低多邊形鯉魚（橘紅魚背、米白魚腹、魚頭朝右），首頁、怎麼逛、集章完成共用這一張
-const LOGO_SRC = 'assets/brand/koi-logo.png?v=20261117z';
+const LOGO_SRC = 'assets/brand/koi-logo.png?v=20261118a';
 const MASCOT = `<img src="${LOGO_SRC}" alt="115 鯉魚市集 Logo：低多邊形小鯉魚" decoding="async">`;
 
 let C = null;            // content.json
@@ -847,6 +847,11 @@ function onCanvasUp(e) {
   ray.setFromCamera(ndc, W.camera);
   if (FX) { const bh = ray.intersectObjects(FX.balloons(), false)[0]; if (bh && FX.pop(bh.object)) { balloonPopped(); return; } }
   if (IA && IA.pick(ray)) return;                 // 可以互動的地標（果汁杯、貼紙牆、彈珠、書櫃、合照點）
+  // 漫遊時點攤位招牌或攤子：留在地面，右邊直接打開那一攤的介紹（不飛回鳥瞰）
+  if (S.walking && SG) {
+    const sw = ray.intersectObjects(SG.pickables.map((p) => p.obj), false)[0];
+    if (sw && sw.distance < 25) { const sg = SG.pickables.find((p) => p.obj === sw.object).sign; closeBubble(); panelOpener = null; showPanel(sg.island, sg.st.no); return; }
+  }
   if (S.walking || (CAM.S.busy && !CAM.S.busy.custom)) return;
   ray.setFromCamera(ndc, W.camera);
   const life = ray.intersectObjects(L.pickables.filter((p) => p.obj.parent && p.obj.parent.visible).map((p) => p.obj), false)[0];
@@ -1072,7 +1077,7 @@ function balloonPopped() {
 }
 function startNet() {
   const M = C.multiplayer; if (!M || !M.enabled || !M.firebase || !PL) return;
-  import('./net.js?v=20261117z').then(({ createNet }) => {
+  import('./net.js?v=20261118a').then(({ createNet }) => {
     NET = createNet(M.firebase, {
       myPos: () => PL.myPos(), upsert: (id, info, pos) => PL.upsert(id, info, pos), remove: (id) => PL.remove(id),
       onCount: (c) => { COUNT = c; const el = $('#onlineChip'); el.hidden = false; $('#onlineCount').textContent = c.players; el.setAttribute('aria-label', `市集島上 ${c.players} 人，開著網站 ${c.viewers} 人，點一下看各身分人數`); },
@@ -1117,6 +1122,7 @@ addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return;
   if (document.querySelector('dialog[open]')) return;                          // 對話框自己處理 Esc
   if (S.bubble) { closeBubble(); return; }
+  if (S.walking && S.open) { closePanel(false); return; }        // 漫遊中先關攤位介紹，再按一次才回鳥瞰
   if (S.walking) { exitWalk(); return; }
   if (S.tour) { endTour(true); return; }
   if (!$('#settings').hidden) { toggleSettings(false); $('#setBtn').focus(); return; }
@@ -1161,7 +1167,7 @@ async function boot() {
   if (Q.has('nogl') || !webglOK()) { textOnly(Q.has('nogl') ? '已切換為文字清單版' : '這台裝置無法顯示 3D 畫面'); applyTheme(); updateClock(); setInterval(updateClock, 10000); window.__ready = true; return; }
   let mods;
   try {
-    mods = await Promise.all([import('./world.js?v=20261117z'), import('./life.js?v=20261117z'), import('./cam.js?v=20261117z'), import('./players.js?v=20261117z'), import('./signs.js?v=20261117z'), import('./festival.js?v=20261117z'), import('./fauna.js?v=20261117z'), import('./interact.js?v=20261117z')]);
+    mods = await Promise.all([import('./world.js?v=20261118a'), import('./life.js?v=20261118a'), import('./cam.js?v=20261118a'), import('./players.js?v=20261118a'), import('./signs.js?v=20261118a'), import('./festival.js?v=20261118a'), import('./fauna.js?v=20261118a'), import('./interact.js?v=20261118a')]);
     const [{ createWorld, H: GROUND_H }, { createLife, makePerson }, { createCam }, { createPlayers }, { createSigns }, { createFestival }, { createFauna }, { createInteract }] = mods;
     const mobile = isMobile();
     W = createWorld($('#gl'), { quality: S.quality, mobile });
@@ -1170,9 +1176,9 @@ async function boot() {
     CAM = createCam(W, $('#gl'), { onZoom: showZoom, onIntro: (k) => { L.setDeck(k < .3 ? 1 : Math.max(0, 1 - (k - .3) / .25)); if (k > .55) $('.intro-title').classList.add('show'); } });
     CAM.S.reduced = S.reduced; CAM.S.mobile = mobile;
     PL = createPlayers(W, GROUND_H); renderMe(); startNet();
-    SG = createSigns(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261117z')).rng, low: mobile || S.quality === 'low' });
-    FX = createFestival(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261117z')).rng, low: mobile || S.quality === 'low', avoid: [...SG.signs.map((s) => s.g.position), ...Object.values(W.islands).flatMap((I) => (I.trees || []).filter((tr) => tr.visible).map((tr) => tr.position.clone().add(I.pos)))], carp: L.carp });
-    FA = createFauna(W, { H: GROUND_H, rng: (await import('./kit.js?v=20261117z')).rng });
+    SG = createSigns(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261118a')).rng, low: mobile || S.quality === 'low' });
+    FX = createFestival(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261118a')).rng, low: mobile || S.quality === 'low', avoid: [...SG.signs.map((s) => s.g.position), ...Object.values(W.islands).flatMap((I) => (I.trees || []).filter((tr) => tr.visible).map((tr) => tr.position.clone().add(I.pos)))], carp: L.carp });
+    FA = createFauna(W, { H: GROUND_H, rng: (await import('./kit.js?v=20261118a')).rng });
     IA = createInteract(W, C, GROUND_H, {
       toast, carp: L.carp,
       toastIf: (m) => { if (!S.intro) toast(m); },
