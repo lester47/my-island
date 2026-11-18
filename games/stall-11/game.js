@@ -1,5 +1,5 @@
 // 第 11 攤・彈珠迷宮：傾斜木板讓彈珠滾到終點；掉進洞就回起點。手機可以直接傾斜，也可以按方向鍵
-import { LIYU } from '../_kit/kit.js?v=20261118s';
+import { LIYU } from '../_kit/kit.js?v=20261118t';
 const { ctx, W, H } = LIYU;
 
 const CONFIG = {
