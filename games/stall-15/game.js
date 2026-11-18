@@ -1,5 +1,5 @@
 // 第 15 攤・夏來寶：鑽石貼紙畫——點格子貼上閃亮的鑽石，可以照著底圖貼，也可以自由創作
-import { LIYU } from '../_kit/kit.js?v=20261118v';
+import { LIYU } from '../_kit/kit.js?v=20261118w';
 const { ctx, W, H } = LIYU;
 
 const CONFIG = {

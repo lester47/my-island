@@ -1,7 +1,7 @@
 // 第 18 攤・丟球者（3D 版）：從投手背後看出去，按住球蓄力（力道條上下跑），左右拖瞄準，在綠色區放開，把球丟進遠方木板上的洞
 // 判斷進不進洞仍用 400×600 的座標（和 2D 版一樣）；畫面用 Three.js 畫成 3D，力道條和文字畫在上層的 HUD
 import * as THREE from 'three';
-import { LIYU } from '../_kit/kit.js?v=20261118v';
+import { LIYU } from '../_kit/kit.js?v=20261118w';
 const { ctx, W, H } = LIYU;
 
 const CONFIG = {
@@ -41,7 +41,7 @@ const PX2X = 2.6 / 110;                    // 橫向：像素 → 單位（洞�
 const BALL0 = new THREE.Vector3(0, .32, 3.6), HZ = -5.6;
 let renderer = null;
 const c3 = LIYU.layer3d((w, h, dpr) => { if (renderer) { renderer.setPixelRatio(dpr); renderer.setSize(w, h, false); } });
-renderer = new THREE.WebGLRenderer({ canvas: c3, antialias: true }); { const r = c3.getBoundingClientRect(); renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2)); renderer.setSize(r.width || W, r.height || H, false); }
+renderer = new THREE.WebGLRenderer({ canvas: c3, antialias: true }); { const r = c3.getBoundingClientRect(); renderer.setPixelRatio(Math.min(devicePixelRatio || 1, matchMedia('(pointer: coarse)').matches ? 1.5 : 2)); renderer.setSize(r.width || W, r.height || H, false); }
 renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap; renderer.outputColorSpace = THREE.SRGBColorSpace;
 const scene = new THREE.Scene(); scene.background = new THREE.Color('#cfe8fb'); scene.fog = new THREE.Fog('#cfe8fb', 18, 40);
 const camera = new THREE.PerspectiveCamera(48, W / H, .1, 100); camera.position.set(0, 2.3, 7.4); camera.lookAt(0, .1, -3.2);

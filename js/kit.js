@@ -62,6 +62,54 @@ export class Builder {
   }
 }
 
+// 靜態合併：把 root 底下「不會動」的小網格合成少數幾個，大幅減少 draw call（手機最怕 draw call 太多）
+// 純色材質（沒有貼圖、不發光、不透明）把顏色寫進頂點，不同顏色也能合成同一個網格；其他材質依材質分組合併
+// skip：要保留原樣的物件（會動、要點擊、會個別隱藏的），連同它們的子孫都不合併
+const VC_MATS = new Map();
+const plainMat = (m) => m.type === 'MeshStandardMaterial' && !m.map && !m.emissiveMap && !m.alphaMap && !m.normalMap && !m.vertexColors && !m.transparent && m.opacity === 1 && m.visible && m.emissive.r + m.emissive.g + m.emissive.b === 0 && !m.userData.dynamic;
+function vcMat(m) {
+  const k = [m.roughness, m.metalness, m.flatShading, m.side, m.alphaTest].join('|');
+  if (!VC_MATS.has(k)) VC_MATS.set(k, new THREE.MeshStandardMaterial({ color: '#ffffff', vertexColors: true, roughness: m.roughness, metalness: m.metalness, flatShading: m.flatShading, side: m.side }));
+  return VC_MATS.get(k);
+}
+export function batchStatic(root, skip = []) {
+  const skipSet = new Set(skip); root.updateMatrixWorld(true);
+  const inv = new THREE.Matrix4().copy(root.matrixWorld).invert(), groups = new Map();
+  const walk = (o) => {
+    for (const c of [...o.children]) {
+      if (skipSet.has(c) || c.visible === false) continue;
+      if (c.isMesh && !c.isInstancedMesh && !c.isSkinnedMesh && !Array.isArray(c.material) && c.material.visible !== false && !c.morphTargetInfluences) {
+        const plain = plainMat(c.material), k = (plain ? 'vc' + vcMat(c.material).uuid : c.material.uuid) + (c.castShadow ? 1 : 0) + (c.receiveShadow ? 1 : 0);
+        if (!groups.has(k)) groups.set(k, { mat: plain ? vcMat(c.material) : c.material, plain, cast: c.castShadow, recv: c.receiveShadow, list: [] });
+        groups.get(k).list.push(c);
+      }
+      walk(c);
+    }
+  };
+  walk(root);
+  const m = new THREE.Matrix4();
+  for (const G0 of groups.values()) {
+    if (G0.list.length < 2) continue;
+    const keepUV = !G0.plain && !!(G0.mat.map || G0.mat.emissiveMap || G0.mat.alphaMap);
+    if (keepUV && G0.list.some((c) => !c.geometry.attributes.uv)) continue;
+    const geos = G0.list.map((c) => {
+      let g = c.geometry.index ? c.geometry.toNonIndexed() : c.geometry.clone();
+      for (const n of Object.keys(g.attributes)) if (n !== 'position' && n !== 'normal' && !(keepUV && n === 'uv')) g.deleteAttribute(n);
+      if (!g.attributes.normal) g.computeVertexNormals();
+      m.multiplyMatrices(inv, c.matrixWorld); g.applyMatrix4(m);
+      if (m.determinant() < 0) { for (const n in g.attributes) { const at = g.attributes[n], sz = at.itemSize; for (let i = 0; i < at.count; i += 3) for (let j = 0; j < sz; j++) { const t = at.array[(i + 1) * sz + j]; at.array[(i + 1) * sz + j] = at.array[(i + 2) * sz + j]; at.array[(i + 2) * sz + j] = t; } } }
+      if (G0.plain) { const col = c.material.color, n = g.attributes.position.count, arr = new Float32Array(n * 3); for (let i = 0; i < n; i++) { arr[i * 3] = col.r; arr[i * 3 + 1] = col.g; arr[i * 3 + 2] = col.b; } g.setAttribute('color', new THREE.BufferAttribute(arr, 3)); }
+      return g;
+    });
+    const geo = mergeGeometries(geos, false); if (!geo) continue;
+    geo.computeBoundingSphere();
+    const mesh = new THREE.Mesh(geo, G0.mat); mesh.castShadow = G0.cast; mesh.receiveShadow = G0.recv; mesh.userData.batched = true;
+    root.add(mesh);
+    for (const c of G0.list) c.parent && c.parent.remove(c);
+  }
+  return root;
+}
+
 // 共用基本幾何（低多邊形）
 export const G = {
   box: new THREE.BoxGeometry(1, 1, 1),

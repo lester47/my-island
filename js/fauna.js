@@ -1,5 +1,6 @@
 // 島上的小生命：蝴蝶 30 隻、五色鳥 5 隻，另外四種昆蟲各 6 隻（蜻蜓、蜜蜂、瓢蟲、獨角仙）
 import * as THREE from 'three';
+import { batchStatic } from './kit.js?v=20261118w';
 
 const TAU = Math.PI * 2;
 const M = {};
@@ -105,6 +106,12 @@ export function createFauna(W, opts = {}) {
     list.push({ kind, ...B, c: p, rad: .3 + R() * .5, h: H + .01, sp: (kind === 'lady' ? .18 : .1) * (R() < .5 ? 1 : -1), ph: R() * TAU });
   }
 
+  // 每隻小動物不會動的部分合成一個網格（翅膀照樣拍）：約 400 個零件 → 150 個左右
+  for (const a of list) {
+    const ws = (a.wings || []).map((w) => (w.isObject3D ? w : w.w));
+    for (const w of ws) if (w.isGroup) batchStatic(w);
+    batchStatic(a.body || a.g, ws);
+  }
   function update(t, dt, moving, night) {
     const dayVis = (night || 0) < .7;   // 晚上蝴蝶、蜜蜂、蜻蜓去休息
     for (const a of list) {
@@ -123,5 +130,5 @@ export function createFauna(W, opts = {}) {
       else if (a.kind === 'bee') { for (const w of a.wings) w.w.rotation.y = Math.sin(t * 50) * .5 * w.s; }
     }
   }
-  return { update, counts: { butterflies: n(30), barbets: n(5), dragonflies: n(6), bees: n(6), ladybugs: n(6), beetles: n(6) } };
+  return { root, update, counts: { butterflies: n(30), barbets: n(5), dragonflies: n(6), bees: n(6), ladybugs: n(6), beetles: n(6) } };
 }

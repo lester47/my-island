@@ -1,7 +1,7 @@
 // 第 19 攤・三二一發射！／戰鬥陀螺（3D 版）：倒數後按住「發射」貯力，在綠色區放開；陀螺在碗形擂台裡互撞，先停下或被撞出場的輸
 // 物理在 400×600 的平面上算（和 2D 版一樣），畫面用 Three.js 畫成 3D；力道條、文字畫在上層的 HUD
 import * as THREE from 'three';
-import { LIYU } from '../_kit/kit.js?v=20261118v';
+import { LIYU } from '../_kit/kit.js?v=20261118w';
 const { ctx, W, H } = LIYU;
 
 const CONFIG = {
@@ -77,7 +77,7 @@ function result(win) {
 const K = .025;                                                        // 1 像素 = 0.025 單位（陀螺半徑 24px → 0.6）
 let renderer = null;
 const c3 = LIYU.layer3d((w, h, dpr) => { if (renderer) { renderer.setPixelRatio(dpr); renderer.setSize(w, h, false); } });
-renderer = new THREE.WebGLRenderer({ canvas: c3, antialias: true }); { const r = c3.getBoundingClientRect(); renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2)); renderer.setSize(r.width || W, r.height || H, false); }
+renderer = new THREE.WebGLRenderer({ canvas: c3, antialias: true }); { const r = c3.getBoundingClientRect(); renderer.setPixelRatio(Math.min(devicePixelRatio || 1, matchMedia('(pointer: coarse)').matches ? 1.5 : 2)); renderer.setSize(r.width || W, r.height || H, false); }
 renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap; renderer.outputColorSpace = THREE.SRGBColorSpace;
 const scene = new THREE.Scene(); scene.background = new THREE.Color('#f5ead6');
 const camera = new THREE.PerspectiveCamera(50, W / H, .1, 100); camera.position.set(0, 9.6, 12.6); camera.lookAt(0, -1.1, .3);

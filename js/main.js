@@ -1,6 +1,6 @@
 // 115 鯉魚市集｜介面與流程
 import * as THREE from 'three';
-import { ROLES, OUTFITS, HATS } from './roles.js?v=20261118v';
+import { ROLES, OUTFITS, HATS } from './roles.js?v=20261118w';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -11,11 +11,13 @@ const store = {
 };
 const Q = new URLSearchParams(location.search);
 const isMobile = () => matchMedia('(max-width: 760px)').matches;
+// 效能用的判斷：手機和平板（iPad 螢幕比 760px 寬，但顯示晶片和記憶體跟手機同一級，不能用電腦規格跑）
+const isLite = () => isMobile() || matchMedia('(pointer: coarse)').matches || (navigator.maxTouchPoints > 1 && /Mac/.test(navigator.platform || ''));
 const pad2 = (n) => String(n).padStart(2, '0');
 const fmtH = (h) => { h = ((h % 24) + 24) % 24; return `${pad2(Math.floor(h))}:${pad2(Math.floor((h % 1) * 60))}`; };
 
 // 介面 Logo：低多邊形鯉魚（橘紅魚背、米白魚腹、魚頭朝右），首頁、怎麼逛、集章完成共用這一張
-const LOGO_SRC = 'assets/brand/koi-logo.png?v=20261118v';
+const LOGO_SRC = 'assets/brand/koi-logo.png?v=20261118w';
 const MASCOT = `<img src="${LOGO_SRC}" alt="115 鯉魚市集 Logo：低多邊形小鯉魚" decoding="async">`;
 
 let C = null;            // content.json
@@ -1210,14 +1212,14 @@ function balloonPopped() {
 }
 function startNet() {
   const M = C.multiplayer; if (!M || !M.enabled || !M.firebase || !PL) return;
-  import('./net.js?v=20261118v').then(({ createNet }) => {
+  import('./net.js?v=20261118w').then(({ createNet }) => {
     NET = createNet(M.firebase, {
       myPos: () => PL.myPos(), upsert: (id, info, pos) => PL.upsert(id, info, pos), remove: (id) => PL.remove(id),
       onCount: (c) => { COUNT = c; const el = $('#onlineChip'); el.hidden = false; $('#onlineCount').textContent = c.players; el.setAttribute('aria-label', `市集島上 ${c.players} 人，開著網站 ${c.viewers} 人，點一下看各身分人數`); },
       onStatus: (s, msg) => { $('#onlineChip').classList.toggle('off', s !== 'online'); if (s === 'error') console.warn('連線錯誤', msg); },
     });
     NET.setMe(meProfile());
-    import('./hidemp.js?v=20261118v').then(({ createHideMP }) => {
+    import('./hidemp.js?v=20261118w').then(({ createHideMP }) => {
       HM = createHideMP(NET, {
         toast, profile: meProfile, enterWalk: () => { if (!S.walking) enterWalk(); },
         walkPos: () => (S.walking ? CAM.walk.pos : null), posOf: (id) => PL.posOf(id),
@@ -1287,12 +1289,32 @@ $('#homeBtn').addEventListener('click', () => { closeBubble(); closePanel(false)
 function setQuality(q, auto) {
   S.quality = q; S.qualityAuto = !!auto; store.set('quality', q); syncSettings();
   if (!W) return;
-  W.renderer.shadowMap.enabled = q !== 'low';
-  W.scene.traverse((o) => { if (o.material) { (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => (m.needsUpdate = true)); } });
-  for (const a of L.agents) a.lowHidden = q === 'low' && a.nightHide;
-  W.renderer.setPixelRatio(Math.min(devicePixelRatio, q === 'low' ? 1 : (isMobile() ? 1.5 : 2)));
-  toast(auto ? '畫面有點卡，已自動切換成低畫質' : q === 'low' ? '已切換成低畫質（關閉陰影、減少人物）' : '已切換成高畫質');
+  const R = W.renderer, low = q === 'low';
+  if (!low && !R.shadowMap.enabled) {
+    // 一開始就是低畫質（沒建陰影），切回高畫質才需要重新編譯材質
+    R.shadowMap.enabled = true;
+    W.scene.traverse((o) => { if (o.material) { (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => (m.needsUpdate = true)); } });
+  }
+  // 低畫質：不重新編譯材質（以前一次重編全部材質，剛好在手機最吃力時卡死）。
+  // 改成只讓島、橋、攤位這些不會動的東西留下影子，影子圖畫一次就凍結，不再每格重畫
+  if (R.shadowMap.enabled) {
+    if (low) {
+      shadowKeep = new Set(); const keepRoots = [...Object.values(W.islands).map((I) => I.group), ...SG.signs.map((s) => s.g)];
+      for (const r of keepRoots) r && r.traverse((o) => shadowKeep.add(o));
+      for (const k of SG.signs.flatMap((s) => s.g.children)) if (k.isGroup && k.children.some((c) => c.isGroup)) k.traverse((o) => shadowKeep.delete(o));   // 攤主會動
+      shadowOff = []; W.scene.traverse((o) => { if (o.isMesh && o.castShadow && !shadowKeep.has(o)) { o.castShadow = false; shadowOff.push(o); } });
+      R.shadowMap.autoUpdate = false; R.shadowMap.needsUpdate = true; shadowHour = S.hourShown;
+    } else {
+      for (const o of shadowOff) o.castShadow = true; shadowOff = [];
+      R.shadowMap.autoUpdate = true;
+    }
+  }
+  if (FA && FA.root) FA.root.visible = !low;                       // 低畫質收起蝴蝶、小鳥和昆蟲
+  for (const a of L.agents) a.lowHidden = low && a.nightHide;
+  R.setPixelRatio(Math.min(devicePixelRatio, low ? 1 : (isLite() ? 1.5 : 2)));
+  toast(auto ? '畫面有點卡，已自動切換成低畫質' : low ? '已切換成低畫質（減少影子、人物和小動物）' : '已切換成高畫質');
 }
+let shadowOff = [], shadowKeep = null, shadowHour = 0;
 
 // ------------------------------------------------------------------ 文字清單版（沒有 WebGL）
 function textOnly(reason) {
@@ -1320,22 +1342,22 @@ async function boot() {
   if (Q.has('nogl') || !webglOK()) { textOnly(Q.has('nogl') ? '已切換為文字清單版' : '這台裝置無法顯示 3D 畫面'); applyTheme(); updateClock(); setInterval(updateClock, 10000); window.__ready = true; return; }
   let mods;
   try {
-    mods = await Promise.all([import('./world.js?v=20261118v'), import('./life.js?v=20261118v'), import('./cam.js?v=20261118v'), import('./players.js?v=20261118v'), import('./signs.js?v=20261118v'), import('./festival.js?v=20261118v'), import('./fauna.js?v=20261118v'), import('./interact.js?v=20261118v'), import('./games.js?v=20261118v')]);
+    mods = await Promise.all([import('./world.js?v=20261118w'), import('./life.js?v=20261118w'), import('./cam.js?v=20261118w'), import('./players.js?v=20261118w'), import('./signs.js?v=20261118w'), import('./festival.js?v=20261118w'), import('./fauna.js?v=20261118w'), import('./interact.js?v=20261118w'), import('./games.js?v=20261118w')]);
     const [{ createWorld, H: GROUND_H }, { createLife, makePerson }, { createCam }, { createPlayers }, { createSigns }, { createFestival }, { createFauna }, { createInteract }, { createGames, FISH }] = mods;
-    const mobile = isMobile();
+    const mobile = isLite();   // 手機和平板都用輕量版場景
     W = createWorld($('#gl'), { quality: S.quality, mobile });
     W.renderer.setPixelRatio(Math.min(devicePixelRatio, S.quality === 'low' ? 1 : (mobile ? 1.5 : 2)));
     L = createLife(W, C, { halfPeople: mobile || S.quality === 'low', quality: S.quality });
     CAM = createCam(W, $('#gl'), { onZoom: showZoom, onIntro: (k) => { L.setDeck(k < .3 ? 1 : Math.max(0, 1 - (k - .3) / .25)); if (k > .55) $('.intro-title').classList.add('show'); } });
-    CAM.S.reduced = S.reduced; CAM.S.mobile = mobile;
+    CAM.S.reduced = S.reduced; CAM.S.mobile = isMobile();
     PL = createPlayers(W, GROUND_H); renderMe(); startNet();
     W.canBoard = canBoardWalk;
     // 搭船中：只有靠港、跳板放下時才能走出船艙
     W.canLeave = () => { const s = L.carp.status(); if (s.docked && s.gang) return true; if (performance.now() - lastBlockToast > 3000) { lastBlockToast = performance.now(); toast('⛔ 航行中請待在船上，靠港放下跳板後再下船'); } return false; };
-    KIT = await import('./kit.js?v=20261118v');
-    SG = createSigns(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261118v')).rng, low: mobile || S.quality === 'low' });
-    FX = createFestival(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261118v')).rng, low: mobile || S.quality === 'low', avoid: [...SG.signs.map((s) => s.g.position), ...Object.values(W.islands).flatMap((I) => (I.trees || []).filter((tr) => tr.visible).map((tr) => tr.position.clone().add(I.pos)))], carp: L.carp });
-    FA = createFauna(W, { H: GROUND_H, rng: (await import('./kit.js?v=20261118v')).rng });
+    KIT = await import('./kit.js?v=20261118w');
+    SG = createSigns(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261118w')).rng, low: mobile || S.quality === 'low' });
+    FX = createFestival(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261118w')).rng, low: mobile || S.quality === 'low', avoid: [...SG.signs.map((s) => s.g.position), ...Object.values(W.islands).flatMap((I) => (I.trees || []).filter((tr) => tr.visible).map((tr) => tr.position.clone().add(I.pos)))], carp: L.carp });
+    FA = createFauna(W, { H: GROUND_H, rng: (await import('./kit.js?v=20261118w')).rng });
     IA = createInteract(W, C, GROUND_H, {
       toast, carp: L.carp,
       toastIf: (m) => { if (!S.intro) toast(m); },
@@ -1372,8 +1394,39 @@ async function boot() {
 
   // 動畫迴圈：分頁看不到時瀏覽器會自動暫停
   const clock = new THREE.Clock(); let clkN = 0, fpsT = 0, fpsN = 0, slow = 0; const keepQ = Q.has('keepq');
+  // 3D 畫面被系統收回（iPad／手機切去別的 App、記憶體不夠時會發生）：等它恢復，太久沒恢復就請使用者重新載入
+  cv.addEventListener('webglcontextlost', (e) => { e.preventDefault(); S.glLost = performance.now(); setTimeout(checkGL, 4000); });
+  cv.addEventListener('webglcontextrestored', () => { S.glLost = 0; glNote(false); if (W.renderer.shadowMap.enabled) W.renderer.shadowMap.needsUpdate = true; });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) setTimeout(checkGL, 1500); });
+  function checkGL() {
+    let lost = !!S.glLost; try { lost = lost || W.renderer.getContext().isContextLost(); } catch (e) { /* 拿不到就當作還在 */ }
+    if (lost) glNote(true);
+  }
+  function glNote(show) {
+    let n = $('#glNote');
+    if (!show) { if (n) n.remove(); return; }
+    if (n) return;
+    n = document.createElement('div'); n.id = 'glNote'; n.setAttribute('role', 'alert');
+    n.style.cssText = 'position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:9999;background:#fff;color:#222;padding:18px 20px;border-radius:16px;box-shadow:0 8px 30px rgba(0,0,0,.25);text-align:center;max-width:300px;font-size:15px;line-height:1.5';
+    n.innerHTML = '3D 畫面被系統暫時收回了（通常是切換 App 或記憶體不夠）<br><button type="button" style="margin-top:12px;padding:10px 18px;border-radius:999px;border:0;background:#3f7d3a;color:#fff;font-size:15px;font-weight:700">🔄 重新載入</button>';
+    n.querySelector('button').addEventListener('click', () => location.reload());
+    document.body.append(n);
+  }
+  let errN = 0, lastErr = '';
+  const gameDlg = $('#gameDlg');
   function frame(now) {
-    const dt = clock.getDelta(), t = clock.elapsedTime, moving = !S.reduced;
+    requestAnimationFrame(frame);   // 先排下一格：就算這一格出錯，畫面也不會整個停住
+    if (S.glLost) return;
+    // 全螢幕小遊戲打開時，後面的島看不到，不用畫（省下一半以上的負擔，特別是 3D 小遊戲）
+    if (gameDlg && gameDlg.open) { clock.getDelta(); try { if (NET) NET.tick(now); } catch (e) { /* 連線問題不影響畫面 */ } return; }
+    try { frameBody(now); errN = 0; } catch (err) {
+      errN++;
+      if (String(err) !== lastErr) { lastErr = String(err); console.warn('畫面更新出錯（已略過這一格）', err); }
+      if (errN === 120) toast('畫面有點問題，如果一直卡住請重新整理');
+    }
+  }
+  function frameBody(now) {
+    const dt = Math.min(clock.getDelta(), .1), t = clock.elapsedTime, moving = !S.reduced;   // dt 上限：切回來時不會一次跳一大段
     // 時段：平滑過渡（減少動態時直接切換）
     const target = targetHour(now);
     let d = target - S.hourShown; if (d > 12) d -= 24; if (d < -12) d += 24;
@@ -1407,7 +1460,8 @@ async function boot() {
     fpsN++; fpsT += dt;
     if (fpsT > 3) { const fps = fpsN / fpsT; fpsT = 0; fpsN = 0; if (!keepQ && S.quality !== 'low' && t > 8) { slow = fps < 24 ? slow + 1 : 0; if (slow >= 2) setQuality('low', true); } }
     if (!window.__ready && t > .2) window.__ready = true;
-    requestAnimationFrame(frame);
+    // 低畫質時影子圖是凍結的：太陽角度變了才重畫一次
+    if (shadowOff.length && Math.abs(S.hourShown - shadowHour) > .1) { shadowHour = S.hourShown; W.renderer.shadowMap.needsUpdate = true; }
   }
   requestAnimationFrame(frame);
   window.__isle = { W, L, CAM, S, THREE, get PL() { return PL; }, get NET() { return NET; }, get SG() { return SG; }, get FX() { return FX; }, get FA() { return FA; }, get IA() { return IA; }, get GM() { return GM; } };   // 給自動測試讀取狀態用

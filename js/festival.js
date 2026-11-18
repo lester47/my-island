@@ -1,6 +1,7 @@
 // 園遊會氣氛：氣球、拱門、彩旗、燈籠、踩高蹺、小丑、舞獅、吉祥物、熱氣球、風箏、煙火……
 // 所有東西都放在橋上、天空、海面，或島上步道外側的空地（避開攤子），不擋步道
 import * as THREE from 'three';
+import { batchStatic } from './kit.js?v=20261118w';
 
 const TAU = Math.PI * 2;
 const M = {};
@@ -23,7 +24,7 @@ function markBalloon(mesh, group, color) {
 // 一顆氣球（橢圓球＋小結）
 // 鯉魚 Logo 貼片（旗子用）
 const LOGO_GEO = new THREE.PlaneGeometry(1, 1); let LOGO_M = null;
-function logoMat() { if (!LOGO_M) { const tx = new THREE.TextureLoader().load('assets/brand/koi-logo.png?v=20261118v'); tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 4; LOGO_M = new THREE.MeshStandardMaterial({ map: tx, transparent: true, alphaTest: .4, roughness: .8, polygonOffset: true, polygonOffsetFactor: -2 }); } return LOGO_M; }
+function logoMat() { if (!LOGO_M) { const tx = new THREE.TextureLoader().load('assets/brand/koi-logo.png?v=20261118w'); tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 4; LOGO_M = new THREE.MeshStandardMaterial({ map: tx, transparent: true, alphaTest: .4, roughness: .8, polygonOffset: true, polygonOffsetFactor: -2 }); } return LOGO_M; }
 function balloon(parent, c, x, y, z, s = 1) {
   const g = new THREE.Group(); g.position.set(x, y, z); parent.add(g);
   const b = add(g, G.sph, mat(c, { roughness: .35, metalness: .05 }), 0, 0, 0, .34 * s, .42 * s, .34 * s);
@@ -37,6 +38,8 @@ export function createFestival(W, content, H, opts = {}) {
   const low = !!opts.low, makePerson = opts.makePerson, rng = opts.rng;
   const R = rng ? rng(2026) : Math.random;
   const root = new THREE.Group(); scene.add(root);
+  // 不會動的裝飾先放進 stat，最後合併成少數幾個網格（手機減輕負擔）；statics 是整組都不會動的小群組
+  const stat = new THREE.Group(); root.add(stat); const statics = [];
   BALLOONS = [];
   const anim = [];          // 每格要更新的東西
   const nightGlow = [];     // 晚上會亮的材質
@@ -73,10 +76,10 @@ export function createFestival(W, content, H, opts = {}) {
     const n = 14;
     for (let i = 0; i < n; i++) {
       const t0 = (i + .5) / n, p = onBridge(b, t0, side); p.y += 1.15 + Math.sin(i * 1.3) * .03;
-      const f = add(root, G.tri, BAL[i % 6], p.x, p.y - .12, p.z, .16, .24, .03, Math.PI, 0, 0); f.rotation.y = -b.a + Math.PI / 2;
+      const f = add(stat, G.tri, BAL[i % 6], p.x, p.y - .12, p.z, .16, .24, .03, Math.PI, 0, 0); f.rotation.y = -b.a + Math.PI / 2;
     }
     const a = onBridge(b, .02, side), c = onBridge(b, .98, side); a.y += 1.18; c.y += 1.18;
-    for (let i = 0; i < 6; i++) line(root, onBridge(b, i / 6, side).add(new THREE.Vector3(0, 1.18, 0)), onBridge(b, (i + 1) / 6, side).add(new THREE.Vector3(0, 1.18, 0)), '#8a5a2e', .01);
+    for (let i = 0; i < 6; i++) line(stat, onBridge(b, i / 6, side).add(new THREE.Vector3(0, 1.18, 0)), onBridge(b, (i + 1) / 6, side).add(new THREE.Vector3(0, 1.18, 0)), '#8a5a2e', .01);
   }
   kinds.add('橋上三角彩旗');
 
@@ -88,7 +91,7 @@ export function createFestival(W, content, H, opts = {}) {
     for (let i = 1; i < 6; i++) {
       const p = onBridge(b, i / 6, 0); p.y += 1.55;
       const m = new THREE.MeshStandardMaterial({ color: I0.color || '#ff5a3c', emissive: I0.color || '#ff6a2a', emissiveIntensity: 0, roughness: .6 });
-      add(root, G.sph, m, p.x, p.y, p.z, .26, .32, .26); add(root, G.cyl, '#2a2a2a', p.x, p.y + .17, p.z, .14, .04, .14); add(root, G.cyl, '#ffd23a', p.x, p.y - .2, p.z, .04, .1, .04);
+      add(root, G.sph, m, p.x, p.y, p.z, .26, .32, .26); add(stat, G.cyl, '#2a2a2a', p.x, p.y + .17, p.z, .14, .04, .14); add(stat, G.cyl, '#ffd23a', p.x, p.y - .2, p.z, .04, .1, .04);
       items.push({ m, t: i / 6, lit: 0 });
     }
     bridgeLights.push({ b, items, name: I0.name, order: I0.order });
@@ -196,7 +199,7 @@ export function createFestival(W, content, H, opts = {}) {
   // ⑪ 遮陽傘休息桌
   for (const id of IDS) {
     const s = freeSpot(id, .75, 1.0); if (!s) continue;
-    const g = new THREE.Group(); g.position.set(s.x, H, s.z); root.add(g);
+    const g = new THREE.Group(); g.position.set(s.x, H, s.z); root.add(g); statics.push(g);
     add(g, G.cyl, '#ffffff', 0, .4, 0, .7, .05, .7); add(g, G.cyl, '#cccccc', 0, .2, 0, .06, .4, .06);
     for (let i = 0; i < 3; i++) { const a = i / 3 * TAU; add(g, G.cyl, BAL[i + 1], Math.cos(a) * .55, .22, Math.sin(a) * .55, .26, .04, .26); add(g, G.cyl, '#cccccc', Math.cos(a) * .55, .1, Math.sin(a) * .55, .04, .2, .04); }
     add(g, G.cyl, '#eeeeee', 0, .9, 0, .03, 1.1, .03);
@@ -207,7 +210,7 @@ export function createFestival(W, content, H, opts = {}) {
   // ⑫ 分類垃圾桶（一般、回收、廚餘）
   for (const id of IDS) {
     const s = freeSpot(id, .5, .6); if (!s) continue;
-    const g = new THREE.Group(); g.position.set(s.x, H, s.z); g.rotation.y = s.face; root.add(g);
+    const g = new THREE.Group(); g.position.set(s.x, H, s.z); g.rotation.y = s.face; root.add(g); statics.push(g);
     ['#5a5f66', '#2f7fd1', '#3e9b4f'].forEach((c, i) => { add(g, G.box, c, (i - 1) * .3, .3, 0, .26, .6, .26); add(g, G.box, '#ffffff', (i - 1) * .3, .45, .135, .14, .08, .01); });
   }
   kinds.add('分類垃圾桶');
@@ -216,7 +219,7 @@ export function createFestival(W, content, H, opts = {}) {
   {
     const s = spotAny(['center', 'food', 'recycle'], .7, 1.0);
     if (s) {
-      const g = new THREE.Group(); g.position.set(s.x, H, s.z); g.rotation.y = s.face; root.add(g);
+      const g = new THREE.Group(); g.position.set(s.x, H, s.z); g.rotation.y = s.face; root.add(g); statics.push(g);
       const frameC = '#e8762b';
       add(g, G.box, frameC, -.75, .9, 0, .14, 1.8, .1); add(g, G.box, frameC, .75, .9, 0, .14, 1.8, .1); add(g, G.box, frameC, 0, 1.8, 0, 1.64, .26, .1); add(g, G.box, frameC, 0, .05, 0, 1.64, .1, .1);
       for (let i = 0; i < 7; i++) add(g, G.sph, BAL[i % 6], -.75 + i * .25, 2.0, 0, .2, .2, .2);
@@ -233,7 +236,7 @@ export function createFestival(W, content, H, opts = {}) {
   {
     const s = spotAny(['center', 'food', 'sport'], .7, 1.0);
     if (s) {
-      const g = new THREE.Group(); g.position.set(s.x, H, s.z); g.rotation.y = s.face; root.add(g);
+      const g = new THREE.Group(); g.position.set(s.x, H, s.z); g.rotation.y = s.face; root.add(g); statics.push(g);
       add(g, G.box, '#ff9ed2', 0, .45, 0, 1.0, .5, .55); for (const x of [-.35, .35]) add(g, G.cyl, '#2a2a2a', x, .16, .3, .3, .06, .3, Math.PI / 2);
       add(g, G.cyl, '#dff3ff', 0, .85, 0, .5, .3, .5);
       for (let i = 0; i < 3; i++) { add(g, G.cyl, '#ffffff', -.3 + i * .3, 1.05, -.2, .02, .4, .02); add(g, G.sph, ['#ffb3d9', '#b3e0ff', '#fff0b3'][i], -.3 + i * .3, 1.32, -.2, .3, .26, .3); }
@@ -395,7 +398,7 @@ export function createFestival(W, content, H, opts = {}) {
     const I0 = (content.islands || []).find((x) => x.id === b.to); if (!I0) continue;
     const dir = new THREE.Vector3(Math.cos(b.a), 0, Math.sin(b.a)), side = new THREE.Vector3(-dir.z, 0, dir.x);
     const pos = b.p0.clone().addScaledVector(dir, -.9).addScaledVector(side, 1.35);
-    const g = new THREE.Group(); g.position.set(pos.x, H, pos.z); root.add(g);
+    const g = new THREE.Group(); g.position.set(pos.x, H, pos.z); root.add(g); statics.push(g);
     add(g, G.cyl, '#7a4a22', 0, .8, 0, .08, 1.6, .08);
     // 正面箭頭在右、背面箭頭在左：從兩邊看，箭頭都指向橋
     const makeTex = (rev) => {
@@ -467,6 +470,7 @@ export function createFestival(W, content, H, opts = {}) {
     }
     return null;
   }
+  batchStatic(stat); for (const g of statics) batchStatic(g);
   return { root, update, walkerAt, bridgeLights, freeSpot: (id, n, r) => spotAny([id], n, r), kinds: [...kinds], balloons: () => BALLOONS.filter((h) => !h.userData.balloon.group.userData.popped && h.parent && isVisible(h)), pop };
 }
 function isVisible(o) { for (let p = o; p; p = p.parent) if (!p.visible) return false; return true;
