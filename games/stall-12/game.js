@@ -1,5 +1,5 @@
 // 第 12 攤・鯉魚 Liyu 遊戲店：四子連線（和電腦對下）。先把 4 顆同色連成一線（橫、直、斜都可以）就贏
-import { LIYU } from '../_kit/kit.js?v=20261118v';
+import { LIYU } from '../_kit/kit.js?v=20261118w';
 const { ctx, W, H } = LIYU;
 
 const CONFIG = {

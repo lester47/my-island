@@ -1,6 +1,7 @@
 // 攤位實體：每個攤位在自己的島上有一座小攤子（桌子、條紋遮雨棚、招牌、依類型擺的道具）
 // 招牌寫攤號和攤名，前後兩面都有字；點攤子或招牌就打開那一攤的攤位卡
 import * as THREE from 'three';
+import { batchStatic } from './kit.js?v=20261118w';
 
 const TAU = Math.PI * 2;
 const FONT = '"Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif';
@@ -328,6 +329,8 @@ function makeBooth(st, I0, people) {
   const face2 = face.clone(); face2.position.z = -.03; face2.rotation.y = Math.PI; sign.add(face2);
   // 點擊用的透明大盒子（整座攤子）
   const hit = new THREE.Mesh(new THREE.BoxGeometry(W + .2, 2.4, D + .4), new THREE.MeshBasicMaterial({ visible: false })); hit.position.y = 1.2; g.add(hit);
+  // 桌子、遮雨棚、道具、彩旗這些不會動的零件合併成少數幾個網格（每攤原本約 80 個 → 十幾個）
+  batchStatic(g, [hit, sign, ...keepers.map((k) => k.P.g)]);
   return { g, hit, face, back, keepers };
 }
 

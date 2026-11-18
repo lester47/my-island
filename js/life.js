@@ -1,7 +1,7 @@
 // 生活感：居民、送貨員、商人、路人、動物、雲、鳥群、帆船、螢火蟲、貝殼
 import * as THREE from 'three';
-import { TAU, clamp, lerp, rng, mat, GEO, glowTexture, C } from './kit.js?v=20261118v';
-import { H, PIER_Y } from './world.js?v=20261118v';
+import { TAU, clamp, lerp, rng, mat, GEO, glowTexture, C, batchStatic } from './kit.js?v=20261118w';
+import { H, PIER_Y } from './world.js?v=20261118w';
 
 const SKIN = ['#ffd9b8', '#f2c49b', '#e0ad84', '#ffe3c8'];
 const SHIRT = ['#e8762b', '#8a5cd0', '#2f7fd1', '#dc4848', '#3e9b4f', '#e3a33b', '#f2f2f2', '#4fb3b0'];
@@ -29,6 +29,8 @@ export function makePerson(r, carry = false, look = {}) {
   if (carry) { box = add(GEO.box, mat('#d4a571'), 0, 1.55, 0, .5, .36, .4); add(GEO.box, mat('#8d5d35'), 0, 1.55, .205, .52, .06, .02); }
   // 點擊判定用的透明大球
   const hit = new THREE.Mesh(new THREE.SphereGeometry(.85, 8, 6), new THREE.MeshBasicMaterial({ visible: false })); hit.position.y = .8; g.add(hit);
+  // 每個會動的部位（頭、手、腳）各自合成一個網格：一個小人從 18 個零件變成 6 個，動作不變
+  for (const part of [...legs, ...arms, head]) batchStatic(part);
   g.scale.setScalar(PERSON_SCALE);
   return { g, legs, arms, head, box, hit };
 }
