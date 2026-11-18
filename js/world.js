@@ -1,7 +1,7 @@
 // 3D 世界：天空、海、遠山、島嶼與地標、橋、日夜光影
 import * as THREE from 'three';
-import { TAU, clamp, lerp, smooth, rng, loopNoise, mat, Builder, GEO, glowTexture, C } from './kit.js?v=20261118m';
-import { makeScenery } from './scenery.js?v=20261118m';
+import { TAU, clamp, lerp, smooth, rng, loopNoise, mat, Builder, GEO, glowTexture, C } from './kit.js?v=20261118n';
+import { makeScenery } from './scenery.js?v=20261118n';
 
 export const H = 1.75;               // 島頂草地高度
 const SEG = 72;                      // 海岸線分段（6 的倍數，六角轉角落在頂點上）
@@ -432,11 +432,43 @@ function landmarkCenter(B, g, P, extras) {
       const k = koiPlane(i % 5, 1.35); k.position.set(.34, 1.35, z); k.rotation.set(0, ry, Math.PI / 2); arm.add(k);
     }
   });
-  // 塔身：前後各一尾大的錦鯉，貼在塔的外牆上
-  for (const [y, a, n] of [[1.5, .5, 0], [2.7, .5 + Math.PI, 3]]) {
-    const r = 1.0 - (y / 4) * .45 + .04; const k = koiPlane(n, 1.7);
-    k.position.set(wm.x + Math.sin(a) * r, H + y, wm.z + Math.cos(a) * r); k.rotation.y = a; g.add(k);
+  // 塔身：前後各一尾立體的錦鯉雕塑（低多邊形、有厚度），用短支架固定在塔的外牆上，尾巴微微擺動
+  const sculpt = [
+    { base: '#f7f3ea', spots: [['#e8402f', -.48, .07, .17, .14], ['#e8402f', .02, .08, .3, .16], ['#e8402f', .42, .04, .15, .1]], fin: '#f2d9c8' },        // 紅白
+    { base: '#f7f3ea', spots: [['#e8402f', -.46, .07, .16, .14], ['#1f1f24', -.12, .1, .12, .1], ['#e8402f', .18, .07, .24, .15], ['#1f1f24', .48, .03, .09, .07]], fin: '#ece4d6' },   // 三色
+  ];
+  const FM = new Map(); const fm = (c) => { if (!FM.has(c)) FM.set(c, new THREE.MeshStandardMaterial({ color: c, flatShading: true, roughness: .55, metalness: .05 })); return FM.get(c); };
+  const sph = new THREE.SphereGeometry(1, 10, 7), cone4 = new THREE.ConeGeometry(1, 1, 4), cyl8 = new THREE.CylinderGeometry(1, 1, 1, 8);
+  const part = (p, geo, c, x, y, z, sx, sy, sz, rx = 0, ry = 0, rz = 0) => { const m = new THREE.Mesh(geo, fm(c)); m.position.set(x, y, z); m.scale.set(sx, sy, sz); m.rotation.set(rx, ry, rz); m.castShadow = true; p.add(m); return m; };
+  function koiSculpture(S) {
+    const k = new THREE.Group();                                                         // 魚頭朝 -x、側面朝 +z（朝外）
+    part(k, sph, S.base, 0, 0, 0, .62, .25, .19);                                        // 身體
+    part(k, sph, S.base, -.5, -.01, 0, .3, .21, .17);                                    // 頭
+    for (const [c, x, y, sx, sy] of S.spots) part(k, sph, c, x, y, 0, sx, sy, .196);      // 花紋（微微凸出身體，像上了色的雕塑）
+    const tail = new THREE.Group(); tail.position.x = .55; k.add(tail);
+    part(tail, cone4, S.base, .12, 0, 0, .12, .32, .09, 0, 0, -Math.PI / 2);              // 尾柄
+    for (const s of [1, -1]) part(tail, cone4, S.fin, .38, s * .11, 0, .12, .34, .03, 0, 0, Math.PI / 2 + s * .6);   // 尾鰭兩片（像燕尾）
+    part(k, cone4, S.fin, .0, .27, 0, .14, .2, .025, 0, 0, .6);                         // 背鰭
+    for (const s of [1, -1]) part(k, cone4, S.fin, -.3, -.2, s * .13, .07, .16, .02, s * .5, 0, -.9);   // 胸鰭
+    for (const s of [1, -1]) {
+      part(k, sph, '#ffffff', -.66, .07, s * .12, .055, .055, .04);                      // 眼睛
+      part(k, sph, '#151515', -.69, .07, s * .145, .028, .03, .02);
+      part(k, cyl8, '#d9b58a', -.8, -.08, s * .06, .008, .14, .008, 0, 0, -.9);          // 鬍鬚
+    }
+    part(k, sph, '#c96a5a', -.79, -.03, 0, .035, .03, .06);                               // 嘴
+    k.rotation.z = .08;                                                                   // 頭微微上揚，像躍起
+    return { k, tail };
   }
+  const sculptures = [];
+  for (const [y, a, n] of [[1.5, .5, 0], [2.7, .5 + Math.PI, 1]]) {
+    const r = 1.0 - (y / 4) * .45;
+    const holder = new THREE.Group(); holder.position.set(wm.x + Math.sin(a) * r, H + y, wm.z + Math.cos(a) * r); holder.rotation.y = a; g.add(holder);
+    part(holder, cyl8, '#8a7a66', 0, 0, .14, .045, .3, .045, Math.PI / 2);              // 支架
+    part(holder, cyl8, '#8a7a66', 0, 0, .02, .16, .04, .16, Math.PI / 2);               // 固定在牆上的圓座
+    const { k, tail } = koiSculpture(sculpt[n]); k.position.z = .36; k.scale.setScalar(1.2); holder.add(k);
+    sculptures.push({ k, tail, ph: n * 1.7 });
+  }
+  ANIM.push((t) => { for (const s of sculptures) { s.tail.rotation.y = Math.sin(t * 1.6 + s.ph) * .25; s.k.rotation.y = Math.sin(t * .8 + s.ph) * .06; } });
   const mpole = new THREE.Mesh(GEO.cyl6, mat('#d8d2c4')); mpole.scale.set(.06, 1.6, .06); mpole.position.set(wm.x, H + 5.6, wm.z); g.add(mpole);
   const mini = [['#2f7fd1', '#ffffff'], ['#e8473f', '#ffffff']].map(([c1, c2], i) => {
     const koi = new THREE.Group(); koi.position.set(wm.x, H + 6.2 - i * .5, wm.z);
