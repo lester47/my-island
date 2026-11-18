@@ -149,13 +149,49 @@ export function createGames(W, content, H, api) {
       add(g, G.cyl, '#7a4a22', 0, .7, 0, .07, 1.4, .07);
       const sp = label('🙈 躲貓貓', '#8a5cd0'); sp.position.y = 1.65; g.add(sp); hideSign = g;
       const hit = new THREE.Mesh(new THREE.BoxGeometry(1.2, 2.2, 1.2), new THREE.MeshBasicMaterial({ visible: false })); hit.position.y = 1; g.add(hit);
-      picks.push({ obj: hit, act: () => (hide ? startHide() : api.openRules('hide', startHide)) }); picks.push({ obj: sp, act: () => (hide ? startHide() : api.openRules('hide', startHide)) });
+      picks.push({ obj: hit, act: () => (hide ? startHide() : api.openHideMenu(startHide)) }); picks.push({ obj: sp, act: () => (hide ? startHide() : api.openHideMenu(startHide)) });
       anim.push((t) => { sp.position.y = 1.65 + Math.sin(t * 2.4) * .06; });
     }
   }
-  // 可以躲的地方：樹的後面、攤子的後面、橋頭旁
+  // ---------------- 躲貓貓掩體：每座島 3～4 個（灌木叢、稻草堆、木箱堆、大木桶、遊戲隧道、紙箱屋），蹲下就藏得住
+  const covers = [];
+  const COVER = {
+    bush(g) { for (const [x, z, s] of [[0, 0, 1], [.45, .15, .8], [-.4, .2, .85], [.1, -.35, .75]]) add(g, new THREE.IcosahedronGeometry(.5, 0), ['#4e9a3d', '#5fae49', '#3f8a35'][Math.floor(Math.abs(x * 10)) % 3], x, .45 * s, z, 1.0 * s, .95 * s, 1.0 * s); return .8; },
+    hay(g) { add(g, G.cyl, '#e8c25a', 0, .45, 0, 1.3, .9, 1.3); add(g, G.cyl, '#d4a83f', 0, .91, 0, 1.25, .04, 1.25); for (const y of [.25, .65]) add(g, G.cyl, '#b8862f', 0, y, 0, 1.32, .04, 1.32); add(g, G.box, '#e8c25a', .75, .3, .2, .7, .6, .5, 0, .4); return .85; },
+    crates(g) { add(g, G.box, '#b5803f', -.3, .35, 0, .7, .7, .7); add(g, G.box, '#a8743f', .4, .35, .1, .7, .7, .7, 0, .3); add(g, G.box, '#c48a4f', 0, 1.0, .05, .65, .6, .65, 0, -.2); for (const [x, y] of [[-.3, .35], [.4, .35]]) add(g, G.box, '#7a4a22', x, y, .36, .72, .08, .02); return .8; },
+    barrels(g) { for (const [x, z] of [[-.35, 0], [.35, 0], [0, .5]]) { add(g, G.cyl, '#8b5a2b', x, .5, z, .62, 1.0, .62); for (const y of [.2, .8]) add(g, G.cyl, '#3a3a3a', x, y, z, .64, .05, .64); } return .8; },
+    tube(g) { const m = new THREE.Mesh(new THREE.CylinderGeometry(.62, .62, 1.8, 14, 1, true), new THREE.MeshStandardMaterial({ color: '#e8473f', side: THREE.DoubleSide, roughness: .6 })); m.rotation.z = Math.PI / 2; m.position.y = .62; m.castShadow = true; g.add(m); for (const x of [-.9, .9]) add(g, new THREE.TorusGeometry(.62, .06, 6, 16), '#ffd23a', x, .62, 0, 1, 1, 1, 0, Math.PI / 2); return .9; },
+    box(g) { add(g, G.box, '#c9a06a', 0, .55, 0, 1.2, 1.1, 1.0); add(g, G.cone, '#b5803f', 0, 1.35, 0, 1.2, .5, 1.0, 0, Math.PI / 4); add(g, G.box, '#3a2a1a', 0, .4, .51, .4, .6, .02); add(g, G.box, '#ffffff', .35, .8, .51, .22, .18, .02); return .75; },
+  };
+  const coverKinds = Object.keys(COVER);
+  // 掩體放在步道外側的草地：避開橋頭、攤子、樹和彼此
+  function coverSpot(id) {
+    const I = islands[id], bA = I.bridgeAngles || [];
+    for (let i = 0; i < 600; i++) {
+      const th = R() * TAU; if (bA.some((b) => Math.abs(Math.atan2(Math.sin(th - b), Math.cos(th - b))) < .45)) continue;
+      const lo = I.walk.radAt(th) + .9, hi = I.top(th) * .9; if (hi < lo) continue;
+      const r = lo + R() * (hi - lo), x = I.pos.x + Math.cos(th) * r, z = I.pos.z + Math.sin(th) * r;
+      if (W.ground(x, z) == null || I.walk.clear(x - I.pos.x, z - I.pos.z) < .75 - i / 1200) continue;
+      if (api.nearBooth(x, z, i < 200 ? 2.2 : 1.7) || covers.some((c) => Math.hypot(c.x - x, c.z - z) < 2.8)) continue;
+      if ((I.trees || []).some((tr) => tr.visible && Math.hypot(tr.position.x + I.pos.x - x, tr.position.z + I.pos.z - z) < 1.1)) continue;
+      return { x, z };
+    }
+    return null;
+  }
+  for (const id of Object.keys(islands)) {
+    for (let k = 0; k < (id === 'center' ? 3 : 4); k++) {
+      const s = coverSpot(id); if (!s) continue;
+      const kind = coverKinds[covers.length % coverKinds.length];
+      const g = new THREE.Group(); g.position.set(s.x, H, s.z); g.rotation.y = R() * TAU; root.add(g);
+      const r = COVER[kind](g); W.blockers.push({ x: s.x, z: s.z, r: r * .85 });
+      covers.push({ x: s.x, z: s.z, id, kind, r, g });
+    }
+  }
+  const COVER_NAME = { bush: '灌木叢後面', hay: '稻草堆後面', crates: '木箱堆後面', barrels: '大木桶後面', tube: '遊戲隧道旁', box: '紙箱屋後面' };
+  // 可以躲的地方：樹的後面、攤子的後面、掩體的後面
   function hidingSpots() {
     const out = [];
+    for (const c of covers) { const I = islands[c.id]; const a = Math.atan2(c.z - I.pos.z, c.x - I.pos.x) + (R() - .5); out.push({ x: c.x + Math.cos(a) * (c.r + .45), z: c.z + Math.sin(a) * (c.r + .45), id: c.id, where: COVER_NAME[c.kind] }); }
     for (const [id, I] of Object.entries(islands)) {
       for (const tr of I.trees || []) { if (!tr.visible) continue; const w = tr.position.clone().add(I.pos); const a = Math.atan2(tr.position.z, tr.position.x); out.push({ x: w.x + Math.cos(a) * .7, z: w.z + Math.sin(a) * .7, id, where: '樹後面' }); }
     }
@@ -242,5 +278,5 @@ export function createGames(W, content, H, api) {
     if (!hit) return false;
     picks.find((p) => p.obj === hit.object).act(); return true;
   }
-  return { update, pick, startHide, spots, hideSign: () => hideSign, onExitWalk: () => { if (hide) { api.toast('離開漫遊，躲貓貓結束'); endHide(false); } } };
+  return { update, pick, startHide, spots, covers, hideSign: () => hideSign, onExitWalk: () => { if (hide) { api.toast('離開漫遊，躲貓貓結束'); endHide(false); } } };
 }

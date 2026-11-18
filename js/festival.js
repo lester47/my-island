@@ -21,6 +21,9 @@ function markBalloon(mesh, group, color) {
   hit.userData.balloon = { group, color }; BALLOONS.push(hit);
 }
 // 一顆氣球（橢圓球＋小結）
+// 鯉魚 Logo 貼片（旗子用）
+const LOGO_GEO = new THREE.PlaneGeometry(1, 1); let LOGO_M = null;
+function logoMat() { if (!LOGO_M) { const tx = new THREE.TextureLoader().load('assets/brand/koi-logo.png?v=20261118l'); tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 4; LOGO_M = new THREE.MeshStandardMaterial({ map: tx, transparent: true, alphaTest: .4, roughness: .8, polygonOffset: true, polygonOffsetFactor: -2 }); } return LOGO_M; }
 function balloon(parent, c, x, y, z, s = 1) {
   const g = new THREE.Group(); g.position.set(x, y, z); parent.add(g);
   const b = add(g, G.sph, mat(c, { roughness: .35, metalness: .05 }), 0, 0, 0, .34 * s, .42 * s, .34 * s);
@@ -106,7 +109,9 @@ export function createFestival(W, content, H, opts = {}) {
     add(g, G.cyl, '#dddddd', 0, 1.0, 0, .04, 2.0, .04);
     const f = add(g, G.box, BAL[(b.a * 10 | 0) % 6 + 0] || '#ff4d6d', .22, 1.3, 0, .42, 1.2, .02); f.material = mat(['#ff4d6d', '#3fa7ff', '#5ed37a', '#ffd23a', '#b06bff'][bridges.indexOf(b)]);
     add(g, G.box, '#ffffff', .22, 1.3, .015, .08, .9, .01);
-    anim.push((t) => { f.rotation.y = Math.sin(t * 2 + side) * .25; });
+    const LG = new THREE.Group(); LG.position.set(.22, 1.3, 0); g.add(LG);   // 旗面兩邊都有鯉魚 Logo（跟著旗子擺）
+    for (const sd of [1, -1]) { const L = new THREE.Mesh(LOGO_GEO, logoMat()); L.position.set(0, .3, sd * .026); L.scale.setScalar(.34); if (sd < 0) L.rotation.y = Math.PI; LG.add(L); }
+    anim.push((t) => { f.rotation.y = LG.rotation.y = Math.sin(t * 2 + side) * .25; });
   }
   kinds.add('羽毛旗');
 
@@ -116,7 +121,7 @@ export function createFestival(W, content, H, opts = {}) {
     const g = new THREE.Group(); g.position.set(s.x, H, s.z); root.add(g);
     add(g, G.cyl, '#7a4a22', 0, .2, 0, .06, .4, .06);
     const top = new THREE.Group(); top.position.y = .4; g.add(top);
-    for (let i = 0; i < 6; i++) { const a = i / 6 * TAU, bx = Math.cos(a) * .32, bz = Math.sin(a) * .32, by = 1.7 + (i % 3) * .2; balloon(top, BAL[(i + k) % BAL.length], bx, by, bz); line(top, new THREE.Vector3(0, 0, 0), new THREE.Vector3(bx, by - .3, bz)); }
+    for (let i = 0; i < 6; i++) { const a = i / 6 * TAU, bx = Math.cos(a) * .32, bz = Math.sin(a) * .32, by = 1.7 + (i % 3) * .2; const bg = balloon(top, BAL[(i + k) % BAL.length], bx, by, bz); line(bg, new THREE.Vector3(-bx, -by, -bz), new THREE.Vector3(0, -.3, 0)); /* 線綁在氣球上：破掉時一起消失 */ }
     const ph = R() * 6; anim.push((t) => { top.rotation.z = Math.sin(t * .9 + ph) * .05; top.rotation.x = Math.cos(t * .7 + ph) * .05; });
   }
   kinds.add('氣球束');
@@ -299,7 +304,7 @@ export function createFestival(W, content, H, opts = {}) {
   ringWalker(low ? 'center' : 'craft', (g) => {
     const P = person(g, '#ffd23a');
     const bunch = new THREE.Group(); bunch.position.set(.25, .6, .1); g.add(bunch);
-    for (let i = 0; i < 9; i++) { const a = i / 9 * TAU, x = Math.cos(a) * .35, z = Math.sin(a) * .35, y = 1.5 + (i % 3) * .25; balloon(bunch, BAL[i % BAL.length], x, y, z, .9); line(bunch, new THREE.Vector3(0, 0, 0), new THREE.Vector3(x, y - .3, z)); }
+    for (let i = 0; i < 9; i++) { const a = i / 9 * TAU, x = Math.cos(a) * .35, z = Math.sin(a) * .35, y = 1.5 + (i % 3) * .25; const bg = balloon(bunch, BAL[i % BAL.length], x, y, z, .9); line(bg, new THREE.Vector3(-x, -y, -z), new THREE.Vector3(0, -.3, 0)); }
     if (P) P.arms[1].rotation.z = 2.6;
     return { P, bunch };
   }, .45, 1);

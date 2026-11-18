@@ -1,9 +1,9 @@
 // 鏡頭：拖曳旋轉縮放、回到全景、點島飛近（電影史詩運鏡）、開場、導覽、地面漫遊
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { TAU, clamp, lerp, easeInOut, smooth } from './kit.js?v=20261118h';
-import { H } from './world.js?v=20261118h';
-import { SHORE } from './scenery.js?v=20261118h';
+import { TAU, clamp, lerp, easeInOut, smooth } from './kit.js?v=20261118l';
+import { H } from './world.js?v=20261118l';
+import { SHORE } from './scenery.js?v=20261118l';
 
 export function createCam(W, canvas, hooks) {
   const camera = W.camera;
@@ -121,7 +121,8 @@ export function createCam(W, canvas, hooks) {
   }
 
   // ------------------------------------------------------------ 地面漫遊（第一人稱）
-  const walk = { yaw: 0, pitch: -.05, keys: {}, pad: {}, pos: new THREE.Vector3() };
+  // crouch：按住 Shift 蹲下（ck 是蹲下的程度 0～1，平滑過渡）；jumpY／vy：空白鍵跳躍的高度與速度
+  const walk = { yaw: 0, pitch: -.05, keys: {}, pad: {}, pos: new THREE.Vector3(), crouch: false, ck: 0, jumpY: 0, vy: 0 };
   function enterWalk(at) {
     S.mode = 'walk'; controls.enabled = false; S.busy = null; S.follow = null;
     if (at) { walk.pos.copy(at.pos); walk.yaw = at.yaw; walk.pitch = -.08; }   // 指定起點（例如登上鯉魚號）
@@ -130,12 +131,13 @@ export function createCam(W, canvas, hooks) {
   }
   function exitWalk(done) { S.mode = 'orbit'; S.follow = null; const h = setHome(false); flight({ t: h.t, p: h.p }, 1400, 0, done); }
   function placeWalk() {
-    const eye = walk.pos.clone().setY(walk.pos.y + 1.05);
+    const lift = walk.jumpY - walk.ck * .42;            // 跳起來往上、蹲下往下
+    const eye = walk.pos.clone().setY(walk.pos.y + 1.05 + lift);
     const dir = new THREE.Vector3(Math.sin(walk.yaw) * Math.cos(walk.pitch), Math.sin(walk.pitch), Math.cos(walk.yaw) * Math.cos(walk.pitch));
     if (walk.third) {
       // 第三人稱：鏡頭在自己人物的後上方，看得到自己和頭上的名牌
       const back = 4.4, up = 2.3 - walk.pitch * 2.2;
-      camera.position.set(walk.pos.x - Math.sin(walk.yaw) * back, walk.pos.y + up, walk.pos.z - Math.cos(walk.yaw) * back);
+      camera.position.set(walk.pos.x - Math.sin(walk.yaw) * back, walk.pos.y + up + walk.jumpY * .6, walk.pos.z - Math.cos(walk.yaw) * back);
       camera.lookAt(walk.pos.x + Math.sin(walk.yaw) * 1.6, walk.pos.y + .9 + walk.pitch * 2, walk.pos.z + Math.cos(walk.yaw) * 1.6);
       return;
     }
@@ -157,12 +159,16 @@ export function createCam(W, canvas, hooks) {
         const h = W.ground(walk.pos.x, walk.pos.z); if (h != null) walk.pos.y = h;
       }
     }
+    if (walk.frozen) { placeWalk(); return; }        // 躲貓貓當鬼閉眼時不能走
     const k = walk.keys, p = walk.pad;
     const fwd = (k.KeyW || k.ArrowUp || p.up ? 1 : 0) - (k.KeyS || k.ArrowDown || p.down ? 1 : 0);
     const turn = (k.ArrowLeft || p.left ? 1 : 0) - (k.ArrowRight || p.right ? 1 : 0);
     const strafe = (k.KeyD ? 1 : 0) - (k.KeyA ? 1 : 0);
     walk.yaw += turn * dt * 1.8;
-    const sp = 4.2 * dt;
+    // 跳躍（重力往下拉）與蹲下（蹲著走比較慢）
+    walk.ck += ((walk.crouch && !walk.jumpY ? 1 : 0) - walk.ck) * Math.min(1, dt * 12);
+    if (walk.vy || walk.jumpY > 0) { const jd = Math.min(dt, .05); walk.jumpY = Math.max(0, walk.jumpY + walk.vy * jd - 7 * jd * jd); walk.vy -= 14 * jd; if (walk.jumpY === 0 && walk.vy < 0) walk.vy = 0; }
+    const sp = 4.2 * dt * (1 - walk.ck * .55);
     const dx = (Math.sin(walk.yaw) * fwd - Math.cos(walk.yaw) * strafe) * sp, dz = (Math.cos(walk.yaw) * fwd + Math.sin(walk.yaw) * strafe) * sp;
     if (dx || dz) {
       // 分軸嘗試，碰到牆可以沿牆滑動；走到海邊或建築會被擋住

@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261118h">
+<link rel="stylesheet" href="styles.css?v=20261118l">
 <script type="importmap">{"imports":{"three":"./vendor/three/three.module.js","three/addons/":"./vendor/three/addons/"}}</script>
 </head>
 <body>
@@ -78,6 +78,8 @@
 <div class="notice-bar" id="noticeBar" role="status" hidden><span aria-hidden="true">📢</span><span class="nt"></span><small class="nw"></small><button type="button" class="nx" aria-label="關閉公告">✕</button></div>
 <section class="fish-ui" id="fishUI" hidden aria-live="polite"><p class="ft"></p><div class="fbtns"><button type="button" class="fb">🎣 拋竿</button><button type="button" class="fx fl">📖 圖鑑 0/6</button><button type="button" class="fx frules">📜 規則</button></div></section>
 <section class="hide-ui" id="hideUI" hidden aria-live="polite"><p class="ht"></p><p class="hm"></p><button type="button" class="hr">📜 規則</button><button type="button" class="hq">結束</button></section>
+<section class="hide-ui mp" id="mpUI" hidden aria-live="polite"><p class="ht"></p><p class="hm"></p></section>
+<div class="blindfold" id="blindfold" hidden><p>👹 你是鬼<br>閉上眼睛數到 60…</p></div>
 <p class="live-note" id="liveNote" role="status" aria-live="polite" hidden></p>
 
 <!-- 島嶼面板（桌機右側、手機底部抽屜） -->
@@ -99,9 +101,10 @@
 
 <!-- 漫遊介面 -->
 <section class="walkui" id="walkui" hidden aria-label="地面漫遊">
-  <p class="walk-hint" id="walkHint">WASD 或方向鍵移動、拖曳畫面環顧；點攤位招牌看介紹；按 Esc 或「鳥瞰」回到上空</p>
+  <p class="walk-hint" id="walkHint">WASD 或方向鍵移動、空白鍵跳、按住 Shift 蹲下、拖曳畫面環顧；點攤位招牌看介紹；按 Esc 或「鳥瞰」回到上空</p>
   <button type="button" class="walk-view" id="walkView" hidden>👀 切換視角</button>
   <button type="button" class="walk-exit" id="walkExit">✕ 鳥瞰</button>
+  <div class="actpad" aria-label="動作"><button type="button" id="actJump" aria-label="跳躍（空白鍵）">⤴ 跳</button><button type="button" id="actCrouch" aria-label="蹲下（按住 Shift）">⤵ 蹲</button></div>
   <div class="dpad" aria-label="方向鍵">
     <button type="button" data-d="up" aria-label="前進">▲</button>
     <button type="button" data-d="left" aria-label="向左轉">◀</button>
@@ -164,6 +167,10 @@
   <div class="dlg-hd"><h2 id="rulesTitle">規則</h2><button type="button" class="x" data-close aria-label="關閉">✕</button></div>
   <div id="rulesBody"></div>
 </dialog>
+<dialog id="hideDlg" class="dlg" aria-labelledby="hideTitle">
+  <div class="dlg-hd"><h2 id="hideTitle">🙈 躲貓貓</h2><button type="button" class="x" data-close aria-label="關閉">✕</button></div>
+  <div id="hideBody"></div>
+</dialog>
 <dialog id="doneDlg" class="dlg" aria-labelledby="doneTitle">
   <div class="dlg-hd"><h2 id="doneTitle">🎉 集章完成！</h2><button type="button" class="x" data-close aria-label="關閉">✕</button></div>
   <div id="doneBody"></div>
@@ -171,6 +178,6 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <noscript><p class="noscript">這個網站需要開啟 JavaScript。</p></noscript>
-<script type="module" src="js/main.js?v=20261118h"></script>
+<script type="module" src="js/main.js?v=20261118l"></script>
 </body>
 </html>

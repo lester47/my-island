@@ -6,3 +6,12 @@ export const ROLES = {
   visitor: { label: '訪客', icon: '⭐', color: '#7a4cc0' },
 };
 export const OUTFITS = ['#e8762b', '#2f7fd1', '#dc4848', '#3e9b4f', '#8a5cd0', '#e3a33b', '#4fb3b0', '#f2f2f2'];
+// 可以選的帽子（每頂帽子前面都有小鯉魚 Logo）
+export const HATS = {
+  none: { label: '不戴', icon: '🙂' },
+  cap: { label: '棒球帽', icon: '🧢' },
+  bucket: { label: '漁夫帽', icon: '👒' },
+  beanie: { label: '毛線帽', icon: '🧶' },
+  straw: { label: '草帽', icon: '🌾' },
+  koi: { label: '鯉魚帽', icon: '🎏' },
+};

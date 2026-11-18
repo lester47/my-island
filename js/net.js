@@ -10,7 +10,7 @@ const STALE = 3 * 60 * 1000;   // 超過 3 分鐘沒更新的人不顯示（例�
 export function createNet(config, hooks) {
   const app = initializeApp(config);
   const auth = getAuth(app), db = getDatabase(app);
-  let uid = null, me = null, meRef = null, lastSent = '', lastT = 0, viewerRef = null;
+  let uid = null, me = null, meRef = null, lastSent = '', lastT = 0, viewerRef = null, noHat = false;
   const others = new Map();   // uid → { info, pos, t }
   let viewers = 0, skew = 0;
   const status = (s, msg) => hooks.onStatus && hooks.onStatus(s, msg);
@@ -34,12 +34,14 @@ export function createNet(config, hooks) {
     meRef = ref(db, `${ROOT}/players/${uid}`);
     const p = hooks.myPos() || { x: 0, y: 1.75, z: 7.4, yaw: Math.PI };
     const data = { name: me.name, role: me.role, shirt: me.shirt, x: p.x, y: p.y, z: p.z, yaw: p.yaw, t: serverTimestamp() };
-    onDisconnect(meRef).remove().then(() => set(meRef, data)).catch((e) => status('error', e.code));
+    if (me.hat && me.hat !== 'none' && !noHat) data.hat = me.hat;
+    // 舊版規則不認得 hat 欄位會被擋：退回不送帽子（等老師貼上新規則就會自動有帽子）
+    onDisconnect(meRef).remove().then(() => set(meRef, data)).catch((e) => { if (data.hat && !noHat) { noHat = true; delete data.hat; console.warn('Firebase 規則還沒更新，先不同步帽子'); return set(meRef, data); } throw e; }).catch((e) => status('error', e.code));
     lastSent = `${p.x},${p.z},${p.yaw}`; lastT = performance.now();
   }
   function setMe(profile) {
     if (!profile && meRef) { remove(meRef).catch(() => {}); onDisconnect(meRef).cancel().catch(() => {}); meRef = null; }
-    me = profile ? { name: profile.name, role: profile.role, shirt: profile.shirt } : null;
+    me = profile ? { name: profile.name, role: profile.role, shirt: profile.shirt, hat: profile.hat || 'none' } : null;
     if (me) publish(true);
   }
   // 每一格畫面呼叫：有移動才送，最多每 0.25 秒一次；站著不動時每 60 秒報一次平安
@@ -57,7 +59,7 @@ export function createNet(config, hooks) {
   const valid = (v) => v && typeof v.name === 'string' && typeof v.x === 'number' && typeof v.z === 'number';
   const put = (s) => {
     if (s.key === uid) return; const v = s.val(); if (!valid(v)) return;
-    others.set(s.key, v); hooks.upsert(s.key, { name: v.name, role: v.role, shirt: v.shirt }, { x: v.x, y: v.y, z: v.z, yaw: v.yaw || 0 });
+    others.set(s.key, v); hooks.upsert(s.key, { name: v.name, role: v.role, shirt: v.shirt, hat: v.hat || 'none' }, { x: v.x, y: v.y, z: v.z, yaw: v.yaw || 0 });
     emitCount();
   };
   onChildAdded(players, put); onChildChanged(players, put);
@@ -78,5 +80,6 @@ export function createNet(config, hooks) {
     if (me) { n++; if (byRole[me.role] != null) byRole[me.role]++; }
     hooks.onCount({ players: n, byRole, viewers: Math.max(viewers, n ? 1 : 0) });
   }
-  return { setMe, tick };
+  // 給多人小遊戲用：資料庫、自己的 id、伺服器時間
+  return { setMe, tick, db, uid: () => uid, now: () => Date.now() + skew, fb: { ref, set, update, remove, onValue, serverTimestamp } };
 }
