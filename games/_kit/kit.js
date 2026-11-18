@@ -63,7 +63,8 @@ const cv = el('canvas', 'lg-cv'); cv.width = W; cv.height = H; cv.setAttribute('
 const ctx = cv.getContext('2d');
 const toastEl = el('p', 'lg-toast'); toastEl.setAttribute('role', 'status');
 const over = el('section', 'lg-over');
-stage.append(cv, toastEl, over);
+const box = el('div', 'lg-box'); box.append(cv);                 // 3D 遊戲：3D 畫布放在 box 裡、cv 下面，cv 變成透明的 HUD
+stage.append(box, toastEl, over);
 root.append(bar, stage);
 document.body.append(root);
 
@@ -74,11 +75,12 @@ back.onclick = () => { if (embedded) post('close'); else location.href = new URL
 addEventListener('keydown', (e) => { if (e.key === 'Escape' && embedded) post('close'); });
 
 // 畫布縮放：保持 2:3，盡量填滿；高解析度螢幕畫得更清楚
-let scale = 1;
+let scale = 1, layer3d = null;
 function fit() {
   const r = stage.getBoundingClientRect(), s = Math.min(r.width / W, r.height / H);
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  cv.style.width = `${W * s}px`; cv.style.height = `${H * s}px`;
+  cv.style.width = `${W * s}px`; cv.style.height = `${H * s}px`; box.style.width = cv.style.width; box.style.height = cv.style.height;
+  if (layer3d) layer3d.resize(W * s, H * s, dpr);
   cv.width = Math.round(W * s * dpr); cv.height = Math.round(H * s * dpr);
   scale = s * dpr; ctx.setTransform(scale, 0, 0, scale, 0, 0);
 }
@@ -162,6 +164,13 @@ export const LIYU = window.__liyu = {
       document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
     }, 'image/png');
   },
+  // 3D 版：建一個 3D 畫布放在 HUD 下面；onResize(cssW, cssH, dpr) 讓遊戲調整 renderer 和相機
+  layer3d(onResize) {
+    const c3 = el('canvas', 'lg-3d'); box.insertBefore(c3, cv); cv.classList.add('hud');
+    layer3d = { canvas: c3, resize: onResize }; fit(); return c3;
+  },
+  // HUD 座標（400×600）→ 3D 用的 -1～1 螢幕座標
+  ndc(x, y) { return { x: x / W * 2 - 1, y: -(y / H * 2 - 1) }; },
   // 畫圖小幫手
   text(s, x, y, { size = 20, color = '#2a1d12', align = 'center', weight = 800, base = 'middle' } = {}) {
     ctx.font = `${weight} ${size}px "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif`; ctx.fillStyle = color; ctx.textAlign = align; ctx.textBaseline = base; ctx.fillText(s, x, y);
@@ -170,5 +179,5 @@ export const LIYU = window.__liyu = {
   circle(x, y, r, fill, stroke, lw = 3) { ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); if (fill) { ctx.fillStyle = fill; ctx.fill(); } if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw; ctx.stroke(); } },
   // 圖片：學生畫好的圖放在 assets/，用這個載入；還沒載好時回傳 null（遊戲先畫簡單圖形代替）
   img(src) { const i = new Image(); i.src = src; const o = { el: i, ok: false }; i.onload = () => (o.ok = true); return o; },
-  bg(color = '#fff8ec') { ctx.fillStyle = color; ctx.fillRect(0, 0, W, H); },
+  bg(color = '#fff8ec') { if (layer3d) { ctx.clearRect(0, 0, W, H); return; } ctx.fillStyle = color; ctx.fillRect(0, 0, W, H); },
 };

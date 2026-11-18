@@ -1,5 +1,5 @@
 // 第 17 攤・名不虛傳 GG 手：穩穩手挑戰（電流急急棒）——拖著小圈圈沿著彎彎的鐵絲走到終點，碰到邊就回上一個檢查點
-import { LIYU } from '../_kit/kit.js?v=20261118t';
+import { LIYU } from '../_kit/kit.js?v=20261118u';
 const { ctx, W, H } = LIYU;
 
 const CONFIG = {

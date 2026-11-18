@@ -1,6 +1,6 @@
 // 115 鯉魚市集｜介面與流程
 import * as THREE from 'three';
-import { ROLES, OUTFITS, HATS } from './roles.js?v=20261118t';
+import { ROLES, OUTFITS, HATS } from './roles.js?v=20261118u';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -15,7 +15,7 @@ const pad2 = (n) => String(n).padStart(2, '0');
 const fmtH = (h) => { h = ((h % 24) + 24) % 24; return `${pad2(Math.floor(h))}:${pad2(Math.floor((h % 1) * 60))}`; };
 
 // 介面 Logo：低多邊形鯉魚（橘紅魚背、米白魚腹、魚頭朝右），首頁、怎麼逛、集章完成共用這一張
-const LOGO_SRC = 'assets/brand/koi-logo.png?v=20261118t';
+const LOGO_SRC = 'assets/brand/koi-logo.png?v=20261118u';
 const MASCOT = `<img src="${LOGO_SRC}" alt="115 鯉魚市集 Logo：低多邊形小鯉魚" decoding="async">`;
 
 let C = null;            // content.json
@@ -1210,14 +1210,14 @@ function balloonPopped() {
 }
 function startNet() {
   const M = C.multiplayer; if (!M || !M.enabled || !M.firebase || !PL) return;
-  import('./net.js?v=20261118t').then(({ createNet }) => {
+  import('./net.js?v=20261118u').then(({ createNet }) => {
     NET = createNet(M.firebase, {
       myPos: () => PL.myPos(), upsert: (id, info, pos) => PL.upsert(id, info, pos), remove: (id) => PL.remove(id),
       onCount: (c) => { COUNT = c; const el = $('#onlineChip'); el.hidden = false; $('#onlineCount').textContent = c.players; el.setAttribute('aria-label', `市集島上 ${c.players} 人，開著網站 ${c.viewers} 人，點一下看各身分人數`); },
       onStatus: (s, msg) => { $('#onlineChip').classList.toggle('off', s !== 'online'); if (s === 'error') console.warn('連線錯誤', msg); },
     });
     NET.setMe(meProfile());
-    import('./hidemp.js?v=20261118t').then(({ createHideMP }) => {
+    import('./hidemp.js?v=20261118u').then(({ createHideMP }) => {
       HM = createHideMP(NET, {
         toast, profile: meProfile, enterWalk: () => { if (!S.walking) enterWalk(); },
         walkPos: () => (S.walking ? CAM.walk.pos : null), posOf: (id) => PL.posOf(id),
@@ -1320,7 +1320,7 @@ async function boot() {
   if (Q.has('nogl') || !webglOK()) { textOnly(Q.has('nogl') ? '已切換為文字清單版' : '這台裝置無法顯示 3D 畫面'); applyTheme(); updateClock(); setInterval(updateClock, 10000); window.__ready = true; return; }
   let mods;
   try {
-    mods = await Promise.all([import('./world.js?v=20261118t'), import('./life.js?v=20261118t'), import('./cam.js?v=20261118t'), import('./players.js?v=20261118t'), import('./signs.js?v=20261118t'), import('./festival.js?v=20261118t'), import('./fauna.js?v=20261118t'), import('./interact.js?v=20261118t'), import('./games.js?v=20261118t')]);
+    mods = await Promise.all([import('./world.js?v=20261118u'), import('./life.js?v=20261118u'), import('./cam.js?v=20261118u'), import('./players.js?v=20261118u'), import('./signs.js?v=20261118u'), import('./festival.js?v=20261118u'), import('./fauna.js?v=20261118u'), import('./interact.js?v=20261118u'), import('./games.js?v=20261118u')]);
     const [{ createWorld, H: GROUND_H }, { createLife, makePerson }, { createCam }, { createPlayers }, { createSigns }, { createFestival }, { createFauna }, { createInteract }, { createGames, FISH }] = mods;
     const mobile = isMobile();
     W = createWorld($('#gl'), { quality: S.quality, mobile });
@@ -1332,10 +1332,10 @@ async function boot() {
     W.canBoard = canBoardWalk;
     // 搭船中：只有靠港、跳板放下時才能走出船艙
     W.canLeave = () => { const s = L.carp.status(); if (s.docked && s.gang) return true; if (performance.now() - lastBlockToast > 3000) { lastBlockToast = performance.now(); toast('⛔ 航行中請待在船上，靠港放下跳板後再下船'); } return false; };
-    KIT = await import('./kit.js?v=20261118t');
-    SG = createSigns(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261118t')).rng, low: mobile || S.quality === 'low' });
-    FX = createFestival(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261118t')).rng, low: mobile || S.quality === 'low', avoid: [...SG.signs.map((s) => s.g.position), ...Object.values(W.islands).flatMap((I) => (I.trees || []).filter((tr) => tr.visible).map((tr) => tr.position.clone().add(I.pos)))], carp: L.carp });
-    FA = createFauna(W, { H: GROUND_H, rng: (await import('./kit.js?v=20261118t')).rng });
+    KIT = await import('./kit.js?v=20261118u');
+    SG = createSigns(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261118u')).rng, low: mobile || S.quality === 'low' });
+    FX = createFestival(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261118u')).rng, low: mobile || S.quality === 'low', avoid: [...SG.signs.map((s) => s.g.position), ...Object.values(W.islands).flatMap((I) => (I.trees || []).filter((tr) => tr.visible).map((tr) => tr.position.clone().add(I.pos)))], carp: L.carp });
+    FA = createFauna(W, { H: GROUND_H, rng: (await import('./kit.js?v=20261118u')).rng });
     IA = createInteract(W, C, GROUND_H, {
       toast, carp: L.carp,
       toastIf: (m) => { if (!S.intro) toast(m); },

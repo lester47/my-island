@@ -1,5 +1,5 @@
 // 第 06 攤・巧手工坊／自己畫貼紙 DIY：在圓形空白貼紙上畫畫，按「完成」存成圖片
-import { LIYU } from '../_kit/kit.js?v=20261118t';
+import { LIYU } from '../_kit/kit.js?v=20261118u';
 const { ctx, W, H } = LIYU;
 
 const CONFIG = {

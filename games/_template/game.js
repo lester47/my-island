@@ -1,6 +1,6 @@
 // 🧩 遊戲範本：複製整個 _template 資料夾，改名成 stall-攤號（兩位數），再改下面的設定和玩法
 // 範本示範：鯉魚從水裡冒出來，點到就得分；20 秒內點到 5 隻過關
-import { LIYU } from '../_kit/kit.js?v=20261118t';
+import { LIYU } from '../_kit/kit.js?v=20261118u';
 const { ctx, W, H } = LIYU;
 
 // ===== ① 設定（學生可以先只改這裡）=====

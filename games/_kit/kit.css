@@ -7,6 +7,9 @@ html, body { margin: 0; height: 100%; background: #1f2a24; font-family: "Noto Sa
 .lg-bar button { min-width: 44px; min-height: 44px; border: 0; border-radius: 12px; background: rgba(255, 255, 255, .92); color: var(--koi-dk); font-weight: 800; font-size: 15px; font-family: inherit; padding: 0 12px; cursor: pointer; }
 .lg-title { flex: 1; margin: 0; font-size: 17px; font-weight: 900; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .lg-stage { position: relative; flex: 1; min-height: 0; display: grid; place-items: center; background: radial-gradient(circle at 50% 30%, #2f4a3a, #1f2a24); }
+.lg-box { position: relative; border-radius: 14px; box-shadow: 0 8px 30px rgba(0, 0, 0, .35); overflow: hidden; }
+.lg-3d { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
+.lg-cv.hud { position: relative; background: transparent; box-shadow: none; border-radius: 0; }
 .lg-cv { display: block; touch-action: none; border-radius: 14px; box-shadow: 0 8px 30px rgba(0, 0, 0, .35); background: var(--paper); user-select: none; -webkit-user-select: none; }
 .lg-over { position: absolute; inset: 0; display: grid; place-items: center; padding: 16px; background: rgba(20, 30, 25, .55); overflow: auto; }
 .lg-over[hidden] { display: none; }
