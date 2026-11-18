@@ -1,5 +1,5 @@
 // 第 19 攤・三二一發射！／戰鬥陀螺：倒數後按住「發射」貯力，在綠色區放開；陀螺互撞，先停下或被撞出場的輸
-import { LIYU } from '../_kit/kit.js?v=20261118r';
+import { LIYU } from '../_kit/kit.js?v=20261118s';
 const { ctx, W, H } = LIYU;
 
 const CONFIG = {

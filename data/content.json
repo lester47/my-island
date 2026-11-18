@@ -1,5 +1,5 @@
 {
-  "assetVersion": "20261118r",
+  "assetVersion": "20261118s",
   "site": {
     "title": "115 鯉魚市集",
     "tagline": "跳上五座六角小島，逛美食、玩手作、闖關挑戰，還能挖二手好物！",
@@ -752,7 +752,15 @@
         }
       ],
       "sample": true,
-      "short": "手作小物・畫貼紙"
+      "short": "手作小物・畫貼紙",
+      "game": {
+        "url": "games/stall-06/",
+        "title": "自己畫貼紙（線上版）",
+        "short": "畫貼紙",
+        "ready": true,
+        "stamp": false,
+        "hint": "線上畫一張貼紙，完成可以存成圖片"
+      }
     },
     {
       "no": 7,
@@ -784,7 +792,13 @@
       "photoCaption": "示意插畫，非攤位實拍",
       "sample": true,
       "price": "1 個鯉魚幣",
-      "short": "點心＋小遊戲"
+      "short": "點心＋小遊戲",
+      "game": {
+        "url": "games/stall-08/",
+        "title": "點心快手",
+        "short": "點心快手",
+        "ready": true
+      }
     },
     {
       "no": 9,
@@ -805,8 +819,7 @@
         "url": "games/stall-09/",
         "title": "正反接球王線上版",
         "short": "正反接球",
-        "ready": true,
-        "beta": true
+        "ready": true
       }
     },
     {
@@ -842,8 +855,7 @@
         "url": "games/stall-10/",
         "title": "套圈圈＋戳洞洞線上版",
         "short": "套圈＋戳洞",
-        "ready": true,
-        "beta": true
+        "ready": true
       }
     },
     {
@@ -865,8 +877,7 @@
         "url": "games/stall-11/",
         "title": "彈珠迷宮線上版",
         "short": "彈珠迷宮",
-        "ready": true,
-        "beta": true
+        "ready": true
       }
     },
     {
@@ -883,7 +894,13 @@
       "photoCaption": "示意插畫，非攤位實拍",
       "sample": true,
       "price": "1 個鯉魚幣",
-      "short": "桌遊・小遊戲"
+      "short": "桌遊・小遊戲",
+      "game": {
+        "url": "games/stall-12/",
+        "title": "鯉魚四子連線",
+        "short": "四子連線",
+        "ready": true
+      }
     },
     {
       "no": 13,
@@ -918,8 +935,7 @@
         "url": "games/stall-13/",
         "title": "記憶王＋好耳力線上版",
         "short": "記憶＋聽聲",
-        "ready": true,
-        "beta": true
+        "ready": true
       }
     },
     {
@@ -941,8 +957,7 @@
         "url": "games/stall-14/",
         "title": "娃！茶一點就中線上版",
         "short": "投茶杯",
-        "ready": true,
-        "beta": true
+        "ready": true
       }
     },
     {
@@ -971,7 +986,15 @@
         }
       ],
       "sample": true,
-      "short": "二手挖寶・鑽石貼紙畫"
+      "short": "二手挖寶・鑽石貼紙畫",
+      "game": {
+        "url": "games/stall-15/",
+        "title": "鑽石貼紙畫（線上版）",
+        "short": "鑽石畫",
+        "ready": true,
+        "stamp": false,
+        "hint": "線上貼一幅鑽石畫，完成可以存成圖片"
+      }
     },
     {
       "no": 16,
@@ -987,7 +1010,15 @@
       "photoCaption": "示意插畫，非攤位實拍",
       "sample": true,
       "price": "1 個鯉魚幣",
-      "short": "聖誕手作"
+      "short": "聖誕手作",
+      "game": {
+        "url": "games/stall-16/",
+        "title": "裝飾聖誕樹（線上版）",
+        "short": "聖誕樹",
+        "ready": true,
+        "stamp": false,
+        "hint": "線上裝飾聖誕樹，完成可以存成圖片"
+      }
     },
     {
       "no": 17,
@@ -1003,7 +1034,13 @@
       "photoCaption": "示意插畫，非攤位實拍",
       "sample": true,
       "price": "1 個鯉魚幣",
-      "short": "手部挑戰"
+      "short": "手部挑戰",
+      "game": {
+        "url": "games/stall-17/",
+        "title": "穩穩手挑戰",
+        "short": "穩穩手",
+        "ready": true
+      }
     },
     {
       "no": 18,
@@ -1024,8 +1061,7 @@
         "url": "games/stall-18/",
         "title": "丟球者線上版",
         "short": "丟球進洞",
-        "ready": true,
-        "beta": true
+        "ready": true
       }
     },
     {
@@ -1047,8 +1083,7 @@
         "url": "games/stall-19/",
         "title": "戰鬥陀螺線上版",
         "short": "戰鬥陀螺",
-        "ready": true,
-        "beta": true
+        "ready": true
       }
     },
     {

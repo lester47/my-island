@@ -155,6 +155,13 @@ export const LIYU = window.__liyu = {
     over.querySelector('[data-again]').onclick = () => { hideOver(); clearedThisRound = false; running = true; cfg.start && cfg.start(); };
     over.querySelector('[data-back]').onclick = () => { if (embedded) post('close'); else startScreen(); };
   },
+  // 把現在的畫面存成圖片（創作類小工具用）
+  save(name = 'liyu-art') {
+    cv.toBlob((blob) => {
+      if (!blob) return; const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${name}.png`;
+      document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    }, 'image/png');
+  },
   // 畫圖小幫手
   text(s, x, y, { size = 20, color = '#2a1d12', align = 'center', weight = 800, base = 'middle' } = {}) {
     ctx.font = `${weight} ${size}px "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif`; ctx.fillStyle = color; ctx.textAlign = align; ctx.textBaseline = base; ctx.fillText(s, x, y);

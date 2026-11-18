@@ -1,5 +1,5 @@
 // 第 18 攤・丟球者：手指從球往洞口的方向滑出去，力道剛好才進洞；第 2 關開始洞口會左右移動
-import { LIYU } from '../_kit/kit.js?v=20261118r';
+import { LIYU } from '../_kit/kit.js?v=20261118s';
 const { ctx, W, H } = LIYU;
 
 const CONFIG = {
