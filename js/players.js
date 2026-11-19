@@ -1,8 +1,8 @@
 // 登入者：自己的人物＋頭上名牌；之後接上連線服務時，其他人也用同一套顯示（upsert / remove）
 import * as THREE from 'three';
-import { rng } from './kit.js?v=20261119e';
-import { makePerson } from './life.js?v=20261119e';
-import { ROLES, HATS } from './roles.js?v=20261119e';
+import { rng } from './kit.js?v=20261119f';
+import { makePerson } from './life.js?v=20261119f';
+import { ROLES, HATS } from './roles.js?v=20261119f';
 const SPAWN = { x: 0, z: 7.4, yaw: Math.PI };
 
 const seedOf = (s) => { let h = 2166136261; for (const c of String(s)) h = Math.imul(h ^ c.codePointAt(0), 16777619); return h >>> 0; };
@@ -11,7 +11,7 @@ const escH = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '
 // 登入者上衣胸前的小鯉魚 Logo（和網站左上角同一張圖）
 let LOGO_MAT = null;
 function withLogo(P) {
-  if (!LOGO_MAT) { const tx = new THREE.TextureLoader().load('assets/brand/koi-logo.png?v=20261119e'); tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 4; LOGO_MAT = new THREE.MeshStandardMaterial({ map: tx, transparent: true, alphaTest: .4, roughness: .8, polygonOffset: true, polygonOffsetFactor: -2 }); }
+  if (!LOGO_MAT) { const tx = new THREE.TextureLoader().load('assets/brand/koi-logo.png?v=20261119f'); tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 4; LOGO_MAT = new THREE.MeshStandardMaterial({ map: tx, transparent: true, alphaTest: .4, roughness: .8, polygonOffset: true, polygonOffsetFactor: -2 }); }
   const m = new THREE.Mesh(new THREE.PlaneGeometry(.17, .17), LOGO_MAT);
   m.position.set(0, .76, .232); m.rotation.x = -.1;          // 上衣是上窄下寬的圓柱，貼片稍微往後仰才貼合
   P.g.add(m); P.logo = m; return P;
@@ -114,6 +114,8 @@ export function createPlayers(W, H) {
       // 其他登入者在飛行中的熱氣球籃子裡：排進籃子（網路位置有延遲，不然會飄在籃子外）
       const rs = p.id !== meId && W.balloon ? W.balloon.riderSpot(p.target, p.id) : null;
       if (rs) p.pos.copy(rs);
+      // 其他人在熱氣球籃子裡：站著不動（位置變動是熱氣球在飛，不是在走路）
+      if (p.id !== meId && W.balloon && (rs || W.balloon.inBasket(p.pos))) p.moving = 0;
       const offLand = p.id !== meId && !rs && W.ground(p.pos.x, p.pos.z) == null && !onBoat(p.pos);
       const tagOff = hiddenTags.has(p.id);
       // 躲貓貓進行中：從鳥瞰（空中）看不到參加者，不然鬼切到鳥瞰就能把大家看光光；要找人只能在地面漫遊

@@ -2,8 +2,8 @@
 // 停靠時從籃子前面的門走進去，時間到就升空，繞五座島飛一圈再降落回起降場。
 // 時程用「網路時間」排班（所有裝置看到的熱氣球都在同一個位置），一起搭的人會在同一個籃子裡。
 import * as THREE from 'three';
-import { TAU, clamp, batchStatic } from './kit.js?v=20261119e';
-import { H } from './world.js?v=20261119e';
+import { TAU, clamp, batchStatic } from './kit.js?v=20261119f';
+import { H } from './world.js?v=20261119f';
 
 export const BALLOON_CAP = 4;                    // 籃子最多 4 位登入者
 const DOCK = 30, ASC = 10, DESC = 12, ALT = 13, SPEED = 3.2;   // 停靠秒數、升空、降落、飛行高度、巡航速度
@@ -64,7 +64,13 @@ export function createBalloon(W, opts) {
   const post = new THREE.Mesh(new THREE.CylinderGeometry(.05, .06, 1.3, 6), trim); post.position.set(1.55, .65, 1.25); post.castShadow = true; padG.add(post);
   const lampMat = new THREE.MeshStandardMaterial({ color: '#4caf50', emissive: '#2e9e3a', emissiveIntensity: 1.2 });
   const lamp = new THREE.Mesh(new THREE.SphereGeometry(.14, 10, 8), lampMat); lamp.position.set(1.55, 1.38, 1.25); padG.add(lamp);
-  batchStatic(g, [flame, env]); batchStatic(env, []); batchStatic(padG, [lamp]);
+  // 籃子的門：停靠時往外打開，起飛前關上（鉸鏈在門口左邊）
+  const door = new THREE.Group(); door.position.set(-doorW / 2, 0, HALF); g.add(door);
+  box(door, wick, doorW - .04, WH - .04, WT, doorW / 2, wy, 0);
+  box(door, trim, doorW - .04, .07, .12, doorW / 2, .1 + WH - .02, 0);
+  box(door, trim, .07, WH - .1, .1, doorW - .08, wy, .02);   // 門把那一側的框
+  const DOOR_OPEN = -1.75; door.rotation.y = DOOR_OPEN;
+  batchStatic(g, [flame, env, door]); batchStatic(door, []); batchStatic(env, []); batchStatic(padG, [lamp]);
   if (opts.low) for (const c of env.children) c.castShadow = false;
 
   // ------------------------------------------------ 時程
@@ -89,6 +95,9 @@ export function createBalloon(W, opts) {
     env.rotation.z = moving && cur.phase !== 'dock' ? Math.sin(t * .6) * .03 : 0; env.rotation.x = moving && cur.phase !== 'dock' ? Math.sin(t * .45 + 1) * .025 : 0;
     const burn = cur.phase === 'up' || (cur.phase === 'fly' && Math.sin(t * .8) > .3);
     flame.visible = cur.phase !== 'dock';
+    // 門：停靠中而且還有 2 秒以上才起飛 → 打開；其他時間關上（起飛前 2 秒開始關）
+    const want = cur.phase === 'dock' && cur.left > 2 ? DOOR_OPEN : 0;
+    door.rotation.y += (want - door.rotation.y) * Math.min(1, dt * (moving ? 5 : 60));
     const f = burn ? 1 + (moving ? Math.sin(t * 31) * .18 : 0) : .45; flame.scale.set(f * .9, f, f * .9);
     const c = cur.phase !== 'dock' ? '#e8473f' : cur.left < 6 ? '#ffc23a' : '#4caf50';
     if (lamp.userData.c !== c) { lamp.userData.c = c; lampMat.color.set(c); lampMat.emissive.set(c); }
@@ -100,6 +109,7 @@ export function createBalloon(W, opts) {
   function floorAt(x, z, p = g.position) { return Math.abs(x - p.x) < IN && Math.abs(z - p.z) < IN ? p.y + FLOOR : null; }
   function inBasket(v, p = g.position) { const f = floorAt(v.x, v.z, p); return f != null && Math.abs(v.y - f) < .9; }
   const docked = () => cur.phase === 'dock';
+  const doorOpen = () => cur.phase === 'dock' && cur.left > 2;   // 門開著才能進出籃子
   // 停靠時籃子地板誰都能踩；飛起來以後只有在籃子裡的人（自己）才踩得到，不會影響地上的人
   (W.over = W.over || []).push((x, z) => { const f = floorAt(x, z); return f != null && (docked() || W.balloonRiding) ? f : null; });
   // 其他登入者在籃子裡：網路位置有延遲，直接排在籃子裡的四個位置（依 id 固定）
@@ -113,7 +123,7 @@ export function createBalloon(W, opts) {
     const k = h % 4; return new THREE.Vector3(c.x + (k & 1 ? .32 : -.32), fy, c.z + (k & 2 ? .32 : -.32));
   }
   return {
-    g, pad, floorAt, inBasket, riderSpot, docked, cap: BALLOON_CAP,
+    g, pad, floorAt, inBasket, riderSpot, docked, cap: BALLOON_CAP, door, doorOpen,
     anchor: () => g.position,
     // 站進籃子：面向外側（湖和群島那一邊）
     boardSpot: () => ({ pos: new THREE.Vector3(g.position.x, g.position.y + FLOOR, g.position.z - .1), yaw: Math.PI }),

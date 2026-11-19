@@ -1,5 +1,5 @@
 // 第 14 攤・娃！茶一點就中：往後拉再放開（像彈弓），讓道具畫一道弧線落進茶杯
-import { LIYU } from '../_kit/kit.js?v=20261119e';
+import { LIYU } from '../_kit/kit.js?v=20261119f';
 const { ctx, W, H } = LIYU;
 
 const CONFIG = {
