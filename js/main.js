@@ -1,6 +1,6 @@
 // 115 鯉魚市集｜介面與流程
 import * as THREE from 'three';
-import { ROLES, OUTFITS, HATS } from './roles.js?v=20261119e';
+import { ROLES, OUTFITS, HATS } from './roles.js?v=20261119f';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -17,7 +17,7 @@ const pad2 = (n) => String(n).padStart(2, '0');
 const fmtH = (h) => { h = ((h % 24) + 24) % 24; return `${pad2(Math.floor(h))}:${pad2(Math.floor((h % 1) * 60))}`; };
 
 // 介面 Logo：低多邊形鯉魚（橘紅魚背、米白魚腹、魚頭朝右），首頁、怎麼逛、集章完成共用這一張
-const LOGO_SRC = 'assets/brand/koi-logo.png?v=20261119e';
+const LOGO_SRC = 'assets/brand/koi-logo.png?v=20261119f';
 const MASCOT = `<img src="${LOGO_SRC}" alt="115 鯉魚市集 Logo：低多邊形小鯉魚" decoding="async">`;
 
 let C = null;            // content.json
@@ -769,6 +769,7 @@ function goPad() {
 function balloonCheck() {
   const s = BAL.status();
   if (!s.docked) return `熱氣球在天上，約 ${s.eta} 秒後降落回起降場，亮綠燈才能搭`;
+  if (!BAL.doorOpen()) return '門關上了，熱氣球要起飛囉，請等下一趟';
   if (balloonRiders() >= BAL.cap) return `籃子已經有 ${BAL.cap} 個人了，請等下一趟`;
   return '';
 }
@@ -776,9 +777,9 @@ function blockToast(why) { if (performance.now() - lastBlockToast > 3000) { last
 // 漫遊時走進／走出籃子的規則：停靠時才能進出，飛行中不能走出籃子
 function balloonGate(from, x, z) {
   if (!BAL) return true;
-  const wasIn = BAL.inBasket(from), goIn = BAL.floorAt(x, z) != null, docked = BAL.docked();
-  if (!wasIn && goIn && docked) { const why = balloonCheck(); if (why) { blockToast(why); return false; } }
-  if (wasIn && !goIn && !docked) { blockToast('飛行中請待在籃子裡，降落後再從門走出來'); return false; }
+  const wasIn = BAL.inBasket(from), goIn = BAL.floorAt(x, z) != null, docked = BAL.docked(), open = BAL.doorOpen();
+  if (!wasIn && goIn && docked) { const why = open ? balloonCheck() : '門關上了，熱氣球要起飛囉，請等下一趟'; if (why) { blockToast(why); return false; } }
+  if (wasIn && !goIn && !open) { blockToast(docked ? '門關上了，熱氣球要起飛囉！' : '飛行中請待在籃子裡，降落開門後再走出來'); return false; }
   return true;
 }
 function boardBalloon() {
@@ -1340,14 +1341,14 @@ function balloonPopped() {
 }
 function startNet() {
   const M = C.multiplayer; if (!M || !M.enabled || !M.firebase || !PL) return;
-  import('./net.js?v=20261119e').then(({ createNet }) => {
+  import('./net.js?v=20261119f').then(({ createNet }) => {
     NET = createNet(M.firebase, {
       myPos: () => PL.myPos(), upsert: (id, info, pos) => PL.upsert(id, info, pos), remove: (id) => PL.remove(id),
       onCount: (c) => { COUNT = c; const el = $('#onlineChip'); el.hidden = false; $('#onlineCount').textContent = c.players; el.setAttribute('aria-label', `市集島上 ${c.players} 人，開著網站 ${c.viewers} 人，點一下看各身分人數`); },
       onStatus: (s, msg) => { $('#onlineChip').classList.toggle('off', s !== 'online'); if (s === 'error') console.warn('連線錯誤', msg); },
     });
     NET.setMe(meProfile());
-    import('./hidemp.js?v=20261119e').then(({ createHideMP }) => {
+    import('./hidemp.js?v=20261119f').then(({ createHideMP }) => {
       HM = createHideMP(NET, {
         toast, profile: meProfile, enterWalk: () => { if (!S.walking) enterWalk(); },
         walkPos: () => (S.walking ? CAM.walk.pos : null), posOf: (id) => PL.posOf(id),
@@ -1477,7 +1478,7 @@ async function boot() {
   if (Q.has('nogl') || !webglOK()) { textOnly(Q.has('nogl') ? '已切換為文字清單版' : '這台裝置無法顯示 3D 畫面'); applyTheme(); updateClock(); setInterval(updateClock, 10000); window.__ready = true; return; }
   let mods;
   try {
-    mods = await Promise.all([import('./world.js?v=20261119e'), import('./life.js?v=20261119e'), import('./cam.js?v=20261119e'), import('./players.js?v=20261119e'), import('./signs.js?v=20261119e'), import('./festival.js?v=20261119e'), import('./fauna.js?v=20261119e'), import('./interact.js?v=20261119e'), import('./games.js?v=20261119e')]);
+    mods = await Promise.all([import('./world.js?v=20261119f'), import('./life.js?v=20261119f'), import('./cam.js?v=20261119f'), import('./players.js?v=20261119f'), import('./signs.js?v=20261119f'), import('./festival.js?v=20261119f'), import('./fauna.js?v=20261119f'), import('./interact.js?v=20261119f'), import('./games.js?v=20261119f')]);
     const [{ createWorld, H: GROUND_H }, { createLife, makePerson }, { createCam }, { createPlayers }, { createSigns }, { createFestival }, { createFauna }, { createInteract }, { createGames, FISH }] = mods;
     const mobile = isLite();   // 手機和平板都用輕量版場景
     W = createWorld($('#gl'), { quality: S.quality, mobile });
@@ -1491,14 +1492,14 @@ async function boot() {
     W.canLeave = () => { const s = L.carp.status(); if (s.docked && s.gang) return true; if (performance.now() - lastBlockToast > 3000) { lastBlockToast = performance.now(); toast('⛔ 航行中請待在船上，靠港放下跳板後再下船'); } return false; };
     // 彩虹熱氣球：起降場在服務台北側廣場；用網路時間排班，大家看到同一顆
     try {
-      const { createBalloon } = await import('./balloon.js?v=20261119e');
+      const { createBalloon } = await import('./balloon.js?v=20261119f');
       BAL = createBalloon(W, { pad: { x: 1, z: -5 }, now: () => (NET ? NET.now() : Date.now()), low: mobile || S.quality === 'low' });
       W.balloon = BAL; W.gates = [balloonGate];
     } catch (e) { console.warn('熱氣球載入失敗', e); BAL = null; }
-    KIT = await import('./kit.js?v=20261119e');
-    SG = createSigns(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261119e')).rng, low: mobile || S.quality === 'low' });
-    FX = createFestival(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261119e')).rng, low: mobile || S.quality === 'low', avoid: [...(BAL ? BAL.avoid : []), ...SG.signs.map((s) => s.g.position), ...Object.values(W.islands).flatMap((I) => (I.trees || []).filter((tr) => tr.visible).map((tr) => tr.position.clone().add(I.pos)))], carp: L.carp });
-    FA = createFauna(W, { H: GROUND_H, rng: (await import('./kit.js?v=20261119e')).rng });
+    KIT = await import('./kit.js?v=20261119f');
+    SG = createSigns(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261119f')).rng, low: mobile || S.quality === 'low' });
+    FX = createFestival(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261119f')).rng, low: mobile || S.quality === 'low', avoid: [...(BAL ? BAL.avoid : []), ...SG.signs.map((s) => s.g.position), ...Object.values(W.islands).flatMap((I) => (I.trees || []).filter((tr) => tr.visible).map((tr) => tr.position.clone().add(I.pos)))], carp: L.carp });
+    FA = createFauna(W, { H: GROUND_H, rng: (await import('./kit.js?v=20261119f')).rng });
     IA = createInteract(W, C, GROUND_H, {
       toast, carp: L.carp,
       toastIf: (m) => { if (!S.intro) toast(m); },
