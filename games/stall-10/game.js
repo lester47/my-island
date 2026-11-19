@@ -1,5 +1,5 @@
 // 第 10 攤・套圈圈／戳洞洞：往上滑丟圈圈，套中木樁就得到一次戳洞洞機會，戳開紙格看看藏了什麼
-import { LIYU } from '../_kit/kit.js?v=20261119b';
+import { LIYU } from '../_kit/kit.js?v=20261119d';
 const { ctx, W, H } = LIYU;
 
 const CONFIG = {

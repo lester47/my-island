@@ -1,5 +1,5 @@
 // 第 09 攤・正反接球王：球從左邊來按「反手」，從右邊來按「正手」，時機對了就接住
-import { LIYU } from '../_kit/kit.js?v=20261119b';
+import { LIYU } from '../_kit/kit.js?v=20261119d';
 const { ctx, W, H } = LIYU;
 
 const CONFIG = {

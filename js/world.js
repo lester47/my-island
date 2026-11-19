@@ -1,7 +1,7 @@
 // 3D 世界：天空、海、遠山、島嶼與地標、橋、日夜光影
 import * as THREE from 'three';
-import { TAU, clamp, lerp, smooth, rng, loopNoise, mat, Builder, GEO, glowTexture, C } from './kit.js?v=20261119b';
-import { makeScenery } from './scenery.js?v=20261119b';
+import { TAU, clamp, lerp, smooth, rng, loopNoise, mat, Builder, GEO, glowTexture, C } from './kit.js?v=20261119d';
+import { makeScenery } from './scenery.js?v=20261119d';
 
 export const H = 1.75;               // 島頂草地高度
 const SEG = 72;                      // 海岸線分段（6 的倍數，六角轉角落在頂點上）
@@ -924,9 +924,11 @@ function finishWorld(W) {
   };
   // 地面高度（漫遊用）：島頂、橋面；不可走則回傳 null
   W.BODY = .24;                                   // 玩家身體半徑
-  W.blockers = [];                                // 後來加上去、擋路的東西（躲貓貓的掩體）：{ x, z, r }
+  W.blockers = [];
+  W.over = W.over || [];                                // 後來加上去、擋路的東西（躲貓貓的掩體）：{ x, z, r }
   W.ground = (x, z) => {
     for (const b of W.blockers) if (Math.hypot(x - b.x, z - b.z) < b.r + W.BODY) return null;
+    for (const f of W.over) { const h = f(x, z); if (h != null) return h; }   // 比島面優先的面（熱氣球籃子：飛在島的上空時也要踩得到）
     for (const id in islands) {
       const I = islands[id], dx = x - I.pos.x, dz = z - I.pos.z, r = Math.hypot(dx, dz);
       if (r < I.top(Math.atan2(dz, dx)) * .97 && I.walk.clear(dx, dz) >= W.BODY) return H;
