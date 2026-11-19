@@ -1,9 +1,9 @@
 // 鏡頭：拖曳旋轉縮放、回到全景、點島飛近（電影史詩運鏡）、開場、導覽、地面漫遊
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { TAU, clamp, lerp, easeInOut, smooth } from './kit.js?v=20261119c';
-import { H } from './world.js?v=20261119c';
-import { SHORE } from './scenery.js?v=20261119c';
+import { TAU, clamp, lerp, easeInOut, smooth } from './kit.js?v=20261119d';
+import { H } from './world.js?v=20261119d';
+import { SHORE } from './scenery.js?v=20261119d';
 
 export function createCam(W, canvas, hooks) {
   const camera = W.camera;
@@ -85,6 +85,11 @@ export function createCam(W, canvas, hooks) {
     return { t, p: sphPos(t, 19, az, THREE.MathUtils.degToRad(30)) };
   }
   function flyToBoat(anchorFn, done) { flight(boatView(anchorFn()), 1800, 10, done, anchorFn); }
+  // 熱氣球：看著籃子和球皮，在高空時鏡頭也跟著抬高
+  function flyToBalloon(anchorFn, done) {
+    const a = anchorFn(), az = Math.atan2(a.x, a.z) * .6 + .5, t = a.clone().setY(a.y + 3.2);
+    flight({ t, p: sphPos(t, 17, az, THREE.MathUtils.degToRad(a.y > H + 3 ? 12 : 26)) }, 1800, 8, done, anchorFn);
+  }
   function home(done) { const h = setHome(false); flight({ t: h.t, p: h.p }, 1400, 6, done); }
 
   // ------------------------------------------------------------ 開場運鏡（4～6 秒，可跳過）
@@ -159,6 +164,10 @@ export function createCam(W, canvas, hooks) {
         const h = W.ground(walk.pos.x, walk.pos.z); if (h != null) walk.pos.y = h;
       }
     }
+    // 站在熱氣球籃子裡：跟著熱氣球一起移動（升空、飛行、降落）
+    const bl = W.balloonMove; W.balloonMove = null;
+    if (bl && W.balloon && W.balloon.inBasket(walk.pos, bl.from)) walk.pos.add(bl.d);
+    W.balloonRiding = !!(W.balloon && W.balloon.inBasket(walk.pos));
     if (walk.frozen) { placeWalk(); return; }        // 躲貓貓當鬼閉眼時不能走
     const k = walk.keys, p = walk.pad;
     const fwd = (k.KeyW || k.ArrowUp || p.up ? 1 : 0) - (k.KeyS || k.ArrowDown || p.down ? 1 : 0);
@@ -177,7 +186,7 @@ export function createCam(W, canvas, hooks) {
       if (W.ground(walk.pos.x, walk.pos.z) == null && !(W.onBoat && W.onBoat(walk.pos.x, walk.pos.z))) { const g = W.nearestGround(walk.pos.x, walk.pos.z); if (g) walk.pos.set(g.x, g.y, g.z); }
       // 從碼頭走上鯉魚號：要等靠港放下跳板、船上還有空位才能上（W.canBoard 由主程式決定）
       const wasOn = W.onBoat && W.onBoat(walk.pos.x, walk.pos.z);
-      const tryMove = (x, z) => { const h = W.ground(x, z); if (h == null) return false; if (!wasOn && W.onBoat && W.onBoat(x, z) && W.canBoard && !W.canBoard(true)) return false; if (wasOn && W.onBoat && !W.onBoat(x, z) && W.canLeave && !W.canLeave()) return false; /* 航行中不能走出船艙 */ walk.pos.set(x, h, z); return true; };
+      const tryMove = (x, z) => { const h = W.ground(x, z); if (h == null) return false; if (W.gates && W.gates.some((gt) => !gt(walk.pos, x, z))) return false; /* 熱氣球：停靠時才能進出籃子 */ if (!wasOn && W.onBoat && W.onBoat(x, z) && W.canBoard && !W.canBoard(true)) return false; if (wasOn && W.onBoat && !W.onBoat(x, z) && W.canLeave && !W.canLeave()) return false; /* 航行中不能走出船艙 */ walk.pos.set(x, h, z); return true; };
       if (!tryMove(walk.pos.x + dx, walk.pos.z + dz)) { tryMove(walk.pos.x + dx, walk.pos.z) || tryMove(walk.pos.x, walk.pos.z + dz); }
     }
     placeWalk();
@@ -239,5 +248,5 @@ export function createCam(W, canvas, hooks) {
     controls.update();
     clampReach();
   }
-  return { controls, S, walk, setHome, flyToIsland, home, intro, finishIntro, enterWalk, exitWalk, update, islandView, flight, limits, flyToBoat };
+  return { controls, S, walk, setHome, flyToIsland, home, intro, finishIntro, enterWalk, exitWalk, update, islandView, flight, limits, flyToBoat, flyToBalloon };
 }
