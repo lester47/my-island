@@ -1,5 +1,5 @@
 // 第 08 攤・有吃有玩真好玩：點心從天上掉下來，移動盤子接住點心，躲開小石頭
-import { LIYU } from '../_kit/kit.js?v=20261119b';
+import { LIYU } from '../_kit/kit.js?v=20261119c';
 const { ctx, W, H } = LIYU;
 
 const CONFIG = {
