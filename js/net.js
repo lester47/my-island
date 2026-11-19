@@ -48,7 +48,7 @@ export function createNet(config, hooks) {
   function tick(now) {
     if (!uid || !me || !meRef) return;
     const p = hooks.myPos(); if (!p) return;
-    const key = `${p.x},${p.z},${p.yaw}`, dt = now - lastT;
+    const key = `${p.x},${p.y},${p.z},${p.yaw}`, dt = now - lastT;   // 高度也要算：熱氣球垂直升降時水平位置不變，不送的話別人看到你停在半空
     if ((key !== lastSent && dt > 250) || dt > 60000) {
       lastSent = key; lastT = now;
       update(meRef, { x: p.x, y: p.y, z: p.z, yaw: p.yaw, t: serverTimestamp() }).catch((e) => status('error', e.code));

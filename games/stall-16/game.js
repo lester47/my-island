@@ -1,5 +1,5 @@
 // 第 16 攤・聖誕 DIY 製造所：把彩球、星星、蝴蝶結拖到聖誕樹上裝飾，按「完成」存成圖片
-import { LIYU } from '../_kit/kit.js?v=20261119d';
+import { LIYU } from '../_kit/kit.js?v=20261119e';
 const { ctx, W, H } = LIYU;
 
 const CONFIG = {
