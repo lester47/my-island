@@ -1,7 +1,7 @@
 // 第 18 攤・丟球者（3D 版）：從投手背後看出去，按住球蓄力（力道條上下跑），左右拖瞄準，在綠色區放開，把球丟進遠方木板上的洞
 // 判斷進不進洞仍用 400×600 的座標（和 2D 版一樣）；畫面用 Three.js 畫成 3D，力道條和文字畫在上層的 HUD
 import * as THREE from 'three';
-import { LIYU } from '../_kit/kit.js?v=20261119f';
+import { LIYU } from '../_kit/kit.js?v=20261119g';
 const { ctx, W, H } = LIYU;
 
 const CONFIG = {

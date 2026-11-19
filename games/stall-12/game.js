@@ -1,10 +1,10 @@
 // 第 12 攤・鯉魚 Liyu 遊戲店：四子連線（和電腦對下）。先把 4 顆同色連成一線（橫、直、斜都可以）就贏
-import { LIYU } from '../_kit/kit.js?v=20261119f';
+import { LIYU } from '../_kit/kit.js?v=20261119g';
 const { ctx, W, H } = LIYU;
 
 const CONFIG = {
   no: 12, title: '鯉魚四子連線', stall: '鯉魚 Liyu 遊戲店',
-  how: ['點一個直排，棋子會掉到最下面', '你是橘色鯉魚 🟠，電腦是藍色 🔵，輪流下', '先把 4 顆連成一條線（橫、直、斜）就贏', '電腦會擋你，也會偷偷連線，小心！'],
+  how: ['點一個直排，棋子會掉到最下面', '你是橘色鯉魚 🟠，電腦是藍色 🔵，輪流下', '先把 4 顆連成一條線（橫、直、斜）就贏', '電腦會往前想好幾步，會擋你也會布局，小心！'],
   clear: '贏電腦 1 盤',
   credit: '第 12 攤 鯉魚 Liyu 遊戲店',
 };
@@ -20,15 +20,51 @@ function four(b, p) {
   }
   return null;
 }
+// 電腦：往前想 DEPTH 步（你下、它回、你再下…），用 alpha-beta 剪枝；想不完的盤面用「每 4 格一組」的連線潛力打分數。
+// 以前只看一步，「底排兩頭空的三顆」這種雙重威脅擋不住，每次都輸在同一招
+const DEPTH = 5, WIN = 1e6, ORDER = [3, 2, 4, 1, 5, 0, 6];
+function windowScore(a, b, c, d) {
+  let ai = 0, me = 0; for (const v of [a, b, c, d]) { if (v === AI) ai++; else if (v === ME) me++; }
+  if (ai && me) return 0;
+  if (ai === 3) return 50; if (ai === 2) return 6;
+  if (me === 3) return -60; if (me === 2) return -7;   // 擋你的比自己連線稍微重要一點
+  return 0;
+}
+function evaluate(b) {
+  let sc = 0;
+  for (let r = 0; r < ROWS; r++) sc += (b[r][3] === AI ? 4 : b[r][3] === ME ? -4 : 0);   // 中間那排比較有用
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+    if (c + 3 < COLS) sc += windowScore(b[r][c], b[r][c + 1], b[r][c + 2], b[r][c + 3]);
+    if (r + 3 < ROWS) sc += windowScore(b[r][c], b[r + 1][c], b[r + 2][c], b[r + 3][c]);
+    if (r + 3 < ROWS && c + 3 < COLS) sc += windowScore(b[r][c], b[r + 1][c + 1], b[r + 2][c + 2], b[r + 3][c + 3]);
+    if (r + 3 < ROWS && c - 3 >= 0) sc += windowScore(b[r][c], b[r + 1][c - 1], b[r + 2][c - 2], b[r + 3][c - 3]);
+  }
+  return sc;
+}
+function search(b, depth, alpha, beta, p) {
+  const moves = ORDER.filter((c) => rowFor(b, c) >= 0);
+  if (!moves.length) return 0;
+  if (depth === 0) return evaluate(b);
+  let best = p === AI ? -Infinity : Infinity;
+  for (const c of moves) {
+    const r = rowFor(b, c); b[r][c] = p;
+    const v = four(b, p) ? (p === AI ? WIN + depth : -WIN - depth) : search(b, depth - 1, alpha, beta, p === AI ? ME : AI);   // 越早贏越好、越晚輸越好
+    b[r][c] = 0;
+    if (p === AI) { if (v > best) best = v; if (best > alpha) alpha = best; } else { if (v < best) best = v; if (best < beta) beta = best; }
+    if (alpha >= beta) break;
+  }
+  return best;
+}
 function aiMove() {
-  const ok = [...Array(COLS).keys()].filter((c) => rowFor(board, c) >= 0);
-  const test = (c, p) => { const r = rowFor(board, c); board[r][c] = p; const w = !!four(board, p); board[r][c] = 0; return w; };
-  for (const c of ok) if (test(c, AI)) return c;                                // 能贏就贏
-  for (const c of ok) if (test(c, ME)) return c;                                // 擋住你
-  const safe = ok.filter((c) => { const r = rowFor(board, c); if (r <= 0) return true; board[r][c] = AI; board[r - 1][c] = ME; const bad = !!four(board, ME); board[r][c] = board[r - 1][c] = 0; return !bad; });
-  const pool = safe.length ? safe : ok;
-  pool.sort((a, b) => Math.abs(a - 3) - Math.abs(b - 3) + (Math.random() - .5) * 2.2);   // 喜歡中間，但有點隨機（不會太強）
-  return pool[0];
+  const ok = ORDER.filter((c) => rowFor(board, c) >= 0);
+  const scored = ok.map((c) => {
+    const r = rowFor(board, c); board[r][c] = AI;
+    const v = four(board, AI) ? WIN * 2 : search(board, DEPTH - 1, -Infinity, Infinity, ME);
+    board[r][c] = 0; return { c, v };
+  });
+  const top = Math.max(...scored.map((m) => m.v));
+  const best = scored.filter((m) => m.v >= top - 2);          // 分數差不多的走法隨機挑一個，每盤不會都一樣
+  return best[Math.floor(Math.random() * best.length)].c;
 }
 function play(c, p) {
   const r = rowFor(board, c); if (r < 0) return false;
