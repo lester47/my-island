@@ -1,5 +1,5 @@
 // 第 13 攤・鯉魚記憶王／搖出你的好耳力：翻牌找相同圖案＋聽瓶子裡豆子的聲音找相同的一組
-import { LIYU } from '../_kit/kit.js?v=20261119f';
+import { LIYU } from '../_kit/kit.js?v=20261119g';
 const { ctx, W, H } = LIYU;
 
 const CONFIG = {
