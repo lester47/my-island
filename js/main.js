@@ -1,6 +1,6 @@
 // 115 鯉魚市集｜介面與流程
 import * as THREE from 'three';
-import { ROLES, OUTFITS, HATS } from './roles.js?v=20261118w';
+import { ROLES, OUTFITS, HATS } from './roles.js?v=20261119a';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -17,7 +17,7 @@ const pad2 = (n) => String(n).padStart(2, '0');
 const fmtH = (h) => { h = ((h % 24) + 24) % 24; return `${pad2(Math.floor(h))}:${pad2(Math.floor((h % 1) * 60))}`; };
 
 // 介面 Logo：低多邊形鯉魚（橘紅魚背、米白魚腹、魚頭朝右），首頁、怎麼逛、集章完成共用這一張
-const LOGO_SRC = 'assets/brand/koi-logo.png?v=20261118w';
+const LOGO_SRC = 'assets/brand/koi-logo.png?v=20261119a';
 const MASCOT = `<img src="${LOGO_SRC}" alt="115 鯉魚市集 Logo：低多邊形小鯉魚" decoding="async">`;
 
 let C = null;            // content.json
@@ -1001,7 +1001,8 @@ function enterWalk(at) {
   if (mine && W.ground(mine.pos.x, mine.pos.z) == null) { const g = W.nearestGround(mine.pos.x, mine.pos.z, 6); mine = g ? { pos: new THREE.Vector3(g.x, g.y, g.z), yaw: mine.yaw } : startSpot(); }   // 人物在海上（例如船開走了）就回到陸地
   CAM.walk.third = !!mine && store.get('view', 'third') === 'third'; $('#walkView').hidden = !mine; syncViewBtn();
   CAM.enterWalk(at && at.pos ? at : mine || startSpot()); const h = $('#walkHint'); h.classList.remove('fade'); clearTimeout(hintT); hintT = setTimeout(() => h.classList.add('fade'), 4500);
-  $('#walkExit').focus({ preventScroll: true });
+  // 焦點不要停在「✕ 鳥瞰」按鈕上：不然空白鍵會變成按下它、跳回鳥瞰（Esc 一樣可以離開漫遊）
+  if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
 }
 // 漫遊起點：站在服務台往第 1 島的橋頭前一小段，面向路口，一進來就看到橋、路牌和島名
 function startSpot() {
@@ -1212,14 +1213,14 @@ function balloonPopped() {
 }
 function startNet() {
   const M = C.multiplayer; if (!M || !M.enabled || !M.firebase || !PL) return;
-  import('./net.js?v=20261118w').then(({ createNet }) => {
+  import('./net.js?v=20261119a').then(({ createNet }) => {
     NET = createNet(M.firebase, {
       myPos: () => PL.myPos(), upsert: (id, info, pos) => PL.upsert(id, info, pos), remove: (id) => PL.remove(id),
       onCount: (c) => { COUNT = c; const el = $('#onlineChip'); el.hidden = false; $('#onlineCount').textContent = c.players; el.setAttribute('aria-label', `市集島上 ${c.players} 人，開著網站 ${c.viewers} 人，點一下看各身分人數`); },
       onStatus: (s, msg) => { $('#onlineChip').classList.toggle('off', s !== 'online'); if (s === 'error') console.warn('連線錯誤', msg); },
     });
     NET.setMe(meProfile());
-    import('./hidemp.js?v=20261118w').then(({ createHideMP }) => {
+    import('./hidemp.js?v=20261119a').then(({ createHideMP }) => {
       HM = createHideMP(NET, {
         toast, profile: meProfile, enterWalk: () => { if (!S.walking) enterWalk(); },
         walkPos: () => (S.walking ? CAM.walk.pos : null), posOf: (id) => PL.posOf(id),
@@ -1245,9 +1246,16 @@ addEventListener('keydown', (e) => {
   if (e.target.matches('input,textarea')) return;
   if (S.walking && ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) { CAM.walk.keys[e.code] = true; e.preventDefault(); }
   if (S.walking && (e.key === 'Shift')) CAM.walk.crouch = true;                                   // 按住 Shift 蹲下
-  if (S.walking && e.code === 'Space' && !(e.target.matches && e.target.matches('button,select,summary,a'))) { e.preventDefault(); doJump(); }   // 空白鍵跳躍
+  if (spaceJumps(e)) { e.preventDefault(); if (!e.repeat) doJump(); }   // 空白鍵跳躍
 });
-addEventListener('keyup', (e) => { if (CAM) { CAM.walk.keys[e.code] = false; if (e.key === 'Shift') CAM.walk.crouch = false; } });
+// 漫遊時空白鍵一律是跳：只有焦點在打開的視窗、面板、設定裡（使用者正在操作那裡）才照一般按鈕的行為
+function spaceJumps(e) {
+  if (!S.walking || e.code !== 'Space') return false;
+  const t = e.target;
+  if (t && t.closest && t.closest('dialog[open], #settings, #panel, #bubble, select, summary')) return false;
+  return true;
+}
+addEventListener('keyup', (e) => { if (spaceJumps(e)) e.preventDefault(); if (CAM) { CAM.walk.keys[e.code] = false; if (e.key === 'Shift') CAM.walk.crouch = false; } });
 addEventListener('blur', () => { if (CAM) CAM.walk.crouch = false; });
 function doJump() { const w = CAM.walk; if (w.frozen || w.jumpY > 0 || w.vy) return; w.crouch = false; w.vy = 4.6; }
 // 手機：漫遊畫面的「跳」「蹲」按鈕（蹲是按住才蹲）
@@ -1342,7 +1350,7 @@ async function boot() {
   if (Q.has('nogl') || !webglOK()) { textOnly(Q.has('nogl') ? '已切換為文字清單版' : '這台裝置無法顯示 3D 畫面'); applyTheme(); updateClock(); setInterval(updateClock, 10000); window.__ready = true; return; }
   let mods;
   try {
-    mods = await Promise.all([import('./world.js?v=20261118w'), import('./life.js?v=20261118w'), import('./cam.js?v=20261118w'), import('./players.js?v=20261118w'), import('./signs.js?v=20261118w'), import('./festival.js?v=20261118w'), import('./fauna.js?v=20261118w'), import('./interact.js?v=20261118w'), import('./games.js?v=20261118w')]);
+    mods = await Promise.all([import('./world.js?v=20261119a'), import('./life.js?v=20261119a'), import('./cam.js?v=20261119a'), import('./players.js?v=20261119a'), import('./signs.js?v=20261119a'), import('./festival.js?v=20261119a'), import('./fauna.js?v=20261119a'), import('./interact.js?v=20261119a'), import('./games.js?v=20261119a')]);
     const [{ createWorld, H: GROUND_H }, { createLife, makePerson }, { createCam }, { createPlayers }, { createSigns }, { createFestival }, { createFauna }, { createInteract }, { createGames, FISH }] = mods;
     const mobile = isLite();   // 手機和平板都用輕量版場景
     W = createWorld($('#gl'), { quality: S.quality, mobile });
@@ -1354,10 +1362,10 @@ async function boot() {
     W.canBoard = canBoardWalk;
     // 搭船中：只有靠港、跳板放下時才能走出船艙
     W.canLeave = () => { const s = L.carp.status(); if (s.docked && s.gang) return true; if (performance.now() - lastBlockToast > 3000) { lastBlockToast = performance.now(); toast('⛔ 航行中請待在船上，靠港放下跳板後再下船'); } return false; };
-    KIT = await import('./kit.js?v=20261118w');
-    SG = createSigns(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261118w')).rng, low: mobile || S.quality === 'low' });
-    FX = createFestival(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261118w')).rng, low: mobile || S.quality === 'low', avoid: [...SG.signs.map((s) => s.g.position), ...Object.values(W.islands).flatMap((I) => (I.trees || []).filter((tr) => tr.visible).map((tr) => tr.position.clone().add(I.pos)))], carp: L.carp });
-    FA = createFauna(W, { H: GROUND_H, rng: (await import('./kit.js?v=20261118w')).rng });
+    KIT = await import('./kit.js?v=20261119a');
+    SG = createSigns(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261119a')).rng, low: mobile || S.quality === 'low' });
+    FX = createFestival(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261119a')).rng, low: mobile || S.quality === 'low', avoid: [...SG.signs.map((s) => s.g.position), ...Object.values(W.islands).flatMap((I) => (I.trees || []).filter((tr) => tr.visible).map((tr) => tr.position.clone().add(I.pos)))], carp: L.carp });
+    FA = createFauna(W, { H: GROUND_H, rng: (await import('./kit.js?v=20261119a')).rng });
     IA = createInteract(W, C, GROUND_H, {
       toast, carp: L.carp,
       toastIf: (m) => { if (!S.intro) toast(m); },
