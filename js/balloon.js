@@ -2,8 +2,8 @@
 // 停靠時從籃子前面的門走進去，時間到就升空，繞五座島飛一圈再降落回起降場。
 // 時程用「網路時間」排班（所有裝置看到的熱氣球都在同一個位置），一起搭的人會在同一個籃子裡。
 import * as THREE from 'three';
-import { TAU, clamp, batchStatic } from './kit.js?v=20261119d';
-import { H } from './world.js?v=20261119d';
+import { TAU, clamp, batchStatic } from './kit.js?v=20261119e';
+import { H } from './world.js?v=20261119e';
 
 export const BALLOON_CAP = 4;                    // 籃子最多 4 位登入者
 const DOCK = 30, ASC = 10, DESC = 12, ALT = 13, SPEED = 3.2;   // 停靠秒數、升空、降落、飛行高度、巡航速度
@@ -103,10 +103,12 @@ export function createBalloon(W, opts) {
   // 停靠時籃子地板誰都能踩；飛起來以後只有在籃子裡的人（自己）才踩得到，不會影響地上的人
   (W.over = W.over || []).push((x, z) => { const f = floorAt(x, z); return f != null && (docked() || W.balloonRiding) ? f : null; });
   // 其他登入者在籃子裡：網路位置有延遲，直接排在籃子裡的四個位置（依 id 固定）
+  // 位置高在半空（地面上沒有那麼高的地方）一定是搭熱氣球的人：網路位置舊了也一律排進籃子，不會飄在天上
   function riderSpot(p, id) {
-    if (docked() || !p) return null;
-    const c = g.position, fy = c.y + FLOOR;
-    if (Math.hypot(p.x - c.x, p.z - c.z) > 2.2 || Math.abs((p.y ?? 0) - fy) > 2.5) return null;
+    if (!p) return null;
+    const c = g.position, fy = c.y + FLOOR, inAir = (p.y ?? 0) > H + 2.5;
+    if (docked() && !inAir) return null;
+    if (!inAir && (Math.hypot(p.x - c.x, p.z - c.z) > 2.2 || Math.abs((p.y ?? 0) - fy) > 2.5)) return null;
     let h = 0; for (const ch of String(id)) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
     const k = h % 4; return new THREE.Vector3(c.x + (k & 1 ? .32 : -.32), fy, c.z + (k & 2 ? .32 : -.32));
   }
