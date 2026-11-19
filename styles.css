@@ -288,8 +288,18 @@ html[data-theme="deep"] .stamp.got { color: var(--ink); }
 }
 @media (min-width: 761px) and (max-width: 1279px) {
   .tagline { display: none; }
-  .tbtn .tx { display: none; }
-  .tbtn { padding: 0; width: 46px; justify-content: center; }
+  /* 平板／小筆電：空間不夠放「圖示＋文字」橫排，改成圖示在上、文字在下（文字不能拿掉，第一次來的人看不懂圖示） */
+  .tbtn { flex-direction: column; justify-content: center; gap: 1px; padding: 0 6px; min-width: 50px; min-height: 52px; font-size: 11.5px; font-weight: 700; line-height: 1.1; border-radius: 16px; }
+  .tbtn > span:first-child { font-size: 18px; line-height: 1.1; }
+}
+/* iPad 直放這種寬度：標題不換行，按鈕和間距再收一點，整排放得下 */
+@media (min-width: 761px) and (max-width: 960px) {
+  .top { gap: 8px; padding: 12px 14px; }
+  .brand h1 { white-space: nowrap; font-size: clamp(18px, 2.6vw, 24px); letter-spacing: 0; }
+  .brand .mascot { transform: scale(.85); margin: 0 -4px; }
+  .brand { gap: 8px; padding-right: 10px; }
+  .tools { gap: 3px; }
+  .tbtn { min-width: 44px; padding: 0 3px; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition-duration: .01ms !important; animation-duration: .01ms !important; } }
 
