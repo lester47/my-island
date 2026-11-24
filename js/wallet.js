@@ -2,11 +2,12 @@
 // 規則：每天固定發起始幣，當天結束歸零（隔天重新發）；打工每天最多賺 dailyJob；錢包最多 cap。
 // 跟現場的實體鯉魚幣無關，也不能用真錢買。
 // 資料：market/wallets/{uid}（自己的錢包）、market/grants/{uid}（老師加發／扣回）、market/frozen/{uid}（凍結）、
-//       market/admins/{uid}（老師名單）、market/inbox/{uid}（收到的請客券）、market/refunds/{uid}（被退回的請客券）、
+//       market/adminEmails/{email}（老師名冊：用 email 登入的老師，. 換成 ,）、market/inbox/{uid}（收到的請客券）、market/refunds/{uid}（被退回的請客券）、
 //       market/treatLog（請客紀錄，老師看）、market/reports/{uid}（告訴老師）
 // 還沒連上線、或 Firebase 規則還沒貼上時：用「體驗錢包」，只存在這台裝置。
 const LKEY = 'liyu115.wallet.v1';
 const DAY_TZ = 'Asia/Taipei';
+export const emailKey = (e) => String(e || '').trim().toLowerCase().replace(/\./g, ',');
 
 export function createWallet({ cfg, onChange, toast }) {
   const st = { mode: 'trial', uid: null, admin: false, frozen: false, blocked: false, w: null, inbox: [] };
@@ -45,6 +46,7 @@ export function createWallet({ cfg, onChange, toast }) {
     get admin() { return st.admin; },
     get frozen() { return st.frozen; },
     get uid() { return st.uid; },
+    get email() { return st.email || null; },
     get inbox() { return st.inbox; },
     state() { return ensure(); },
     bal() { return ensure().bal; },
@@ -60,7 +62,9 @@ export function createWallet({ cfg, onChange, toast }) {
           if (!loaded) { loaded = true; st.w = roll(v && typeof v.bal === 'number' ? v : null); if (!v || v.day !== st.w.day || !v.name) save(); else onChange(); return; }
           if (v && typeof v.bal === 'number') { st.w = roll(v); onChange(); }      // 另一個分頁或老師改過
         }, fail);
-        fb.onValue(R(`market/admins/${uid}`), (s) => { st.admin = s.val() === true; onChange('admin'); }, () => {});
+        const em = NET.teacher && NET.teacher.email();
+        st.email = em;
+        if (em) fb.onValue(R(`market/adminEmails/${emailKey(em)}`), (s) => { st.admin = s.val() === true; onChange('admin'); }, () => { st.admin = false; onChange('admin'); });
         fb.onValue(R(`market/frozen/${uid}`), (s) => { st.frozen = s.val() === true; onChange(); }, () => {});
         // 老師加發／扣回：每一筆只套用一次
         fb.onValue(R(`market/grants/${uid}`), (s) => {
@@ -153,8 +157,8 @@ export function createWallet({ cfg, onChange, toast }) {
     watchPath(p, fn) { return fb.onValue(fb.ref(NET.db, `market/${p}`), (s) => fn(s.val() || {}), () => fn({})); },
     grant(uid, a, note) { return fb.set(fb.ref(NET.db, `market/grants/${uid}/${now().toString(36)}${Math.random().toString(36).slice(2, 5)}`), { a: Math.round(a), n: String(note || '').slice(0, 30), t: fb.serverTimestamp() }); },
     freeze(uid, on) { return on ? fb.set(fb.ref(NET.db, `market/frozen/${uid}`), true) : fb.remove(fb.ref(NET.db, `market/frozen/${uid}`)); },
-    addAdmin(uid) { return fb.set(fb.ref(NET.db, `market/admins/${uid}`), true); },
-    removeAdmin(uid) { return fb.remove(fb.ref(NET.db, `market/admins/${uid}`)); },
+    addAdmin(email) { return fb.set(fb.ref(NET.db, `market/adminEmails/${emailKey(email)}`), true); },
+    removeAdmin(key) { return fb.remove(fb.ref(NET.db, `market/adminEmails/${key}`)); },
   };
   return api;
 }

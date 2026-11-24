@@ -1,7 +1,7 @@
 // 多人連線（Firebase Realtime Database）：看到其他登入者在島上走、即時人數
 // 資料只有：暱稱、身分、衣服顏色、位置；關掉網頁就自動刪除（onDisconnect）
 import { initializeApp } from '../vendor/firebase/firebase-app.js';
-import { getAuth, signInAnonymously, onAuthStateChanged } from '../vendor/firebase/firebase-auth.js';
+import { getAuth, signInAnonymously, onAuthStateChanged, sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink, GoogleAuthProvider, signInWithPopup, signOut } from '../vendor/firebase/firebase-auth.js';
 import { getDatabase, ref, set, update, remove, onValue, onChildAdded, onChildChanged, onChildRemoved, onDisconnect, serverTimestamp } from '../vendor/firebase/firebase-database.js';
 
 const ROOT = 'market';
@@ -20,8 +20,29 @@ export function createNet(config, hooks) {
     const on = !!s.val(); status(on ? 'online' : 'offline');
     if (on && uid) goOnline();
   });
-  onAuthStateChanged(auth, (u) => { if (u) { uid = u.uid; goOnline(); } });
-  signInAnonymously(auth).catch((e) => { console.warn('匿名登入失敗', e); status('error', e.code || e.message); });
+  // 一般訪客用匿名登入；老師用名冊上的 email 登入（信箱連結或 Google）
+  const TKEY = 'liyu115.teacherEmail';
+  onAuthStateChanged(auth, (u) => {
+    if (u) { if (uid && uid !== u.uid && meRef) { remove(meRef).catch(() => {}); meRef = null; } uid = u.uid; goOnline(); return; }
+    signInAnonymously(auth).catch((e) => { console.warn('匿名登入失敗', e); status('error', e.code || e.message); });
+  });
+  // 從信箱點登入連結回到網站：完成登入
+  if (isSignInWithEmailLink(auth, location.href)) {
+    let email = ''; try { email = localStorage.getItem(TKEY) || ''; } catch (e) { /* 私密模式 */ }
+    if (!email) email = (prompt('請輸入你收到登入連結的 email') || '').trim();
+    const clean = () => { const u = new URL(location.href); for (const k of ['apiKey', 'oobCode', 'mode', 'lang', 'continueUrl', 'tenantId']) u.searchParams.delete(k); history.replaceState(null, '', u.pathname + (u.search ? u.search : '') + u.hash); };
+    if (email) signInWithEmailLink(auth, email, location.href).then(() => { try { localStorage.removeItem(TKEY); } catch (e) { /* 沒關係 */ } clean(); hooks.onTeacher && hooks.onTeacher('in'); }).catch((e) => { console.warn('老師登入失敗', e); clean(); hooks.onTeacher && hooks.onTeacher('fail', e.code); });
+    else clean();
+  }
+  const teacher = {
+    email: () => { const u = auth.currentUser; return u && !u.isAnonymous && u.email ? u.email : null; },
+    async sendLink(email) {
+      try { localStorage.setItem(TKEY, email); } catch (e) { /* 私密模式 */ }
+      await sendSignInLinkToEmail(auth, email, { url: location.origin + location.pathname, handleCodeInApp: true });
+    },
+    async google() { await signInWithPopup(auth, new GoogleAuthProvider()); },
+    async logout() { if (meRef) { await remove(meRef).catch(() => {}); meRef = null; } await signOut(auth); },
+  };
 
   // 只要開著網站就算「在線」；用暱稱加入的才會出現在島上
   function goOnline() {
@@ -81,5 +102,5 @@ export function createNet(config, hooks) {
     hooks.onCount({ players: n, byRole, viewers: Math.max(viewers, n ? 1 : 0) });
   }
   // 給多人小遊戲用：資料庫、自己的 id、伺服器時間
-  return { setMe, tick, db, uid: () => uid, now: () => Date.now() + skew, fb: { ref, set, update, remove, onValue, serverTimestamp } };
+  return { setMe, tick, db, uid: () => uid, now: () => Date.now() + skew, teacher, fb: { ref, set, update, remove, onValue, serverTimestamp } };
 }
