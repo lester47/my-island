@@ -1,7 +1,7 @@
 // 園遊會氣氛：氣球、拱門、彩旗、燈籠、踩高蹺、小丑、舞獅、吉祥物、熱氣球、風箏、煙火……
 // 所有東西都放在橋上、天空、海面，或島上步道外側的空地（避開攤子），不擋步道
 import * as THREE from 'three';
-import { batchStatic } from './kit.js?v=20261124t';
+import { batchStatic } from './kit.js?v=20261124u';
 
 const TAU = Math.PI * 2;
 const M = {};
@@ -24,7 +24,7 @@ function markBalloon(mesh, group, color) {
 // 一顆氣球（橢圓球＋小結）
 // 鯉魚 Logo 貼片（旗子用）
 const LOGO_GEO = new THREE.PlaneGeometry(1, 1); let LOGO_M = null;
-function logoMat() { if (!LOGO_M) { const tx = new THREE.TextureLoader().load('assets/brand/koi-logo.png?v=20261124t'); tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 4; LOGO_M = new THREE.MeshStandardMaterial({ map: tx, transparent: true, alphaTest: .4, roughness: .8, polygonOffset: true, polygonOffsetFactor: -2 }); } return LOGO_M; }
+function logoMat() { if (!LOGO_M) { const tx = new THREE.TextureLoader().load('assets/brand/koi-logo.png?v=20261124u'); tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 4; LOGO_M = new THREE.MeshStandardMaterial({ map: tx, transparent: true, alphaTest: .4, roughness: .8, polygonOffset: true, polygonOffsetFactor: -2 }); } return LOGO_M; }
 function balloon(parent, c, x, y, z, s = 1) {
   const g = new THREE.Group(); g.position.set(x, y, z); parent.add(g);
   const b = add(g, G.sph, mat(c, { roughness: .35, metalness: .05 }), 0, 0, 0, .34 * s, .42 * s, .34 * s);

@@ -1,7 +1,7 @@
 // 3D 世界：天空、海、遠山、島嶼與地標、橋、日夜光影
 import * as THREE from 'three';
-import { TAU, clamp, lerp, smooth, rng, loopNoise, mat, Builder, GEO, glowTexture, C } from './kit.js?v=20261124t';
-import { makeScenery } from './scenery.js?v=20261124t';
+import { TAU, clamp, lerp, smooth, rng, loopNoise, mat, Builder, GEO, glowTexture, C } from './kit.js?v=20261124u';
+import { makeScenery } from './scenery.js?v=20261124u';
 
 export const H = 1.75;               // 島頂草地高度
 const SEG = 72;                      // 海岸線分段（6 的倍數，六角轉角落在頂點上）
