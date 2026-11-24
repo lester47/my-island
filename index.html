@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261119g">
+<link rel="stylesheet" href="styles.css?v=20261124a">
 <script type="importmap">{"imports":{"three":"./vendor/three/three.module.js","three/addons/":"./vendor/three/addons/"}}</script>
 </head>
 <body>
@@ -58,6 +58,9 @@
     <button type="button" class="chip" id="qualityBtn" aria-pressed="false">🖥️ 低畫質</button>
   </div>
   <div class="row">
+    <button type="button" class="chip" id="muteBtn" aria-pressed="false">🔇 貓咪靜音</button>
+  </div>
+  <div class="row">
     <button type="button" class="chip" id="replayBtn">🎬 重播開場</button>
     <button type="button" class="chip" id="shareBtn">📤 分享卡片</button>
   </div>
@@ -73,7 +76,9 @@
   <button type="button" class="hchip me" id="meBtn" aria-label="用暱稱加入市集" aria-haspopup="dialog"><span aria-hidden="true">👤</span><b id="meName">加入</b></button>
   <button type="button" class="hchip" id="bagBtn" aria-label="背包"><span aria-hidden="true">🎒</span><b id="bagCount">0</b></button>
   <button type="button" class="hchip" id="stampBtn" aria-label="集章進度"><span aria-hidden="true">🏮</span><b id="stampCount">0/6</b></button>
+  <button type="button" class="hchip" id="catBtn" aria-label="貓咪圖鑑"><span aria-hidden="true">🐾</span><b id="catCount">0/6</b></button>
 </div>
+<button type="button" class="ticket" id="ticketChip" hidden></button>
 <p class="layout-note">示意配置，非實際場地比例</p>
 <div class="notice-bar" id="noticeBar" role="status" hidden><span aria-hidden="true">📢</span><span class="nt"></span><small class="nw"></small><button type="button" class="nx" aria-label="關閉公告">✕</button></div>
 <section class="fish-ui" id="fishUI" hidden aria-live="polite"><p class="ft"></p><div class="fbtns"><button type="button" class="fb">🎣 拋竿</button><button type="button" class="fx fl">📖 圖鑑 0/6</button><button type="button" class="fx frules">📜 規則</button></div></section>
@@ -175,6 +180,10 @@
   <div class="game-bar"><h2 id="gameTitle">🎮 攤位小遊戲</h2><button type="button" class="btn" id="gameBack">✕ 回市集</button></div>
   <div class="game-wrap"><iframe id="gameFrame" title="攤位線上小遊戲" allow="autoplay; accelerometer; gyroscope" src="about:blank"></iframe><p class="game-load" id="gameLoad">遊戲載入中…</p></div>
 </dialog>
+<dialog id="catDlg" class="dlg wide" aria-labelledby="catTitle">
+  <div class="dlg-hd"><h2 id="catTitle">🐾 貓咪圖鑑</h2><button type="button" class="x" data-close aria-label="關閉">✕</button></div>
+  <div id="catBody"></div>
+</dialog>
 <dialog id="doneDlg" class="dlg" aria-labelledby="doneTitle">
   <div class="dlg-hd"><h2 id="doneTitle">🎉 集章完成！</h2><button type="button" class="x" data-close aria-label="關閉">✕</button></div>
   <div id="doneBody"></div>
@@ -182,6 +191,6 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <noscript><p class="noscript">這個網站需要開啟 JavaScript。</p></noscript>
-<script type="module" src="js/main.js?v=20261119g"></script>
+<script type="module" src="js/main.js?v=20261124a"></script>
 </body>
 </html>

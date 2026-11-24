@@ -1,6 +1,9 @@
 // 115 鯉魚市集｜介面與流程
 import * as THREE from 'three';
-import { ROLES, OUTFITS, HATS } from './roles.js?v=20261119g';
+import { ROLES, OUTFITS, HATS } from './roles.js?v=20261124a';
+import { createMeowBox } from './meow.js?v=20261124a';
+import { REACTIONS, REACTION_IDS, playReaction } from './cats.js?v=20261124a';
+import { createCatNet, SEATS, REST, CALL, pad } from './catnet.js?v=20261124a';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -17,18 +20,38 @@ const pad2 = (n) => String(n).padStart(2, '0');
 const fmtH = (h) => { h = ((h % 24) + 24) % 24; return `${pad2(Math.floor(h))}:${pad2(Math.floor((h % 1) * 60))}`; };
 
 // 介面 Logo：低多邊形鯉魚（橘紅魚背、米白魚腹、魚頭朝右），首頁、怎麼逛、集章完成共用這一張
-const LOGO_SRC = 'assets/brand/koi-logo.png?v=20261119g';
+const LOGO_SRC = 'assets/brand/koi-logo.png?v=20261124a';
 const MASCOT = `<img src="${LOGO_SRC}" alt="115 鯉魚市集 Logo：低多邊形小鯉魚" decoding="async">`;
 
 let C = null;            // content.json
-let W = null, L = null, CAM = null, BAL = null;
+let W = null, L = null, CAM = null, BAL = null, K = null;   // K：島上的貓
+const SND = createMeowBox();
+const CR = createCatNet({
+  onChange(why) {
+    if (K) for (const c of K.cats) c.held = CR.busy(c.data.id);
+    const cn = () => (catData(CR.myCat) || {}).name || '貓';
+    if (why === 'called') { SND.unlock(); SND.chime(); toast(`🔔 叫號 ${pad(CR.myTicket)}！輪到你擼${cn()}了，請在 ${CALL} 秒內按「✋ 報到」`); $('#ticketChip').classList.remove('ring'); void $('#ticketChip').offsetWidth; $('#ticketChip').classList.add('ring'); }
+    if (why === 'missed') { toast('😢 過號了！沒有在時間內報到，可以再抽一張號碼牌。'); setCatSay('過號了……沒關係，再抽一張號碼牌就好。'); }
+    if (why === 'turn') { toast('⏰ 時間到，換下一號擼貓囉！謝謝你的溫柔～想再擼可以再抽號。'); setCatSay('時間到囉，換下一號！想再擼可以再抽一張號碼牌。'); }
+    if (why === 'idle') { toast('💤 你好一陣子沒摸貓，位置讓給下一號了。'); setCatSay('你好一陣子沒摸，位置先讓給下一號囉。'); }
+    renderTicketChip();
+    if (S.bubble && S.bubble.o.cat) updateCatBubble();
+  },
+  onRemotePet(catId, r, who) {
+    const c = K && K.byId(catId); if (!c) return;
+    const watching = !!(S.bubble && S.bubble.o.cat === c);
+    K.remote(c, r, watching ? SND : null);
+    if (watching) setCatSay(r === 'leave' ? `${who}摸得太急，${c.data.name}跑去休息了……` : `${who}：${REACTIONS[r].text.replace('{n}', c.data.name)}`);
+  },
+});
 const S = {
   theme: store.get('theme', 'auto'), timeMode: store.get('time', 'auto'), hour: 10, hourShown: 10, autoStart: 0,
   reduced: store.get('reduce', null), quality: store.get('quality', 'high'),
-  stamps: store.get('stamps', []), bag: store.get('bag', null), open: null, bubble: null, tour: null, walking: false, intro: false,
+  stamps: store.get('stamps', []), petted: store.get('cats', []), muted: store.get('mute', false), bag: store.get('bag', null), open: null, bubble: null, tour: null, walking: false, intro: false,
 };
 if (S.reduced == null) S.reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 if (!S.bag) S.bag = { shell: 3 };
+SND.setMuted(S.muted);
 
 // ------------------------------------------------------------------ 共用小元件
 // 滾輪縮放段數提示（電腦版）：「縮放 4／10」，一秒後淡出
@@ -99,6 +122,7 @@ function buildSettings() {
   $('#timeSeg').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) setTime(b.dataset.k); });
   $('#motionBtn').addEventListener('click', () => { S.reduced = !S.reduced; store.set('reduce', S.reduced); syncSettings(); if (CAM) CAM.S.reduced = S.reduced; toast(S.reduced ? '已減少動態：動畫暫停' : '動畫已恢復'); });
   $('#qualityBtn').addEventListener('click', () => { setQuality(S.quality === 'low' ? 'high' : 'low'); });
+  $('#muteBtn').addEventListener('click', () => setMuted(!S.muted));
   $('#replayBtn').addEventListener('click', () => { toggleSettings(false); playIntro(true); });
   $('#shareBtn').addEventListener('click', () => { toggleSettings(false); openShare(); });
   syncSettings();
@@ -109,8 +133,10 @@ function syncSettings() {
   for (const b of document.querySelectorAll('#timeSeg button')) b.setAttribute('aria-checked', String(b.dataset.k === S.timeMode));
   $('#motionBtn').setAttribute('aria-pressed', String(S.reduced));
   $('#qualityBtn').setAttribute('aria-pressed', String(S.quality === 'low'));
+  $('#muteBtn').setAttribute('aria-pressed', String(S.muted));
   $('#qualityBtn').textContent = `🖥️ 目前畫質：${S.quality === 'low' ? '低' : '高'}${S.qualityAuto ? '（自動調整）' : ''}・點一下切換`;
 }
+function setMuted(v) { S.muted = v; store.set('mute', v); SND.setMuted(v); syncSettings(); if (S.bubble && S.bubble.o.cat) updateCatBubble(); toast(v ? '🔇 貓咪聲音已關閉' : '🔊 貓咪聲音已打開'); if (!v) { SND.unlock(); SND.meow(1, { len: .4 }); } }
 function toggleSettings(on) {
   const p = $('#settings'); on = on == null ? p.hidden : on; p.hidden = !on; $('#setBtn').setAttribute('aria-expanded', String(on));
   if (on) p.querySelector('button[aria-checked="true"]')?.focus();
@@ -153,12 +179,13 @@ function stamp(id) {
   if (S.stamps.length === 6 && !store.get('doneShown', false)) { store.set('doneShown', true); setTimeout(showDone, 900); }
 }
 function showDone() {
+  $('#doneTitle').textContent = '🎉 集章完成！';
   $('#doneBody').innerHTML = `<div style="display:flex;gap:14px;align-items:center"><span class="mascot" style="width:84px;height:84px">${MASCOT}</span><p style="margin:0;line-height:1.7;font-weight:700">太厲害了！你已走訪服務台和五座主題島，集滿六枚章！<br>小鯉魚幫你把護照收好了，記得也到現場逛逛喔！</p></div><p class="foot">集章紀錄只存在這台裝置的瀏覽器裡。</p><button type="button" class="btn" data-close>好耶！</button>`;
   openDlg('#doneDlg');
 }
 function renderHud() {
   const n = Object.values(S.bag).reduce((a, b) => a + b, 0);
-  $('#bagCount').textContent = n; $('#stampCount').textContent = `${S.stamps.length}/6`;
+  $('#bagCount').textContent = n; $('#stampCount').textContent = `${S.stamps.length}/6`; $('#catCount').textContent = `${S.petted.length}/${(C.cats || []).length}`;
   for (const id of STAMP_IDS) { const t = tags[id]; if (t) t.querySelector('.st').textContent = S.stamps.includes(id) ? '🏮' : ''; }
 }
 function saveBag() { store.set('bag', S.bag); renderHud(); $('#bagBtn').classList.remove('bump'); void $('#bagBtn').offsetWidth; $('#bagBtn').classList.add('bump'); }
@@ -449,6 +476,7 @@ window.__routeErrors = () => route().errs;
 $('#passBtn').addEventListener('click', () => { PP.pendingNo = null; PP.view = ppActive() ? 'main' : 'create'; openPass(); });
 $('#bagBtn').addEventListener('click', openBag);
 $('#stampBtn').addEventListener('click', openStamps);
+$('#catBtn').addEventListener('click', openCats);
 
 // ------------------------------------------------------------------ 攤位詳情（點攤位列展開，同時只開一攤）
 // 合併攤（parts）：一張詳情卡分兩段，各有自己的圖片與說明
@@ -561,6 +589,7 @@ function panelHTML(id) {
       <div class="p-sec"><h3>活動資訊</h3>${eventHTML()}</div>
       ${guideHTML()}
       <div class="p-sec"><h3>展區地圖</h3><div class="mapgrid">${C.islands.map((x) => `<button type="button" data-go="${x.id}" style="--c:${x.color}">${x.order}　${esc(x.name)}<br><small>${esc(x.group)}・${stallsOf(x.id).length} 攤</small></button>`).join('')}</div></div>
+      ${catSecHTML('center')}
       <div class="p-sec"><h3>集章進度</h3><div class="stamp-row">🏮 已集 ${S.stamps.length}/6 枚 <button type="button" class="btn ghost" data-stamps>看護照</button></div></div>
       ${resHTML}`;
   }
@@ -572,6 +601,7 @@ function panelHTML(id) {
     <div class="p-sec"><h3>島上地標</h3><p>${esc(I.landmark)}</p></div>
     ${resHTML}
     <div class="p-sec"><h3>資料下載</h3><a class="dl" href="${esc(I.download)}" download>📄 下載攤位清單（txt）</a></div>
+    ${catSecHTML(id)}
     <div class="p-sec"><div class="stamp-row">${got ? '🏮 這座島已蓋章' : '打開介紹就會蓋章'}・目前 ${S.stamps.length}/6 <button type="button" class="btn ghost" data-stamps>看護照</button></div></div>`;
 }
 // 服務台：玩家推薦玩法（內容在 content.json 的 center.guide）
@@ -808,15 +838,16 @@ function cardHTML(id) {
   const I = islandById(id), c = colorOf(id);
   const res = C.residents.filter((r) => r.island === id);
   const resList = `<details><summary>島上的人與對話（示意角色）</summary>${res.map((r) => `<div class="res" style="margin:6px 0"><b>${esc(r.name)}</b>・${esc(r.job)}<ul style="margin:4px 0 0;padding-left:18px">${r.lines.map((l) => `<li>${esc(l)}</li>`).join('')}</ul></div>`).join('')}</details>`;
-  if (id === 'center') return `<article class="card" style="--c:${c}"><h3>★ ${esc(I.name)} <span class="grp">${esc(I.role)}</span></h3><p>${esc(I.intro)}</p><p>${esc(I.overview)}</p>${eventHTML()}${resList}<div class="acts"><button type="button" data-open="center">在地圖上看</button></div></article>`;
+  if (id === 'center') return `<article class="card" style="--c:${c}"><h3>★ ${esc(I.name)} <span class="grp">${esc(I.role)}</span></h3><p>${esc(I.intro)}</p><p>${esc(I.overview)}</p>${eventHTML()}${catLine(id)}${resList}<div class="acts"><button type="button" data-open="center">在地圖上看</button></div></article>`;
   return `<article class="card" style="--c:${c}"><h3><span class="tag" style="position:static;box-shadow:none;--tc:${c};min-height:auto;padding:0;background:none"><span class="no">${I.order}</span></span>${esc(I.name)} <span class="grp">${esc(I.group)}・${stallsOf(id).length} 攤</span>${S.stamps.includes(id) ? ' 🏮' : ''}</h3>
     <p>${esc(I.intro)}</p><ol class="stalls" style="--pc:${c}">${stallsOf(id).map((st) => `<li><button type="button" class="stall-row" data-open="${id}" data-no="${st.no}"><span class="num" aria-hidden="true">${pad2(st.no)}</span><span class="nm ${st.namePending ? 'pending' : ''}"><span class="sr-only">攤號 ${st.no}，</span>${esc(st.name)}</span><span class="go" aria-hidden="true">看介紹 ›</span></button></li>`).join('')}</ol>
-    <p style="margin-top:8px"><b>地標：</b>${esc(I.landmark)}</p>${resList}
+    <p style="margin-top:8px"><b>地標：</b>${esc(I.landmark)}</p>${catLine(id)}${resList}
     <div class="acts"><button type="button" data-open="${id}">在地圖上看</button><a href="${esc(I.download)}" download>📄 下載攤位清單</a></div></article>`;
 }
 function renderList() {
-  const groups = ['全部', ...C.islands.map((i) => i.group), '服務台'];
+  const groups = ['全部', ...C.islands.map((i) => i.group), '服務台', '🐾 貓咪'];
   $('#filters').innerHTML = groups.map((g) => `<button type="button" aria-pressed="${g === filter}" data-f="${g}">${g}</button>`).join('');
+  if (filter === '🐾 貓咪') { $('#listBody').innerHTML = catsListHTML(); return; }
   const ids = ['center', ...C.islands.map((i) => i.id)].filter((id) => filter === '全部' || (id === 'center' ? filter === '服務台' : islandById(id).group === filter));
   const boat = W && L && filter === '全部' ? `<article class="card" style="--c:${C.carpBoat.color}"><h3>⛵ ${esc(C.carpBoat.name)} <span class="grp">${esc(C.carpBoat.role)}</span></h3><p>${esc(C.carpBoat.intro)}</p><p class="foot">${esc(C.carpBoat.note)}</p><div class="acts"><button type="button" data-open="carp">在地圖上看</button></div></article>` : '';
   const BD = balloonDef(), bal = W && BAL && filter === '全部' ? `<article class="card" style="--c:${BD.color}"><h3>🎈 ${esc(BD.name)} <span class="grp">${esc(BD.role)}</span></h3><p>${esc(BD.intro)}</p><p class="foot">${esc(BD.note)}</p><div class="acts"><button type="button" data-open="balloon">在地圖上看</button></div></article>` : '';
@@ -839,12 +870,13 @@ function search(q) {
   if (W && L && [C.carpBoat.name, C.carpBoat.role, '船', '帆船', '碼頭', 'boat'].some(test)) hits.push({ id: 'carp', exact: test(C.carpBoat.name), text: `⛵ ${C.carpBoat.name}・${C.carpBoat.role}` });
   if (W && BAL && [balloonDef().name, balloonDef().role, '熱氣球', '氣球', '起降場', '飛', 'balloon'].some(test)) hits.push({ id: 'balloon', exact: test(balloonDef().name), text: `🎈 ${balloonDef().name}・${balloonDef().role}` });
   hits.sort((a, b) => (b.exact ? 1 : 0) - (a.exact ? 1 : 0) || (b.nameHit ? 1 : 0) - (a.nameHit ? 1 : 0));
+  for (const d of C.cats || []) if (test(d.name) || test(d.coat) || q.includes('貓')) hits.push({ id: d.island, cat: d.id, text: `🐾 ${d.name}・${d.coat}（${islandById(d.island).name}）` });
   for (const r of C.residents) if (test(r.name) || test(r.job)) hits.push({ id: r.island, text: `${r.name}・${r.job}（${islandById(r.island).name}）` });
-  out.innerHTML = hits.length ? hits.slice(0, 20).map((h, i) => `<button type="button" data-id="${h.id}" ${h.no != null ? `data-no="${h.no}"` : ''} style="--c:${colorOf(h.id)}">${esc(h.text)}${i === 0 && h.no != null ? '<small class="enter">按 Enter 直接開啟</small>' : ''}</button>`).join('') : `<p class="none">找不到「${esc(q)}」，換個關鍵字試試，例如「餅乾」「迷宮」或攤號「11」。</p>`;
+  out.innerHTML = hits.length ? hits.slice(0, 20).map((h, i) => `<button type="button" data-id="${h.id}" ${h.no != null ? `data-no="${h.no}"` : ''} ${h.cat ? `data-cat="${h.cat}"` : ''} style="--c:${colorOf(h.id)}">${esc(h.text)}${i === 0 && h.no != null ? '<small class="enter">按 Enter 直接開啟</small>' : ''}</button>`).join('') : `<p class="none">找不到「${esc(q)}」，換個關鍵字試試，例如「餅乾」「迷宮」或攤號「11」。</p>`;
 }
 $('#searchInput').addEventListener('input', (e) => search(e.target.value));
 $('#searchInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); $('#searchResults button')?.click(); } });
-$('#searchResults').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; $('#listDlg').close(); openIsland(b.dataset.id, { no: b.dataset.no != null ? +b.dataset.no : undefined, opener: $('#searchBtn') }); });
+$('#searchResults').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b || b.dataset.cat) return; $('#listDlg').close(); openIsland(b.dataset.id, { no: b.dataset.no != null ? +b.dataset.no : undefined, opener: $('#searchBtn') }); });
 $('#listBtn').addEventListener('click', () => { renderList(); openDlg('#listDlg'); });
 $('#searchBtn').addEventListener('click', () => { renderList(); openDlg('#listDlg'); $('#searchInput').focus(); });
 
@@ -981,12 +1013,14 @@ function openBubble(o) {
   closeBubble();
   S.bubble = { o, line: 0 };
   if (o.agent) o.agent.talking = true; if (o.animal) o.animal.talking = true;
+  if (o.cat) { o.cat.talking = true; S.bubble.msg = o.cat.state === 'sleep' ? `${o.cat.data.name}睡得正香……輕輕摸摸看？` : o.cat.data.lines[Math.floor(Math.random() * o.cat.data.lines.length)]; focusCat(o.cat); }
   $('#labels').classList.add('dim');
   renderBubble(); $('#bubble').hidden = false;
   $('#bubble').querySelector('button')?.focus({ preventScroll: true });
 }
 function renderBubble(msg) {
   const B = S.bubble; if (!B) return; const o = B.o, el = $('#bubble');
+  if (o.cat) { renderCatBubble(); return; }
   if (o.animal) {
     const a = o.animal.data;
     el.innerHTML = `<p class="who">${a.icon} ${esc(a.name)}</p><p class="where">${esc(islandById(o.animal.island.id).name)}</p><p class="say">${esc(a.line)}</p><div class="acts"><button type="button" data-b="x">✕ 關閉</button></div>`;
@@ -1016,11 +1050,12 @@ function doTrade() {
 function closeBubble() {
   if (!S.bubble) return;
   const o = S.bubble.o; if (o.agent) o.agent.talking = false; if (o.animal) o.animal.talking = false;
+  if (o.cat) { o.cat.talking = false; unfocusCat(); }   // 號碼牌留著，可以先去逛別的島
   S.bubble = null; $('#bubble').hidden = true; $('#labels').classList.remove('dim');
 }
 function placeBubble() {
   if (!S.bubble) return;
-  const p = L.headOf(S.bubble.o).project(W.camera), el = $('#bubble');
+  const p = headOf(S.bubble.o).project(W.camera), el = $('#bubble');
   const x = (p.x + 1) / 2 * innerWidth, y = (1 - p.y) / 2 * innerHeight;
   const w = el.offsetWidth, half = w / 2;
   el.style.transform = `translate(${Math.round(Math.max(half + 8, Math.min(innerWidth - half - 8, x)) - half)}px, ${Math.round(Math.max(el.offsetHeight + 70, y) - el.offsetHeight - 14)}px)`;
@@ -1032,6 +1067,7 @@ let down = null;
 function onCanvasDown(e) { down = { x: e.clientX, y: e.clientY }; $('#gl').classList.add('drag'); if (S.tour && !S.tour.paused) pauseTour(true); }
 function onCanvasUp(e) {
   $('#gl').classList.remove('drag');
+  if (skipUp) { skipUp = false; down = null; return; }
   if (!down) return; const moved = Math.hypot(e.clientX - down.x, e.clientY - down.y); down = null;
   if (moved > 7 || S.intro) return;
   ndc.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
@@ -1047,19 +1083,21 @@ function onCanvasUp(e) {
   }
   if (S.walking || (CAM.S.busy && !CAM.S.busy.custom)) return;
   ray.setFromCamera(ndc, W.camera);
-  const life = ray.intersectObjects(L.pickables.filter((p) => p.obj.parent && p.obj.parent.visible).map((p) => p.obj), false)[0];
-  let pick = life ? L.pickables.find((p) => p.obj === life.object) : null;
+  const PK = allPickables();
+  const life = ray.intersectObjects(PK.filter((p) => p.obj.parent && p.obj.parent.visible).map((p) => p.obj), false)[0];
+  let pick = life ? PK.find((p) => p.obj === life.object) : null;
   if (!pick && (e.pointerType === 'touch' || isMobile())) {   // 手機：用螢幕距離找最近的居民或動物
     let best = null, bd = 46;
-    for (const p of L.pickables) {
+    for (const p of PK) {
       if (p.shell || !p.obj.parent.visible) continue;
-      const s = L.headOf(p).project(W.camera); if (s.z > 1) continue;
+      const s = headOf(p).project(W.camera); if (s.z > 1) continue;
       const d = Math.hypot((s.x + 1) / 2 * innerWidth - e.clientX, (1 - s.y) / 2 * innerHeight - e.clientY - 24);
       if (d < bd) { bd = d; best = p; }
     }
     pick = best;
   }
   if (pick && pick.shell) { if (performance.now() >= pick.shell.hiddenUntil) { pick.shell.hiddenUntil = performance.now() + 20000; S.bag.shell = (S.bag.shell || 0) + 1; saveBag(); toast('🐚 撿到一個貝殼！+1'); } return; }
+  if (pick && pick.cat && S.bubble && S.bubble.o.cat === pick.cat) { petCat(pick.cat); return; }   // 再點一次貓＝摸一下
   if (pick) { openBubble(pick); return; }
   // 攤位立牌：點牌子直接打開那一攤的攤位卡
   const sh = SG && ray.intersectObjects(SG.pickables.map((p) => p.obj), false)[0];
@@ -1078,6 +1116,251 @@ function onCanvasUp(e) {
 }
 
 // ------------------------------------------------------------------ 自動導覽路線
+// ------------------------------------------------------------------ 島上的貓：擼貓、圖鑑
+const headOf = (o) => (o.cat ? K.headOf(o) : L.headOf(o));
+const allPickables = () => (K ? [...L.pickables, ...K.pickables] : L.pickables);
+const catData = (id) => (C.cats || []).find((d) => d.id === id);
+// 圖鑑用的小貓臉（依毛色畫）
+function catFace(d, px = 64) {
+  const L0 = d.look, b = L0.base, cal = L0.pattern === 'calico', bl = L0.belly || '#fff', st = L0.stripe || b;
+  let pat = '';
+  if (L0.pattern === 'tabby') pat = `<path d="M26 18v7M32 17v8M38 18v7" stroke="${st}" stroke-width="3" stroke-linecap="round" fill="none"/>`;
+  if (L0.pattern === 'tuft') pat = `<path d="M29 20l3-7 3 7z" fill="${L0.tuft}" stroke="none"/>`;
+  if (cal) pat = `<path d="M33 16c8-2 17 4 17 13-6 1-14-3-17-13z" fill="${L0.patchA}" stroke="none"/><path d="M15 32c1-6 6-10 11-10-1 6-5 10-11 10z" fill="${L0.patchB}" stroke="none"/>`;
+  if (L0.pattern === 'tuxedo') pat = `<path d="M32 21l-6 16h12z" fill="${bl}" stroke="none"/>`;
+  const glasses = L0.extra === 'glasses' ? '<g fill="none" stroke="#3a2d28" stroke-width="1.8"><circle cx="24" cy="33" r="6"/><circle cx="40" cy="33" r="6"/><path d="M30 33h4"/></g>' : '';
+  const bow = L0.extra === 'bow' ? `<path d="M40 14l6-4v8zM52 14l-6-4v8z" fill="${L0.collar}" stroke="#5a4038" stroke-width="1.2"/>` : '';
+  return `<svg class="catface" viewBox="0 0 64 64" width="${px}" height="${px}" aria-hidden="true"><g stroke="#5a4038" stroke-width="1.6" stroke-linejoin="round">
+<path d="M12 30L13 7l16 11z" fill="${cal ? L0.patchB : b}"/><path d="M52 30L51 7 35 18z" fill="${cal ? L0.patchA : b}"/>
+<path d="M15 25L15 12l8 6zM49 25V12l-8 6z" fill="#ffb3c1" stroke="none"/>
+<ellipse cx="32" cy="34" rx="${L0.chubby ? 24 : 22}" ry="19" fill="${b}"/></g>${pat}
+<ellipse cx="32" cy="43" rx="10" ry="6.5" fill="${bl}"/>
+<ellipse cx="24" cy="33" rx="3.4" ry="4.2" fill="#231a16"/><ellipse cx="40" cy="33" rx="3.4" ry="4.2" fill="#231a16"/><circle cx="25" cy="31.5" r="1.2" fill="#fff"/><circle cx="41" cy="31.5" r="1.2" fill="#fff"/>
+<path d="M30 40h4l-2 2.4z" fill="#ff8fa7"/><path d="M28 44q2 2 4 0q2 2 4 0" fill="none" stroke="#5a4038" stroke-width="1.3" stroke-linecap="round"/>
+<circle cx="18" cy="40" r="2.6" fill="#ffa0b4" opacity=".75"/><circle cx="46" cy="40" r="2.6" fill="#ffa0b4" opacity=".75"/>
+<path d="M14 42l-8-1M14 45l-8 2M50 42l8-1M50 45l8 2" stroke="#5a4038" stroke-width="1" stroke-linecap="round"/>
+${glasses}${bow}<path d="M17 50q15 7 30 0" fill="none" stroke="${L0.collar}" stroke-width="4" stroke-linecap="round"/></svg>`;
+}
+function catSecHTML(islandId) {
+  const d = (C.cats || []).find((x) => x.island === islandId); if (!d) return '';
+  const got = S.petted.includes(d.id);
+  return `<div class="p-sec"><h3>島上的貓 🐾</h3><div class="catrow">${catFace(d, 56)}<div><b>${esc(d.name)}</b>・${esc(d.coat)}${got ? ' ✅' : ''}<br><small>${esc(d.personality)}</small></div><button type="button" class="btn" data-cat="${d.id}">🖐 擼貓</button></div></div>`;
+}
+function catLine(islandId) {
+  const d = (C.cats || []).find((x) => x.island === islandId); if (!d) return '';
+  return `<p class="catline">${catFace(d, 30)}<span><b>島上的貓：${esc(d.name)}</b>（${esc(d.coat)}）${esc(d.personality)}</span><button type="button" data-cat="${d.id}">🖐 擼貓</button></p>`;
+}
+function catsListHTML() {
+  return `<div class="catgrid">${(C.cats || []).map((d) => catCardHTML(d)).join('')}</div><p class="foot">${esc(C.catsNote || '')}</p>`;
+}
+function catCardHTML(d) {
+  const got = S.petted.includes(d.id);
+  return `<div class="catcard ${got ? 'got' : ''}" style="--c:${colorOf(d.island)}">${catFace(d, 76)}<h3>${esc(d.name)}${got ? ' <span class="ok">✅ 擼過了</span>' : ''}</h3>
+    <p class="cc-meta">${esc(d.coat)}・${esc(islandById(d.island).name)}</p><p>${esc(d.personality)}</p><p class="cc-meta">最愛被摸：${esc(d.favorite)}</p>
+    <button type="button" class="btn ${got ? 'ghost' : ''}" data-cat="${d.id}">${got ? '🖐 再去擼一次' : '🔍 去找牠'}</button></div>`;
+}
+function openCats() {
+  const n = S.petted.length, tot = (C.cats || []).length;
+  $('#catBody').innerHTML = `<p style="margin:0 0 12px">每座島都住著一隻貓。找到牠、擼擼牠，就能收進圖鑑！目前 <b>${n}/${tot}</b>${n === tot ? '　🎉 全部收集完成！' : ''}</p>
+    <div class="catgrid">${(C.cats || []).map(catCardHTML).join('')}</div>
+    <h3 style="margin:14px 0 6px;font-size:15px">擼貓會看到的 ${REACTION_IDS.length} 種反應</h3>
+    <div class="reacts">${REACTION_IDS.map((k) => `<span>${REACTIONS[k].icon} ${esc(REACTIONS[k].name)}</span>`).join('')}</div>
+    <p class="foot">小提醒：一直摸、一直摸，貓會甩尾巴走開，要等牠休息一下喔。輕輕的、看牠開不開心，貓才會喜歡你。<br>${esc(C.catsNote || '')}圖鑑紀錄存在這台裝置的瀏覽器裡。</p>
+    <button type="button" class="btn ghost" id="catReset">重置圖鑑</button>`;
+  $('#catReset').onclick = () => { S.petted = []; store.set('cats', []); store.set('catsDone', false); renderHud(); openCats(); toast('圖鑑已重置'); };
+  openDlg('#catDlg');
+}
+// 鏡頭靠近貓
+function focusCat(c) {
+  if (!CAM || S.walking) return;
+  if (S.tour) endTour(false);
+  const p = c.M.g.position, t = p.clone().setY(p.y + .55 * (c.data.scale || 1) + (isMobile() ? 2.3 : 1.8));   // 鏡頭看貓的上方，讓貓落在畫面下半部、不被對話框擋住
+  const dir = W.camera.position.clone().sub(t); dir.y = 0; if (dir.lengthSq() < .01) dir.set(0, 0, 1); dir.normalize();
+  const dist = isMobile() ? 8.5 : 7.5, el = .5;
+  const pos = t.clone().addScaledVector(dir, dist * Math.cos(el)); pos.y = t.y + dist * Math.sin(el);
+  CAM.controls.minDistance = 5; S.catZoom = true;
+  CAM.flight({ t, p: pos }, 1100, 1.2);
+}
+function unfocusCat() {
+  if (!S.catZoom || !CAM) return; S.catZoom = false;
+  const t = CAM.controls.target.clone(), d = W.camera.position.distanceTo(t);
+  CAM.limits();
+  if (d < CAM.controls.minDistance && !S.walking) CAM.flight({ t, p: t.clone().add(W.camera.position.clone().sub(t).normalize().multiplyScalar(CAM.controls.minDistance + 2)) }, 700, 0);
+}
+function renderCatBubble() {
+  const B = S.bubble, c = B.o.cat, d = c.data, el = $('#bubble');
+  el.innerHTML = `<p class="who catwho">${catFace(d, 34)}<span>${esc(d.name)} <span class="sample">${esc(d.coat)}</span></span></p><p class="where">${esc(islandById(d.island).name)}・${esc(d.personality)}</p>
+    <p class="say" id="catSay">${esc(B.msg || '')}</p>
+    <div class="mood"><span>開心值</span><span class="hearts" id="catMood"></span><span class="moodtip" id="catTip"></span></div>
+    <div class="seats" id="catSeats" aria-live="polite"></div>
+    <div class="acts"><button type="button" class="pri" data-b="pet" id="petBtn">🖐 擼貓</button><button type="button" data-b="leave" id="leaveBtn" hidden>放棄號碼</button><button type="button" data-b="talk" aria-label="聽牠說話">💬</button><button type="button" data-b="mute" id="catMute"></button><button type="button" data-b="x" aria-label="關閉">✕</button></div>
+    <p class="hint">先抽號碼牌，叫到號碼再報到。一次最多 ${SEATS} 人一起擼，輪到你時也可以在貓身上輕輕滑動。要溫柔，不可以欺負牠喔。</p>`;
+  el.querySelectorAll('[data-b]').forEach((b) => (b.onclick = (e) => {
+    e.stopPropagation(); const k = b.dataset.b;
+    if (k === 'x') closeBubble();
+    else if (k === 'pet') petCat(c);
+    else if (k === 'leave') { CR.giveUp(); setCatSay('號碼牌收回了，謝謝你讓給別人！想擼再抽一張就好。'); }
+    else if (k === 'talk') { SND.unlock(); B.msg = d.lines[(B.line = (B.line + 1) % d.lines.length)]; $('#catSay').textContent = B.msg; if (c.state !== 'sleep') SND.meow(d.pitch, { len: .42, rise: 1.15, fall: .85 }); }
+    else if (k === 'mute') setMuted(!S.muted);
+  }));
+  updateCatBubble();
+}
+function updateCatBubble() {
+  const B = S.bubble; if (!B || !B.o.cat || !$('#petBtn')) return;
+  const c = B.o.cat, cool = K.cooldown(c), m = K.moodOf(c), h = Math.min(5, Math.ceil(m - .05));
+  const hearts = cool ? '' : '❤'.repeat(Math.max(0, h)) + '♡'.repeat(5 - Math.max(0, h));
+  const mh = $('#catMood'); if (mh.textContent !== hearts) { mh.textContent = hearts; mh.setAttribute('aria-label', `開心值 ${Math.max(0, h)}/5`); }
+  const tip = cool ? `${c.data.name}在休息，${cool} 秒後再來` : m > 5.2 ? '快摸夠了，輕輕的就好' : '';
+  const tp = $('#catTip'); if (tp.textContent !== tip) tp.textContent = tip;
+  const st = CR.status(c.data.id);
+  let pt = '🖐 擼貓', dis = false, ring = false;
+  if (st.rest) { pt = `😌 冷靜一下 ${st.rest} 秒`; dis = true; }
+  else if (st.other) { pt = `🎫 你拿的是${(catData(st.other) || {}).name}的號碼`; dis = true; }
+  else if (!st.has) pt = `🎫 抽號碼牌（${pad(st.nextT)}）`;
+  else if (!st.seated) { pt = `⏳ 等待叫號・前面 ${st.ahead} 位`; dis = true; }
+  else if (st.called) { pt = `✋ 報到（${st.callLeft} 秒）`; ring = true; }
+  else if (cool) { pt = `😾 貓在休息 ${cool}`; dis = true; }
+  const pb = $('#petBtn'); pb.disabled = dis; pb.classList.toggle('ring', ring); if (pb.textContent !== pt) pb.textContent = pt;
+  const lb = $('#leaveBtn'); lb.hidden = !st.has;
+  renderSeats(st);
+  const mb = $('#catMute'); const mt = S.muted ? '🔇' : '🔊'; if (mb.textContent !== mt) { mb.textContent = mt; mb.setAttribute('aria-label', S.muted ? '打開貓咪聲音' : '關閉貓咪聲音'); }
+}
+function setCatSay(t) { if (S.bubble && S.bubble.o.cat) { S.bubble.msg = t; const el = $('#catSay'); if (el) el.textContent = t; } }
+function renderSeats(st) {
+  const el = $('#catSeats'); if (!el) return;
+  const who = (x) => `${esc(x.name)}${x.isMe ? '（你）' : ''}`;
+  const seats = [];
+  for (let i = 0; i < SEATS; i++) { const x = st.serving[i]; seats.push(x ? `<span class="seat on${x.isMe ? ' me' : ''}"><b>🎫${pad(x.t)}</b> ${who(x)}${x.ok ? '' : ' 🔔'}</span>` : '<span class="seat">空位</span>'); }
+  const wait = st.waitingList.map((x) => `<span class="qp${x.isMe ? ' me' : ''}"><b>${pad(x.t)}</b> ${who(x)}</span>`);
+  let mine = '';
+  if (st.has) mine = st.called ? `<div class="mine call">🔔 叫號 <b>${pad(st.ticket)}</b>！請在 ${st.callLeft} 秒內報到</div>`
+    : st.seated ? `<div class="mine">你的號碼 <b>${pad(st.ticket)}</b>・正在擼貓${st.turnLeft != null ? `・還可以擼 ${st.turnLeft} 秒` : ''}</div>`
+    : `<div class="mine">你的號碼牌 <b>${pad(st.ticket)}</b>・前面還有 ${st.ahead} 位</div>`;
+  const html = `<div class="board"><span class="lbl">現在叫號</span>${seats.join('')}</div>${wait.length ? `<div class="queue"><span class="lbl">等待中</span>${wait.join('')}</div>` : ''}${mine}`;
+  if (el.dataset.h !== html) { el.innerHTML = html; el.dataset.h = html; }
+}
+// 角落的號碼牌：去別的島逛也看得到，點一下飛回那隻貓
+function renderTicketChip() {
+  const el = $('#ticketChip'); if (!el) return;
+  if (!CR.myCat) { el.hidden = true; return; }
+  const st = CR.status(CR.myCat), d = catData(CR.myCat);
+  const txt = st.called ? `🔔 ${d.name} ${pad(st.ticket)} 叫號了！報到 ${st.callLeft}s` : st.seated ? `🐾 正在擼${d.name}・${pad(st.ticket)}` : `🎫 ${d.name} ${pad(st.ticket)}・前面 ${st.ahead} 位`;
+  el.hidden = false; el.classList.toggle('called', !!st.called);
+  if (el.textContent !== txt) { el.textContent = txt; el.setAttribute('aria-label', `${txt}，點一下回到${d.name}身邊`); }
+}
+$('#ticketChip').addEventListener('click', () => { if (CR.myCat) goCat(CR.myCat); });
+const BURST = 6, BURST_MS = 3000;     // 3 秒內摸 6 下以上＝太用力、在欺負貓
+function petCat(c) {
+  SND.unlock();
+  const id = c.data.id, name = c.data.name;
+  const st = CR.status(id);
+  if (st.rest) { setCatSay(`先冷靜一下，${st.rest} 秒後才能再抽號碼牌喔。`); return null; }
+  if (st.other) { setCatSay(`你手上已經有${(catData(st.other) || {}).name}的號碼牌了。一次只能拿一張，要先放棄那張才能抽這裡的。`); return null; }
+  if (!st.has) {
+    if (S.taking) return null;
+    S.taking = true; setCatSay('🎫 取號中……');
+    CR.take(id).then(() => {
+      S.taking = false; const s2 = CR.status(id); if (!s2.has) { updateCatBubble(); return; }
+    if (s2.seated && s2.ok) setCatSay(`🎫 你抽到 ${pad(s2.ticket)} 號，馬上就輪到你！輕輕摸摸${name}吧。`);
+    else if (s2.called) setCatSay(`🎫 你抽到 ${pad(s2.ticket)} 號，現在就輪到你了！按「✋ 報到」開始擼貓。`);
+    else { setCatSay(`🎫 你抽到 ${pad(s2.ticket)} 號，前面還有 ${s2.ahead} 位。可以先去逛逛，叫號時會叮咚提醒你！`); toast(`🎫 號碼牌 ${pad(s2.ticket)}・前面 ${s2.ahead} 位`); }
+      renderTicketChip(); updateCatBubble();
+    }).catch(() => { S.taking = false; });
+    return null;
+  }
+  if (!st.seated) { setCatSay(`還沒叫到你的號碼（${pad(st.ticket)}）喔，前面還有 ${st.ahead} 位。`); return null; }
+  if (st.called) { CR.checkIn(); setCatSay(`✋ 報到成功！${pad(st.ticket)} 號，輪到你擼${name}了，要溫柔喔～`); renderTicketChip(); updateCatBubble(); return null; }
+  // 不可以欺負貓：太快、太用力
+  const now = performance.now();
+  S.petTimes = (S.petTimes || []).filter((t) => now - t < BURST_MS); S.petTimes.push(now);
+  if (S.petTimes.length >= BURST) {
+    S.petTimes = [];
+    if (now - (S.strikeAt || 0) < 20000) {
+      S.strikeAt = 0;
+      K.scare(c, SND); CR.sendPet(id, 'leave'); CR.penalize();
+      setCatSay(`${name}被嚇跑了！擼貓要輕輕的，不可以欺負牠。請先休息 ${REST} 秒，把位置讓給排隊的人。`);
+      toast('🙅 不可以欺負貓咪！'); updateCatBubble(); return null;
+    }
+    S.strikeAt = now;
+    K.puff('puff', K.headOf({ cat: c }), 1, .2);
+    setCatSay(`🙅 太快、太用力了！${name}耳朵往後縮了。輕輕摸，不可以欺負牠喔，再這樣牠會被嚇跑。`);
+    toast('🙅 輕一點！不可以欺負貓咪'); return null;
+  }
+  const res = K.pet(c, SND);
+  if (res.kind === 'react') CR.sendPet(id, res.id);
+  if (res.kind === 'leave') CR.sendPet(id, 'leave');
+  if (S.bubble && S.bubble.o.cat === c) {
+    if (res.kind === 'react' || res.kind === 'leave') setCatSay(res.text);
+    else if (res.kind === 'cool') setCatSay(`${name}還在休息，再等 ${res.left} 秒喔。`);
+    updateCatBubble();
+  }
+  if (res.kind === 'react') markPetted(c.data);
+  return res;
+}
+function markPetted(d) {
+  if (S.petted.includes(d.id)) return;
+  S.petted.push(d.id); store.set('cats', S.petted); renderHud();
+  const tot = (C.cats || []).length;
+  toast(`🐾 ${d.name} 收進貓咪圖鑑了！（${S.petted.length}/${tot}）`);
+  $('#catBtn').classList.remove('bump'); void $('#catBtn').offsetWidth; $('#catBtn').classList.add('bump');
+  if (S.petted.length === tot && !store.get('catsDone', false)) { store.set('catsDone', true); setTimeout(showCatDone, 2600); }
+}
+function showCatDone() {
+  const go = () => {
+    $('#doneTitle').textContent = '🐾 六隻貓都擼過了！';
+    $('#doneBody').innerHTML = `<div class="catparade">${(C.cats || []).map((d) => catFace(d, 52)).join('')}</div>
+      <p style="margin:10px 0 0;line-height:1.7;font-weight:700">恭喜你成為「鯉魚市集貓咪好朋友」！<br>布丁、彩彩喵、博士、閃電、寶寶和鯉長，都記住你溫柔的手了。</p>
+      <p class="foot">${esc(C.catsNote || '')}</p><button type="button" class="btn" data-close>喵～好耶！</button>`.replace('布丁、彩彩喵、博士、閃電、寶寶和鯉長', (C.cats || []).map((d) => d.name).join('、'));
+    openDlg('#doneDlg');
+  };
+  if (!K) { go(); return; }
+  closeBubble(); closePanel(false); if (S.walking) exitWalk(); else CAM.home();
+  setTimeout(() => { K.celebrate(SND); toast('🎉 所有的貓一起跳起來慶祝！'); }, 1500);
+  setTimeout(go, 4400);
+}
+// 從清單、面板、圖鑑按「擼貓」：飛過去找貓
+function goCat(id) {
+  if (!K) { petNo3D(id); return; }
+  const c = K.byId(id); if (!c) return;
+  if (S.walking) exitWalk(true);
+  closePanel(false);
+  openBubble(c.M.hit && { obj: c.M.hit, cat: c });
+}
+// 沒有 3D 時：用文字和聲音擼貓
+function petNo3D(id) {
+  const d = catData(id); if (!d) return;
+  SND.unlock();
+  const k = REACTION_IDS[Math.floor(Math.random() * REACTION_IDS.length)];
+  playReaction(SND, k, d.pitch); toast(`${REACTIONS[k].icon} ${REACTIONS[k].text.replace('{n}', d.name)}`); markPetted(d);
+}
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-cat]'); if (!b) return;
+  e.preventDefault(); const dlg = b.closest('dialog'); if (dlg && K) dlg.close();
+  goCat(b.dataset.cat);
+});
+// 在貓身上來回滑動＝擼貓
+let stroke = null, skipUp = false;
+function strokeDown(e) {
+  if (!K || !S.bubble || !S.bubble.o.cat || S.walking || S.intro || e.target !== $('#gl')) return;
+  ndc.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1); ray.setFromCamera(ndc, W.camera);
+  const c = S.bubble.o.cat; if (!ray.intersectObject(c.M.hit, false)[0]) return;
+  if (!CR.status(c.data.id).ok) return;   // 還沒輪到或還沒報到：照常旋轉鏡頭
+  stroke = { id: e.pointerId, x: e.clientX, y: e.clientY, acc: 0, tot: 0, c };
+  CAM.controls.enabled = false;
+}
+function strokeMove(e) {
+  if (!stroke || e.pointerId !== stroke.id) return;
+  const d = Math.hypot(e.clientX - stroke.x, e.clientY - stroke.y); stroke.x = e.clientX; stroke.y = e.clientY;
+  stroke.acc += d; stroke.tot += d;
+  if (stroke.acc > 34) { stroke.acc = 0; stroke.n = (stroke.n || 0) + 1; K.puff(stroke.n % 3 ? 'heart' : 'paw', K.headOf({ cat: stroke.c }).add(new THREE.Vector3(0, -.4, 0)), 1, .5); if (stroke.n % 5 === 0) petCat(stroke.c); }
+}
+function strokeUp(e) {
+  if (!stroke || e.pointerId !== stroke.id) return;
+  const s = stroke; stroke = null; skipUp = true;
+  CAM.controls.enabled = CAM.S.mode === 'orbit' && !CAM.S.busy;
+  if (s.tot < 8) petCat(s.c);                       // 點一下也算摸一下
+}
+
 let TOUR = ['center', 'food', 'craft', 'puzzle', 'recycle', 'sport'];   // 開機後依 content.json 的島嶼順序重設
 const DWELL = () => (S.reduced ? 8000 : 5000);
 function startTour() {
@@ -1341,14 +1624,15 @@ function balloonPopped() {
 }
 function startNet() {
   const M = C.multiplayer; if (!M || !M.enabled || !M.firebase || !PL) return;
-  import('./net.js?v=20261119g').then(({ createNet }) => {
+  import('./net.js?v=20261124a').then(({ createNet }) => {
     NET = createNet(M.firebase, {
       myPos: () => PL.myPos(), upsert: (id, info, pos) => PL.upsert(id, info, pos), remove: (id) => PL.remove(id),
       onCount: (c) => { COUNT = c; const el = $('#onlineChip'); el.hidden = false; $('#onlineCount').textContent = c.players; el.setAttribute('aria-label', `市集島上 ${c.players} 人，開著網站 ${c.viewers} 人，點一下看各身分人數`); },
       onStatus: (s, msg) => { $('#onlineChip').classList.toggle('off', s !== 'online'); if (s === 'error') console.warn('連線錯誤', msg); },
     });
     NET.setMe(meProfile());
-    import('./hidemp.js?v=20261119g').then(({ createHideMP }) => {
+    CR.attach(NET, meProfile);   // 擼貓號碼牌改用多人連線
+    import('./hidemp.js?v=20261124a').then(({ createHideMP }) => {
       HM = createHideMP(NET, {
         toast, profile: meProfile, enterWalk: () => { if (!S.walking) enterWalk(); },
         walkPos: () => (S.walking ? CAM.walk.pos : null), posOf: (id) => PL.posOf(id),
@@ -1478,12 +1762,13 @@ async function boot() {
   if (Q.has('nogl') || !webglOK()) { textOnly(Q.has('nogl') ? '已切換為文字清單版' : '這台裝置無法顯示 3D 畫面'); applyTheme(); updateClock(); setInterval(updateClock, 10000); window.__ready = true; return; }
   let mods;
   try {
-    mods = await Promise.all([import('./world.js?v=20261119g'), import('./life.js?v=20261119g'), import('./cam.js?v=20261119g'), import('./players.js?v=20261119g'), import('./signs.js?v=20261119g'), import('./festival.js?v=20261119g'), import('./fauna.js?v=20261119g'), import('./interact.js?v=20261119g'), import('./games.js?v=20261119g')]);
+    mods = await Promise.all([import('./world.js?v=20261124a'), import('./life.js?v=20261124a'), import('./cam.js?v=20261124a'), import('./players.js?v=20261124a'), import('./signs.js?v=20261124a'), import('./festival.js?v=20261124a'), import('./fauna.js?v=20261124a'), import('./interact.js?v=20261124a'), import('./games.js?v=20261124a')]);
     const [{ createWorld, H: GROUND_H }, { createLife, makePerson }, { createCam }, { createPlayers }, { createSigns }, { createFestival }, { createFauna }, { createInteract }, { createGames, FISH }] = mods;
     const mobile = isLite();   // 手機和平板都用輕量版場景
     W = createWorld($('#gl'), { quality: S.quality, mobile });
     W.renderer.setPixelRatio(Math.min(devicePixelRatio, S.quality === 'low' ? 1 : (mobile ? 1.5 : 2)));
     L = createLife(W, C, { halfPeople: mobile || S.quality === 'low', quality: S.quality });
+    try { const { createCats } = await import('./cats.js?v=20261124a'); K = createCats(W, C, { reduced: () => S.reduced }); } catch (e) { console.warn('島上的貓載入失敗', e); K = null; }
     CAM = createCam(W, $('#gl'), { onZoom: showZoom, onIntro: (k) => { L.setDeck(k < .3 ? 1 : Math.max(0, 1 - (k - .3) / .25)); if (k > .55) $('.intro-title').classList.add('show'); } });
     CAM.S.reduced = S.reduced; CAM.S.mobile = isMobile();
     PL = createPlayers(W, GROUND_H); renderMe(); startNet();
@@ -1492,14 +1777,27 @@ async function boot() {
     W.canLeave = () => { const s = L.carp.status(); if (s.docked && s.gang) return true; if (performance.now() - lastBlockToast > 3000) { lastBlockToast = performance.now(); toast('⛔ 航行中請待在船上，靠港放下跳板後再下船'); } return false; };
     // 彩虹熱氣球：起降場在服務台北側廣場；用網路時間排班，大家看到同一顆
     try {
-      const { createBalloon } = await import('./balloon.js?v=20261119g');
+      const { createBalloon } = await import('./balloon.js?v=20261124a');
       BAL = createBalloon(W, { pad: { x: 1, z: -5 }, now: () => (NET ? NET.now() : Date.now()), low: mobile || S.quality === 'low' });
       W.balloon = BAL; W.gates = [balloonGate];
     } catch (e) { console.warn('熱氣球載入失敗', e); BAL = null; }
-    KIT = await import('./kit.js?v=20261119g');
-    SG = createSigns(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261119g')).rng, low: mobile || S.quality === 'low' });
-    FX = createFestival(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261119g')).rng, low: mobile || S.quality === 'low', avoid: [...(BAL ? BAL.avoid : []), ...SG.signs.map((s) => s.g.position), ...Object.values(W.islands).flatMap((I) => (I.trees || []).filter((tr) => tr.visible).map((tr) => tr.position.clone().add(I.pos)))], carp: L.carp });
-    FA = createFauna(W, { H: GROUND_H, rng: (await import('./kit.js?v=20261119g')).rng });
+    KIT = await import('./kit.js?v=20261124a');
+    SG = createSigns(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261124a')).rng, low: mobile || S.quality === 'low' });
+    FX = createFestival(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261124a')).rng, low: mobile || S.quality === 'low', avoid: [...(BAL ? BAL.avoid : []), ...SG.signs.map((s) => s.g.position), ...Object.values(W.islands).flatMap((I) => (I.trees || []).filter((tr) => tr.visible).map((tr) => tr.position.clone().add(I.pos)))], carp: L.carp });
+    // 貓住在自己島上最空曠的地方，不被攤位和裝飾擋住
+    if (K) K.setHomes((id) => {
+      const I = W.islands[id]; if (!I || !I.walk) return null;
+      const avoid = [...(FX.avoid || []), ...(BAL ? BAL.avoid : []), ...SG.signs.map((s) => s.g.position)];
+      let best = null;
+      for (let i = 0; i < 500; i++) {
+        const th = i * 2.39996, r = (.2 + .65 * ((i * .618) % 1)) * I.top(th), x = Math.cos(th) * r, z = Math.sin(th) * r;
+        let cl = I.walk.clear(x, z); if (!(cl > .9)) continue;
+        for (const v of avoid) cl = Math.min(cl, Math.hypot(I.pos.x + x - v.x, I.pos.z + z - v.z) - .6);
+        if (!best || cl > best.cl) best = { x: I.pos.x + x, z: I.pos.z + z, cl };
+      }
+      return best;
+    });
+    FA = createFauna(W, { H: GROUND_H, rng: (await import('./kit.js?v=20261124a')).rng });
     IA = createInteract(W, C, GROUND_H, {
       toast, carp: L.carp,
       toastIf: (m) => { if (!S.intro) toast(m); },
@@ -1528,6 +1826,8 @@ async function boot() {
   W.setHour(S.hourShown); applyTheme(); updateClock(); setInterval(updateClock, 10000);
   const cv = $('#gl');
   cv.addEventListener('pointerdown', onCanvasDown); cv.addEventListener('pointerup', onCanvasUp);
+  $('#stage').addEventListener('pointerdown', strokeDown, true);   // 比鏡頭旋轉先接到：在貓身上滑動＝擼貓
+  addEventListener('pointermove', strokeMove); addEventListener('pointerup', strokeUp, true); addEventListener('pointercancel', strokeUp, true);
   cv.addEventListener('wheel', () => { if (S.tour && !S.tour.paused) pauseTour(true); }, { passive: true });
   // 在島名標籤上滾動滑鼠，也能縮放 3D 畫面
   $('#labels').addEventListener('wheel', (e) => { e.preventDefault(); cv.dispatchEvent(new WheelEvent('wheel', e)); }, { passive: false });
@@ -1579,6 +1879,8 @@ async function boot() {
     CAM.update(dt);
     W.update(t, moving);
     L.update(t, dt, moving, W.state.n, W.camera);
+    if (K) K.update(t, dt, moving, W.state.n, W.camera);
+    if ((clkN % 10) === 0) { if (S.bubble && S.bubble.o.cat) updateCatBubble(); renderTicketChip(); }
     for (const a of L.agents) if (a.lowHidden) a.P.g.visible = false;
     stepTour(now);
     PL.update(dt, t, CAM.walk, S.walking, !CAM.walk.third, innerWidth, innerHeight);
@@ -1608,7 +1910,7 @@ async function boot() {
     if (shadowOff.length && Math.abs(S.hourShown - shadowHour) > .1) { shadowHour = S.hourShown; W.renderer.shadowMap.needsUpdate = true; }
   }
   requestAnimationFrame(frame);
-  window.__isle = { W, L, CAM, S, THREE, get PL() { return PL; }, get NET() { return NET; }, get SG() { return SG; }, get FX() { return FX; }, get FA() { return FA; }, get IA() { return IA; }, get GM() { return GM; }, get BAL() { return BAL; } };   // 給自動測試讀取狀態用
+  window.__isle = { W, L, CAM, S, THREE, get K() { return K; }, CR, SND, get PL() { return PL; }, get NET() { return NET; }, get SG() { return SG; }, get FX() { return FX; }, get FA() { return FA; }, get IA() { return IA; }, get GM() { return GM; }, get BAL() { return BAL; } };   // 給自動測試讀取狀態用
   await playIntro(false);
   const deep = Q.get('island') || location.hash.slice(1), lk = Q.get('stall') ? resolveStallLink(Q.get('stall'), Q.get('roster')) : null, dst = lk && lk.st;
   if (lk && lk.msg && dst) S.legacyNote = { no: dst.no, msg: lk.msg };   // 舊攤號連結：說明寫在攤位卡上（蓋章提示不會蓋掉它）
