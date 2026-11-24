@@ -48,7 +48,9 @@ export function createCatNet({ onChange, onRemotePet }) {
       NET = net; profile = profFn || profile; fb = net.fb;
       // 真的連上線、規則也允許，才算多人模式；斷線時自動變回單人模式
       fb.onValue(fb.ref(net.db, '.info/connected'), (s) => { connected = !!s.val(); solo = !connected || blocked; if (!solo && me.cat) push(); onChange(); });
-      fb.onValue(fb.ref(net.db, 'market/cats'), (s) => {
+      // 等匿名登入完成才訂閱（還沒登入就訂閱會被規則拒絕，而且不會自己重試）；被拒絕時 3 秒後再試一次
+      let tries = 0;
+      const sub = () => { if (!NET.uid()) { setTimeout(sub, 300); return; } fb.onValue(fb.ref(net.db, 'market/cats'), (s) => {
         all = s.val() || {};
         for (const cat in all) for (const [id, v] of Object.entries((all[cat] && all[cat].q) || {})) {
           if (id === uid() || !v || !v.pet) continue;
@@ -56,8 +58,9 @@ export function createCatNet({ onChange, onRemotePet }) {
           lastN.set(id + cat, n);
           if (n > prev && typeof v.pet.r === 'string' && v.pet.r) onRemotePet(cat, v.pet.r, String(v.name || '有人').slice(0, 16));
         }
-        api.tick(); onChange();
-      }, denied);
+        blocked = false; solo = !connected; api.tick(); onChange();
+      }, (e) => { if (++tries < 3) setTimeout(sub, 3000); else denied(e); }); };
+      sub();
       if (me.cat) push();
     },
     // 某隻貓的號碼牌隊伍：[{id, isMe, name, t, ok, seated}]；號碼最小的 2 位在擼貓位

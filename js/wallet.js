@@ -19,9 +19,18 @@ export function createWallet({ cfg, onChange, toast }) {
     log: [{ t: now(), k: 'start', a: cfg.start, n: '今天的起始幣' }],
     bonusEver: (old && old.bonusEver) || {}, applied: (old && old.applied) || {},
   });
+  // Firebase 不會存空的清單（{}、[]），讀回來會少欄位：補回預設值，避免付錢時出錯
+  const fix = (w) => {
+    if (!w) return w;
+    w = { ...w };
+    for (const k of ['plays', 'jobAt', 'bonusEver', 'applied']) if (!w[k] || typeof w[k] !== 'object') w[k] = {};
+    if (!Array.isArray(w.log)) w.log = w.log && typeof w.log === 'object' ? Object.values(w.log) : [];
+    for (const k of ['bal', 'earned', 'treats', 'inT', 'outT']) if (typeof w[k] !== 'number') w[k] = 0;
+    return w;
+  };
   // 換日：錢包歸零，重新發今天的起始幣
-  const roll = (w) => (w && w.day === today() ? w : fresh(w));
-  const ensure = () => { const r = roll(st.w); if (r !== st.w) { st.w = r; save(); } return st.w; };
+  const roll = (w) => (w && w.day === today() ? fix(w) : fresh(w));
+  const ensure = () => { if (st.w && st.w.day === today()) { if (!st.w.plays || !st.w.jobAt || !Array.isArray(st.w.log)) st.w = fix(st.w); return st.w; } st.w = roll(st.w); save(); return st.w; };
   const log = (k, a, n) => { const w = st.w; w.log = [{ t: now(), k, a, n: String(n).slice(0, 40) }, ...(w.log || [])].slice(0, 40); };
 
   function loadLocal() { try { const v = JSON.parse(localStorage.getItem(LKEY)); st.w = roll(v && typeof v.bal === 'number' ? v : null); } catch (e) { st.w = fresh(); } }
