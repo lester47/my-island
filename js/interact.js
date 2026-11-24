@@ -207,7 +207,7 @@ export function createInteract(W, content, H, api) {
     const pole = add(root, G.cyl, '#d8d2c4', entry.x, .8 + 1.4, entry.z, .06, 2.8, .06);
     const flag = new THREE.Group(); flag.position.set(entry.x, .8 + .3, entry.z); root.add(flag);
     add(flag, G.box, '#e8473f', .32, 0, 0, .6, .36, .02); add(flag, G.box, '#ffffff', .32, 0, .012, .36, .1, .01);
-    { const tx = new THREE.TextureLoader().load('assets/brand/koi-logo.png?v=20261124e'); tx.colorSpace = THREE.SRGBColorSpace; const lm = new THREE.MeshStandardMaterial({ map: tx, transparent: true, alphaTest: .4, polygonOffset: true, polygonOffsetFactor: -2 }); for (const sd of [1, -1]) { const L = new THREE.Mesh(new THREE.PlaneGeometry(.3, .3), lm); L.position.set(.32, 0, sd * .022); if (sd < 0) L.rotation.y = Math.PI; flag.add(L); } }   // 碼頭旗子上的鯉魚 Logo
+    { const tx = new THREE.TextureLoader().load('assets/brand/koi-logo.png?v=20261124f'); tx.colorSpace = THREE.SRGBColorSpace; const lm = new THREE.MeshStandardMaterial({ map: tx, transparent: true, alphaTest: .4, polygonOffset: true, polygonOffsetFactor: -2 }); for (const sd of [1, -1]) { const L = new THREE.Mesh(new THREE.PlaneGeometry(.3, .3), lm); L.position.set(.32, 0, sd * .022); if (sd < 0) L.rotation.y = Math.PI; flag.add(L); } }   // 碼頭旗子上的鯉魚 Logo
     const lampMat = new THREE.MeshStandardMaterial({ color: '#444', emissive: '#000000', roughness: .4 });
     const lampPos = P.E.clone().addScaledVector(P.d, P.P1 - .2).addScaledVector(P.s, P.PW + .1);
     add(root, G.cyl, '#5a3a1a', lampPos.x, .8 + .45, lampPos.z, .08, .9, .08);
@@ -237,13 +237,21 @@ export function createInteract(W, content, H, api) {
     const hit = new THREE.Mesh(new THREE.CylinderGeometry(.7, .7, 1.6, 10), new THREE.MeshBasicMaterial({ visible: false })); hit.position.y = .8; g.add(hit);
     picks.push({ obj: hit, act: () => api.photoSpot() });
     picks.push({ obj: sp, act: () => api.photoSpot() });
-    anim.push((t, dt, ctx) => { sp.position.y = 1.4 + Math.sin(t * 2) * .08; if (ctx.walkPos && ctx.walkPos.distanceTo(new THREE.Vector3(pos.x, ctx.walkPos.y, pos.z)) < .6 && !ctx.photoLock) { ctx.photoLock = true; api.photoSpot(); } });
+    // 漫遊走到腳印上：只提示「點牌子拍合照」，不自動跳出漫遊
+    // （以前會自動跳回鳥瞰；已加入市集的人再按漫遊會回到腳印上又被踢出去，卡在原地進退不得）
+    anim.push((t, dt, ctx) => {
+      sp.position.y = 1.4 + Math.sin(t * 2) * .08;
+      if (!ctx.walkPos) return;
+      const d = Math.hypot(ctx.walkPos.x - pos.x, ctx.walkPos.z - pos.z);
+      if (d < .6 && !ctx.photoLock) { ctx.photoLock = true; api.toast('📸 站上合照點了！點上面的「📸 合照點」牌子，鏡頭會轉到最佳合照角度'); }
+      else if (d > 1.2) ctx.photoLock = false;
+    });
   }
 
   // ------------------------------------------------ 每格更新與點擊
   const ctx = { camera: W.camera, walkPos: null, photoLock: false };
   function update(t, dt, moving, walkPos) {
-    ctx.walkPos = walkPos || null; if (!walkPos) ctx.photoLock = false;
+    ctx.walkPos = walkPos || null;
     if (!moving) return;
     for (let i = anim.length - 1; i >= 0; i--) if (anim[i](t, dt, ctx) === true) anim.splice(i, 1);
   }
