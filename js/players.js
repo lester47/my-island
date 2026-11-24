@@ -1,10 +1,10 @@
 // 登入者：自己的人物＋頭上名牌；之後接上連線服務時，其他人也用同一套顯示（upsert / remove）
 import * as THREE from 'three';
-import { rng } from './kit.js?v=20261124r';
-import { makePerson } from './life.js?v=20261124r';
-import { ROLES, HATS } from './roles.js?v=20261124r';
-import { makeBike, poseRider, BIKE_LIFT } from './bike.js?v=20261124r';
-import { makeAcc, makePet, stepPet, poseDance, DANCE_SEC } from './style.js?v=20261124r';
+import { rng } from './kit.js?v=20261124s';
+import { makePerson } from './life.js?v=20261124s';
+import { ROLES, HATS } from './roles.js?v=20261124s';
+import { makeBike, poseRider, BIKE_LIFT } from './bike.js?v=20261124s';
+import { makeAcc, makePet, stepPet, poseDance, DANCE_SEC } from './style.js?v=20261124s';
 const SPAWN = { x: 0, z: 7.4, yaw: Math.PI };
 
 const seedOf = (s) => { let h = 2166136261; for (const c of String(s)) h = Math.imul(h ^ c.codePointAt(0), 16777619); return h >>> 0; };
@@ -13,7 +13,7 @@ const escH = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '
 // 登入者上衣胸前的小鯉魚 Logo（和網站左上角同一張圖）
 let LOGO_MAT = null;
 function withLogo(P) {
-  if (!LOGO_MAT) { const tx = new THREE.TextureLoader().load('assets/brand/koi-logo.png?v=20261124r'); tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 4; LOGO_MAT = new THREE.MeshStandardMaterial({ map: tx, transparent: true, alphaTest: .4, roughness: .8, polygonOffset: true, polygonOffsetFactor: -2 }); }
+  if (!LOGO_MAT) { const tx = new THREE.TextureLoader().load('assets/brand/koi-logo.png?v=20261124s'); tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 4; LOGO_MAT = new THREE.MeshStandardMaterial({ map: tx, transparent: true, alphaTest: .4, roughness: .8, polygonOffset: true, polygonOffsetFactor: -2 }); }
   const m = new THREE.Mesh(new THREE.PlaneGeometry(.17, .17), LOGO_MAT);
   m.position.set(0, .76, .232); m.rotation.x = -.1;          // 上衣是上窄下寬的圓柱，貼片稍微往後仰才貼合
   P.g.add(m); P.logo = m; return P;
