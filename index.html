@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261124s">
+<link rel="stylesheet" href="styles.css?v=20261124t">
 <script type="importmap">{"imports":{"three":"./vendor/three/three.module.js","three/addons/":"./vendor/three/addons/"}}</script>
 </head>
 <body>
@@ -197,6 +197,13 @@
   <div class="dlg-hd"><h2 id="walletTitle">🪙 我的線上鯉魚幣</h2><button type="button" class="x" data-close aria-label="關閉">✕</button></div>
   <div id="walletBody"></div>
 </dialog>
+<dialog id="coaPhotoDlg" class="dlg" aria-labelledby="coaPhotoTitle">
+  <div class="dlg-hd"><h2 id="coaPhotoTitle">📸 你的俯衝照</h2><button type="button" class="x" data-close aria-label="關閉">✕</button></div>
+  <img id="coaPhotoImg" class="coa-photo" alt="坐雲霄飛車衝下坡時，軌道旁照相機拍的照片">
+  <div class="chal-btns"><a class="btn" id="coaPhotoSave" href="#" download>💾 存下來</a></div>
+  <p class="foot">照片只存在你的裝置，不會上傳。</p>
+</dialog>
+<div class="cam-flash" id="camFlash" aria-hidden="true"></div>
 <dialog id="phoneDlg" class="dlg" aria-labelledby="phoneTitle">
   <div class="dlg-hd"><h2 id="phoneTitle">📞 遊戲電話</h2><button type="button" class="x" data-close aria-label="關閉">✕</button></div>
   <div id="phoneBody"></div>
@@ -237,6 +244,6 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <noscript><p class="noscript">這個網站需要開啟 JavaScript。</p></noscript>
-<script type="module" src="js/main.js?v=20261124s"></script>
+<script type="module" src="js/main.js?v=20261124t"></script>
 </body>
 </html>

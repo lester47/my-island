@@ -1,9 +1,9 @@
 // 鏡頭：拖曳旋轉縮放、回到全景、點島飛近（電影史詩運鏡）、開場、導覽、地面漫遊
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { TAU, clamp, lerp, easeInOut, smooth } from './kit.js?v=20261124s';
-import { H } from './world.js?v=20261124s';
-import { SHORE } from './scenery.js?v=20261124s';
+import { TAU, clamp, lerp, easeInOut, smooth } from './kit.js?v=20261124t';
+import { H } from './world.js?v=20261124t';
+import { SHORE } from './scenery.js?v=20261124t';
 
 export function createCam(W, canvas, hooks) {
   const camera = W.camera;
@@ -134,8 +134,24 @@ export function createCam(W, canvas, hooks) {
     else { walk.pos.set(0, H, 7.4); walk.yaw = Math.PI; walk.pitch = -.05; }   // 從中央島出發，面向服務台
     placeWalk();
   }
-  function exitWalk(done) { S.mode = 'orbit'; S.follow = null; const h = setHome(false); flight({ t: h.t, p: h.p }, 1400, 0, done); }
+  function exitWalk(done) { walk.ride = null; camera.up.set(0, 1, 0); S.mode = 'orbit'; S.follow = null; const h = setHome(false); flight({ t: h.t, p: h.p }, 1400, 0, done); }
+  const _rq = new THREE.Vector3(), _ru = new THREE.Vector3(), _rt = new THREE.Vector3();
   function placeWalk() {
+    // 🎢 坐雲霄飛車：鏡頭跟著車廂的方向（迴圈時會倒過來），yaw／pitch 是「相對車頭」的轉頭角度
+    if (walk.ride) {
+      const q = walk.ride.q, seat = walk.ride.seat;
+      _ru.set(0, 1, 0).applyQuaternion(q); camera.up.copy(_ru);
+      const cy = Math.cos(walk.yaw), sy = Math.sin(walk.yaw), cp = Math.cos(walk.pitch), sp = Math.sin(walk.pitch);
+      if (walk.third) {
+        _rq.set(-sy * 4.4, 2.3 - walk.pitch * 2.2, -cy * 4.4).applyQuaternion(q).add(seat); camera.position.copy(_rq);
+        _rt.set(sy * 1.6, .9 + walk.pitch * 2, cy * 1.6).applyQuaternion(q).add(seat); camera.lookAt(_rt);
+      } else {
+        _rq.copy(_ru).multiplyScalar(1.05 - (walk.seatDrop || 0)).add(seat); camera.position.copy(_rq);
+        _rt.set(sy * cp, sp, cy * cp).applyQuaternion(q).add(_rq); camera.lookAt(_rt);
+      }
+      return;
+    }
+    camera.up.set(0, 1, 0);
     const lift = walk.jumpY - walk.ck * .42;            // 跳起來往上、蹲下往下
     const eye = walk.pos.clone().setY(walk.pos.y + 1.05 + lift - (walk.seatDrop || 0));   // 坐著（雲霄飛車）眼睛比較低
     const dir = new THREE.Vector3(Math.sin(walk.yaw) * Math.cos(walk.pitch), Math.sin(walk.pitch), Math.cos(walk.yaw) * Math.cos(walk.pitch));

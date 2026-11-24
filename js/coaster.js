@@ -3,8 +3,8 @@
 // 大俯衝、海面波浪段，再依序飛過循環挖寶島、手作體驗二島、美食補給島、手作體驗一島，回到車站。
 // 時程用「網路時間」排班（所有裝置看到同一班車）：停站 25 秒 → 跑一圈 → 回站。
 import * as THREE from 'three';
-import { TAU, clamp } from './kit.js?v=20261124s';
-import { H } from './world.js?v=20261124s';
+import { TAU, clamp } from './kit.js?v=20261124t';
+import { H } from './world.js?v=20261124t';
 
 export const COASTER_CAP = 8;                 // 4 節車廂 × 每節 2 人
 const DOCK = 25;                              // 停站秒數
@@ -29,11 +29,20 @@ export function createCoaster(W, opts) {
   const isle = (id, y = H + 4.5, du = 3.4) => { const C = I(id).pos.clone().setY(0), u = uOf(C), t = tOf(u); return [at(C, u, t, du, -5, y), at(C, u, t, du + .5, 0, y + .35), at(C, u, t, du, 5, y)]; };
   const a = Object.fromEntries(ORDER.map((id) => [id, (angOf(id) + 360) % 360]));
   const mid = (a1, a2, f) => { let d = a2 - a1; if (d < 0) d += 360; return a1 + d * f; };
+  // 🌀 大迴圈：在大俯衝的底部，直徑 5.6 公尺（最高 8.6 公尺，比坡頂低，衝得上去）；出口往旁邊錯開一點，軌道才不會打結
+  const LB = polar(mid(a.sport, a.recycle, .70), 31, 3.0), LR = 2.8;
+  const toRecycle = (() => { const C = I('recycle').pos.clone().setY(0), u = uOf(C), t = tOf(u); return at(C, u, t, 3.4, -5, H + 4.5); })();
+  const LF = toRecycle.clone().sub(polar(mid(a.sport, a.recycle, .58), 31, 3.2)).setY(0).normalize(), LS = new THREE.Vector3().crossVectors(LF, UP).normalize();
+  const LOOP = [];
+  for (let k = 1; k < 16; k++) { const th = k / 16 * TAU; LOOP.push(LB.clone().addScaledVector(LF, LR * Math.sin(th) + (k < 8 ? 0 : .0)).addScaledVector(UP, LR * (1 - Math.cos(th))).addScaledVector(LS, 1.3 * (k / 16 - .5))); }
+  LOOP.unshift(LB.clone().addScaledVector(LF, -1.6).addScaledVector(LS, -.75));
+  LOOP.push(LB.clone().addScaledVector(LF, 1.8).addScaledVector(LS, .75));
   const pts = [
     at(Cs, us, ts, STD, SH - 2, STY), at(Cs, us, ts, STD, SH + 4, STY),           // 車站（起點）
     at(Cs, us, ts, STD + .3, SH + 10, STY + 1.6),                                  // 開始爬坡（從小碼頭上方經過）
     polar(mid(a.sport, a.recycle, .45), 33, 9.6),                                  // 坡頂（10 公尺以下）
-    polar(mid(a.sport, a.recycle, .7), 31, 3.4),                                   // 大俯衝到海面
+    polar(mid(a.sport, a.recycle, .58), 31, 3.2),                                  // 大俯衝到海面
+    ...LOOP,                                                                       // 🌀 360 度大迴圈
     ...isle('recycle'),
     polar(mid(a.recycle, a.puzzle, .28), 31, 5.6),                                 // 海灣上空（高過鴨子船）
     polar(mid(a.recycle, a.puzzle, .5), 33, 8.4),                                  // 駝峰
@@ -55,13 +64,23 @@ export function createCoaster(W, opts) {
   const curve = new THREE.CatmullRomCurve3(pts, true, 'centripetal', .5);
   const L = curve.getLength();
   const N = Math.ceil(L / .35);
-  // 每一小段的位置、切線、右手方向（不側傾，第一版沒有迴圈）
+  // 每一小段的位置、切線、右手方向：一般路段保持水平（不側傾）；迴圈裡用「平行移動」的方向，車廂才會跟著翻過去
   const P = [], T = [], RX = [];
   for (let i = 0; i <= N; i++) {
     const u = i / N, p = curve.getPointAt(u % 1), t = curve.getTangentAt(u % 1).normalize();
     P.push(p); T.push(t); RX.push(new THREE.Vector3().crossVectors(UP, t).normalize());
   }
-  const sample = (s) => { s = ((s % L) + L) % L; const f = s / L * N, i = Math.floor(f), k = f - i, j = Math.min(N, i + 1); return { p: P[i].clone().lerp(P[j], k), t: T[i].clone().lerp(T[j], k).normalize(), r: RX[i].clone().lerp(RX[j], k).normalize() }; };
+  {
+    const inLoop = (p) => Math.hypot(p.x - LB.x, p.z - LB.z) < LR + 1.6 && p.y > 2.6;
+    let i0 = -1, i1 = -1; for (let i = 0; i <= N; i++) if (inLoop(P[i])) { if (i0 < 0) i0 = i; i1 = i; }
+    if (i0 > 0) {
+      const q = new THREE.Quaternion(); let r = RX[i0 - 1].clone();
+      for (let i = i0; i <= i1 + 1 && i <= N; i++) { q.setFromUnitVectors(T[i - 1], T[i]); r.applyQuaternion(q); r.addScaledVector(T[i], -r.dot(T[i])).normalize(); RX[i] = r.clone(); }
+      // 出迴圈後慢慢回到水平
+      for (let k = 1; k <= 14 && i1 + 1 + k <= N; k++) { const i = i1 + 1 + k, lv = new THREE.Vector3().crossVectors(UP, T[i]).normalize(); const pr = RX[i1 + 1].clone(); pr.addScaledVector(T[i], -pr.dot(T[i])).normalize(); RX[i] = pr.lerp(lv, k / 14).normalize(); }
+    }
+  }
+  const sample = (s) => { s = ((s % L) + L) % L; const f = s / L * N, i = Math.floor(f), k = f - i, j = Math.min(N, i + 1); const t = T[i].clone().lerp(T[j], k).normalize(), r = RX[i].clone().lerp(RX[j], k); r.addScaledVector(t, -r.dot(t)).normalize(); return { p: P[i].clone().lerp(P[j], k), t, r }; };
 
   // ------------------------------------------------ 時刻表：用能量守恆算速度（爬坡用鏈條、進站煞車），先算好整趟的「時間 → 位置」
   const yAt = (s) => sample(s).p.y;
@@ -85,7 +104,8 @@ export function createCoaster(W, opts) {
   const spineM = new THREE.MeshStandardMaterial({ color: '#f2c230', roughness: .5, metalness: .2 });
   const tieM = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: .7 });
   const postM = new THREE.MeshStandardMaterial({ color: '#f3f0e6', roughness: .7 });
-  const offCurve = (dx, dy) => new THREE.CatmullRomCurve3(P.slice(0, N).map((p, i) => p.clone().addScaledVector(RX[i], dx).add(new THREE.Vector3(0, dy, 0))), true);
+  const UPL = (i) => new THREE.Vector3().crossVectors(T[i], RX[i]);     // 軌道自己的「上方」（迴圈裡會倒過來）
+  const offCurve = (dx, dy) => new THREE.CatmullRomCurve3(P.slice(0, N).map((p, i) => p.clone().addScaledVector(RX[i], dx).addScaledVector(UPL(i), dy)), true);
   const segs = Math.min(1400, N);
   for (const dx of [-.36, .36]) { const m = new THREE.Mesh(new THREE.TubeGeometry(offCurve(dx, 0), segs, .055, 6, true), railM); m.castShadow = !low; root.add(m); }
   { const m = new THREE.Mesh(new THREE.TubeGeometry(offCurve(0, -.22), segs, .1, 6, true), spineM); m.castShadow = !low; root.add(m); }
@@ -93,23 +113,89 @@ export function createCoaster(W, opts) {
   const ties = new THREE.InstancedMesh(new THREE.BoxGeometry(.95, .06, .14), tieM, nTies);
   const M4 = new THREE.Matrix4(), Q = new THREE.Quaternion(), V1 = new THREE.Vector3(), ONE = new THREE.Vector3(1, 1, 1);
   const basis = (t, r) => { const y = new THREE.Vector3().crossVectors(t, r); return new THREE.Matrix4().makeBasis(r, y, t); };
-  for (let k = 0; k < nTies; k++) { const sp = sample(k * step); Q.setFromRotationMatrix(basis(sp.t, sp.r)); V1.copy(sp.p).y -= .08; ties.setMatrixAt(k, M4.compose(V1, Q, ONE)); }
+  for (let k = 0; k < nTies; k++) { const sp = sample(k * step); Q.setFromRotationMatrix(basis(sp.t, sp.r)); V1.copy(sp.p).addScaledVector(new THREE.Vector3().crossVectors(sp.t, sp.r), -.08); ties.setMatrixAt(k, M4.compose(V1, Q, ONE)); }
   ties.receiveShadow = true; root.add(ties);
   // 支柱：每 5 公尺一根，落在島上或海裡；車站和島上擋路的地方不放
   const posts = [];
   const stationC = at(Cs, us, ts, STD, SH, 0);
   for (let s = 2.5; s < L; s += low ? 7 : 5) {
     const p = sample(s).p; if (p.y < 1.6) continue;
+    if (Math.hypot(p.x - LB.x, p.z - LB.z) < LR + 1.8) continue;                 // 迴圈裡不放支柱（另外做迴圈的支架）
     if (Math.hypot(p.x - stationC.x, p.z - stationC.z) < 8.5) continue;
     const g = W.ground(p.x, p.z);
     let base = 0;
     if (g != null) { const isl = Object.values(W.islands).find((q) => Math.hypot(p.x - q.pos.x, p.z - q.pos.z) < q.R * 1.05); if (isl && isl.walk && isl.walk.clear && isl.walk.clear(p.x - isl.pos.x, p.z - isl.pos.z) < .45) continue; base = g; }
     posts.push({ x: p.x, z: p.z, y0: base - (g == null ? .3 : 0), y1: p.y - .3 });
   }
+  // 迴圈的支架：兩側各一根高柱、頂上一根橫樑；底下兩根短柱撐住迴圈底部
+  for (const sd of [-1, 1]) {
+    const b = LB.clone().addScaledVector(LS, sd * 1.95);
+    posts.push({ x: b.x, z: b.z, y0: -.3, y1: LB.y + LR * 2 + .55 });
+    const f = LB.clone().addScaledVector(LS, sd * .3).addScaledVector(LF, sd * .2);
+    posts.push({ x: f.x, z: f.z, y0: -.3, y1: LB.y - .3 });
+  }
+  { const bar = new THREE.Mesh(new THREE.CylinderGeometry(.1, .1, 3.9, 8), postM); bar.position.copy(LB).setY(LB.y + LR * 2 + .55); bar.quaternion.setFromUnitVectors(UP, LS); root.add(bar);
+    const hang = new THREE.Mesh(new THREE.CylinderGeometry(.07, .07, .35, 6), postM); hang.position.copy(LB).setY(LB.y + LR * 2 + .4); root.add(hang); }
   const postGeo = new THREE.CylinderGeometry(.09, .12, 1, 8);
   const pm = new THREE.InstancedMesh(postGeo, postM, posts.length);
   posts.forEach((q, k) => { const h = q.y1 - q.y0; pm.setMatrixAt(k, M4.compose(V1.set(q.x, q.y0 + h / 2, q.z), Q.identity(), new THREE.Vector3(1, h, 1))); });
   pm.castShadow = !low; root.add(pm);
+
+  // ------------------------------------------------ 🕳️ 鯉魚嘴山洞：美食補給島和手作體驗一島之間，貼著海面那段鑽進一座海上岩山
+  const caveC = polar(mid(a.food, a.craft, .55), 32.5, 3.4);
+  let caveS = 0, cbest = 1e9; for (let i = 0; i <= N; i++) { const d = P[i].distanceToSquared(caveC); if (d < cbest) { cbest = d; caveS = i / N * L; } }
+  const CAVE0 = caveS - 6, CAVE1 = caveS + 6;
+  {
+    const rockM = new THREE.MeshStandardMaterial({ color: '#7d6e63', roughness: .95, flatShading: true });
+    const rock2 = new THREE.MeshStandardMaterial({ color: '#94857a', roughness: .95, flatShading: true });
+    const darkM = new THREE.MeshStandardMaterial({ color: '#6b5a4c', emissive: '#3a2a1c', emissiveIntensity: .55, roughness: 1, side: THREE.DoubleSide, flatShading: true });   // 洞裡：暗暗的暖色岩壁，看得到
+    const cave = new THREE.Group(); root.add(cave);
+    const B = new THREE.BoxGeometry(1, 1, 1), ICO = new THREE.IcosahedronGeometry(1, 0), PL = new THREE.PlaneGeometry(1, 1);
+    let seed = 7; const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+    for (let s0 = CAVE0; s0 <= CAVE1; s0 += .7) {
+      const sp = sample(s0), up = new THREE.Vector3().crossVectors(sp.t, sp.r), q = new THREE.Quaternion().setFromRotationMatrix(basis(sp.t, sp.r));
+      const y = sp.p.y;
+      for (const sd of [-1, 1]) {                                     // 兩側岩壁：一路到海面
+        const w = new THREE.Mesh(B, rockM); w.position.copy(sp.p).addScaledVector(sp.r, sd * 1.45).setY((y + 2.3) / 2 - .1); w.scale.set(.6, y + 2.5, .8); w.quaternion.copy(q); w.castShadow = !low; cave.add(w);
+        if (!low && rnd() < .7) { const l = new THREE.Mesh(ICO, rnd() < .5 ? rockM : rock2); l.position.copy(sp.p).addScaledVector(sp.r, sd * (2.0 + rnd() * .5)).setY(y - .5 + rnd() * 2.6); l.scale.setScalar(.6 + rnd() * .7); l.rotation.set(rnd() * 3, rnd() * 3, 0); cave.add(l); }
+      }
+      const roof = new THREE.Mesh(B, rockM); roof.position.copy(sp.p).addScaledVector(up, 2.35); roof.scale.set(3.5, .7, .8); roof.quaternion.copy(q); roof.castShadow = !low; cave.add(roof);
+      const top = new THREE.Mesh(ICO, rock2); top.position.copy(sp.p).addScaledVector(up, 2.9 + rnd() * .5).addScaledVector(sp.r, (rnd() - .5) * 1.6); top.scale.set(1.1 + rnd() * .6, .6 + rnd() * .5, 1 + rnd() * .5); top.rotation.set(rnd(), rnd() * 3, 0); cave.add(top);
+      // 洞裡的岩壁和洞頂：只有兩側和上面（前後是開的，火車才看得到前面）
+      for (const sd of [-1, 1]) { const w = new THREE.Mesh(PL, darkM); w.position.copy(sp.p).addScaledVector(sp.r, sd * 1.12).addScaledVector(up, .85); w.quaternion.copy(q); w.rotateY(Math.PI / 2); w.scale.set(.8, 2.5, 1); cave.add(w); }
+      const ce = new THREE.Mesh(PL, darkM); ce.position.copy(sp.p).addScaledVector(up, 2.0); ce.quaternion.copy(q); ce.rotateX(Math.PI / 2); ce.scale.set(2.3, .8, 1); cave.add(ce);
+      if (Math.round(s0 / .7) % 2 === 0) {                           // 洞裡的小燈：兩邊輪流，一盞一盞往後閃過去
+        const sd = Math.round(s0 / .7) % 4 === 0 ? 1 : -1;
+        const lm = new THREE.Mesh(new THREE.SphereGeometry(.14, 8, 6), new THREE.MeshStandardMaterial({ color: '#fff1b0', emissive: '#ffcc55', emissiveIntensity: 3 }));
+        lm.position.copy(sp.p).addScaledVector(sp.r, sd * 1.05).addScaledVector(up, 1.5); cave.add(lm);
+      }
+    }
+    // 入口：大鯉魚的嘴巴（橘紅色唇＋眼睛＋鬍鬚），火車從嘴巴鑽進去
+    const e = sample(CAVE0 - .2), eu = new THREE.Vector3().crossVectors(e.t, e.r), eq = new THREE.Quaternion().setFromRotationMatrix(basis(e.t, e.r));
+    const head = new THREE.Group(); head.position.copy(e.p).addScaledVector(eu, .9); head.quaternion.copy(eq); head.rotateY(Math.PI); cave.add(head);   // 臉朝向開過來的火車
+    const orange = new THREE.MeshStandardMaterial({ color: '#ff6a2a', roughness: .6, flatShading: true }), white = new THREE.MeshStandardMaterial({ color: '#fff7ee', roughness: .6, flatShading: true });
+    const lip = new THREE.Mesh(new THREE.TorusGeometry(1.75, .42, 8, 20), orange); head.add(lip);
+    const crown = new THREE.Mesh(new THREE.SphereGeometry(2.4, 14, 10, 0, TAU, 0, Math.PI / 2), white); crown.position.set(0, .6, -.7); crown.scale.set(1, .9, .6); head.add(crown);
+    const spot = new THREE.Mesh(new THREE.SphereGeometry(1.1, 10, 8), orange); spot.position.set(-.7, 2.2, -.3); spot.scale.set(1, .45, .7); head.add(spot);
+    for (const sd of [-1, 1]) {
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(.42, 12, 8), white); eye.position.set(sd * 1.5, 2.05, .2); head.add(eye);
+      const pup = new THREE.Mesh(new THREE.SphereGeometry(.24, 10, 8), new THREE.MeshStandardMaterial({ color: '#111' })); pup.position.set(sd * 1.55, 2.08, .52); head.add(pup);
+      const wh = new THREE.Mesh(new THREE.CylinderGeometry(.06, .03, 2.2, 5), orange); wh.position.set(sd * 2.1, -.9, .5); wh.rotation.set(.5, 0, sd * .9); head.add(wh);
+    }
+    if (low) head.traverse((o) => { if (o.isMesh) o.castShadow = false; });
+  }
+  const inCave = (s0) => s0 > CAVE0 && s0 < CAVE1;
+
+  // ------------------------------------------------ 📸 俯衝照：大俯衝最陡的地方旁邊有一台照相機，車子衝下來時喀擦一張
+  let photoS = topS + 2, steep = 0; for (let s0 = topS; s0 < topS + 22; s0 += .25) { const ty = sample(s0).t.y; if (ty < steep) { steep = ty; photoS = s0; } }
+  const ph = sample(photoS), phUp = new THREE.Vector3().crossVectors(ph.t, ph.r);
+  const photoCamPos = ph.p.clone().addScaledVector(ph.r, -7.5).addScaledVector(ph.t, 2.5).setY(Math.max(1.5, ph.p.y - .4));
+  const photoTarget = ph.p.clone().addScaledVector(ph.t, -1.2).addScaledVector(phUp, .6);
+  { // 照相機的小柱子＋鏡頭
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(.06, .08, photoCamPos.y + .3, 6), postM); pole.position.copy(photoCamPos).setY((photoCamPos.y - .5) / 2); root.add(pole);
+    const body = new THREE.Mesh(new THREE.BoxGeometry(.45, .32, .35), new THREE.MeshStandardMaterial({ color: '#333' })); body.position.copy(photoCamPos).setY(photoCamPos.y - .2); body.lookAt(photoTarget); root.add(body);
+    const lens = new THREE.Mesh(new THREE.CylinderGeometry(.11, .13, .2, 12), new THREE.MeshStandardMaterial({ color: '#1a1a1a' })); lens.position.set(0, 0, .25); lens.rotation.x = Math.PI / 2; body.add(lens);
+  }
 
   // ------------------------------------------------ 車站：海上的木平台（和島面一樣高）＋屋頂＋招牌＋燈號
   const wood = new THREE.MeshStandardMaterial({ color: '#c98a4a', roughness: .85, flatShading: true });
@@ -216,5 +302,8 @@ export function createCoaster(W, opts) {
     avoid: [stationC.clone(), exitSpot.clone(), ...posts.filter((q) => q.y0 > 0).map((q) => new THREE.Vector3(q.x, H, q.z))],
     // 測試用：路線上每一點
     debugPts: () => P,
+    inCave: (k = 0) => cur.phase !== 'dock' && inCave(cur.s - k * CAR_GAP),
+    photo: { s: photoS, cam: photoCamPos, target: photoTarget },
+    frontS: () => (cur.phase === 'dock' ? -1 : cur.s),
   };
 }
