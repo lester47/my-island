@@ -1,6 +1,6 @@
 // 島上的小生命：蝴蝶 30 隻、五色鳥 5 隻，另外四種昆蟲各 6 隻（蜻蜓、蜜蜂、瓢蟲、獨角仙）
 import * as THREE from 'three';
-import { batchStatic } from './kit.js?v=20261124x';
+import { batchStatic } from './kit.js?v=20261124y';
 
 const TAU = Math.PI * 2;
 const M = {};
