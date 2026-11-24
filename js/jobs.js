@@ -1,5 +1,5 @@
 // 💼 打工：做完一輪拿線上鯉魚幣。每份工作有冷卻時間，同一份工作同時最多 3 人（多人連線時）。
-// 📦 送貨員、🏖️ 沙灘清潔員、🙋 攤位小幫手、♻️ 回收分類員、🐱 貓咪照顧員、🧭 導覽小志工、👶 托嬰小幫手
+// 🚁 無人機快遞、📦 送貨員、🏖️ 沙灘清潔員、🙋 攤位小幫手、♻️ 回收分類員、🐱 貓咪照顧員、🧭 導覽小志工、👶 托嬰小幫手
 import * as THREE from 'three';
 import { onDisconnect } from '../vendor/firebase/firebase-database.js';
 
@@ -66,7 +66,7 @@ export function createJobs(api) {
   function start(id) {
     const s = status(id); if (!s.ok) { toast('💼 ' + s.why); return false; }
     active = { id, t0: Date.now() }; claim(id);
-    ({ courier: startCourier, beach: startBeach, helper: startHelper, recycle: startRecycle, catcare: startCatcare, guide: startGuide, babysit: startBabysit })[id]();
+    ({ courier: startCourier, beach: startBeach, helper: startHelper, recycle: startRecycle, catcare: startCatcare, guide: startGuide, babysit: startBabysit, drone: startDrone })[id]();
     return true;
   }
   function finish() {
@@ -94,6 +94,18 @@ export function createJobs(api) {
     body.onclick = (e) => { const b = e.target.closest('[data-q]'); if (b && !b.disabled) onClick(b.dataset.q, b); };
   }
   dlg.addEventListener('close', () => { if (active && active.inDlg && !active.done) quit('工作視窗關掉了，這次打工沒有完成'); });
+
+  // ---------------- 🚁 無人機快遞：開遙控無人機，把 2 個包裹送到指定的島（降到黃色光柱裡）
+  function startDrone() {
+    active.stop = () => api.droneJob && api.droneJob.stop();
+    active.onBtn = () => {};
+    const ok = api.droneJob && api.droneJob.start({
+      bar: (line) => showBar('🚁 無人機快遞', line, []),
+      done: () => { if (active && active.id === 'drone') finish(); },
+      fail: (msg) => { if (active && active.id === 'drone') quit(msg); },
+    });
+    if (!ok) { cleanup(); }
+  }
 
   // ---------------- 📦 送貨員：把 3 張送貨單送到指定攤位（打開那一攤的介紹）
   function startCourier() {

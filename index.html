@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261124z">
+<link rel="stylesheet" href="styles.css?v=20261125a">
 <script type="importmap">{"imports":{"three":"./vendor/three/three.module.js","three/addons/":"./vendor/three/addons/"}}</script>
 </head>
 <body>
@@ -70,6 +70,7 @@
 <div class="hud hud-left">
   <button type="button" class="hchip plan" id="planBtn" aria-label="我的必逛清單與鯉魚幣預算" aria-haspopup="dialog"><span aria-hidden="true">⭐</span><span class="tx">必逛</span><b id="planCount">0</b></button>
   <button type="button" class="hchip coin" id="coinBtn" hidden aria-label="我的線上鯉魚幣錢包與打工" aria-haspopup="dialog"><span aria-hidden="true">🪙</span><b id="coinCount">0</b></button>
+  <button type="button" class="hchip" id="drBtn" aria-label="無人機" aria-haspopup="dialog" hidden><span aria-hidden="true">🚁</span></button>
   <button type="button" class="hchip" id="fwBtn" aria-label="放煙火" aria-haspopup="dialog" hidden><span aria-hidden="true">🎆</span></button>
   <button type="button" class="clock" id="clock" aria-label="目前時間與天色，點一下切換晝夜"><span class="now" id="clockNow">--:--</span><span class="sky" id="clockSky">白天 12:00</span></button>
 </div>
@@ -204,6 +205,21 @@
   <div class="chal-btns"><a class="btn" id="coaPhotoSave" href="#" download>💾 存下來</a></div>
   <p class="foot">照片只存在你的裝置，不會上傳。</p>
 </dialog>
+<dialog id="drDlg" class="dlg" aria-labelledby="drTitle">
+  <div class="dlg-hd"><h2 id="drTitle">🚁 無人機</h2><button type="button" class="x" data-close aria-label="關閉">✕</button></div>
+  <div id="drBody"></div>
+</dialog>
+<section class="drui" id="drUI" hidden aria-label="遙控無人機">
+  <div class="dr-info" id="drInfo" role="status" aria-live="off"></div>
+  <p class="dr-hint">W／↑ 前進、S／↓ 後退、A D／← → 轉向、空白鍵 上升、Shift 下降、P 拍照</p>
+  <div class="dr-pad dr-move" aria-label="移動">
+    <button type="button" data-dp="f" aria-label="前進">▲</button><button type="button" data-dp="l" aria-label="左轉">⟲</button><button type="button" data-dp="r" aria-label="右轉">⟳</button><button type="button" data-dp="b" aria-label="後退">▼</button>
+  </div>
+  <div class="dr-pad dr-alt" aria-label="高度">
+    <button type="button" data-dp="u" aria-label="上升">⇧<small>升</small></button><button type="button" data-dp="d" aria-label="下降">⇩<small>降</small></button>
+  </div>
+  <div class="dr-acts"><button type="button" id="drShot">📸 拍照</button><button type="button" id="drFpv">👁️ 機頭視角</button><button type="button" id="drLand">✕ 降落結束</button></div>
+</section>
 <dialog id="fwDlg" class="dlg" aria-labelledby="fwTitle">
   <div class="dlg-hd"><h2 id="fwTitle">🎆 煙火船：放煙火</h2><button type="button" class="x" data-close aria-label="關閉">✕</button></div>
   <div id="fwBody"></div>
@@ -249,6 +265,6 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <noscript><p class="noscript">這個網站需要開啟 JavaScript。</p></noscript>
-<script type="module" src="js/main.js?v=20261124z"></script>
+<script type="module" src="js/main.js?v=20261125a"></script>
 </body>
 </html>
