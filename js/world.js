@@ -1,7 +1,7 @@
 // 3D 世界：天空、海、遠山、島嶼與地標、橋、日夜光影
 import * as THREE from 'three';
-import { TAU, clamp, lerp, smooth, rng, loopNoise, mat, Builder, GEO, glowTexture, C } from './kit.js?v=20261125b';
-import { makeScenery } from './scenery.js?v=20261125b';
+import { TAU, clamp, lerp, smooth, rng, loopNoise, mat, Builder, GEO, glowTexture, C } from './kit.js?v=20261125c';
+import { makeScenery } from './scenery.js?v=20261125c';
 
 export const H = 1.75;               // 島頂草地高度
 const SEG = 72;                      // 海岸線分段（6 的倍數，六角轉角落在頂點上）
@@ -622,6 +622,7 @@ function buildIsland(id, scene, quality) {
   if (isC) { info.colliders.push({ x: info.extras.windmill.x, z: info.extras.windmill.z, r: 1.2 }, { x: 7.0, z: 4.3, r: 2.0 }, { x: 3.6, z: -2.6, r: .4 }); }
   // 手作體驗二島西側是「鯉魚號碼頭」：石板小路、物件與草叢都要讓出通往碼頭的路
   const pierA = id === 'puzzle' ? bridgeAngles[0] + Math.PI : null; info.pierA = pierA;
+  info.entryAngles = pierA != null ? [pierA] : [];   // 從海上走上島的入口（碼頭、棧道）：掩體和裝飾要讓開，入口到環島路要走得通
   const corridorA = pierA == null ? bridgeAngles : [...bridgeAngles, pierA];
   stonePath(B, P, info.ring, rand, corridorA, L.R, L.seed, isC ? 1.1 : .95);
   // 外圈物件：避開橋的方向與正面標籤區

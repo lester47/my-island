@@ -1,7 +1,7 @@
 // 攤位實體：每個攤位在自己的島上有一座小攤子（桌子、條紋遮雨棚、招牌、依類型擺的道具）
 // 招牌寫攤號和攤名，前後兩面都有字；點攤子或招牌就打開那一攤的攤位卡
 import * as THREE from 'three';
-import { batchStatic } from './kit.js?v=20261125b';
+import { batchStatic } from './kit.js?v=20261125c';
 
 const TAU = Math.PI * 2;
 const FONT = '"Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif';
@@ -411,7 +411,7 @@ export function createSigns(W, content, H, opts = {}) {
       for (const [need, gap] of [[.7, 4.0], [.5, 3.8], [.4, 3.6]]) {
         for (let k = 0; k < 96 && !spot; k++) {
           const th = (k * 37 % 96) / 96 * TAU;
-          if ((I.bridgeAngles || []).some((b) => Math.abs(Math.atan2(Math.sin(th - b), Math.cos(th - b))) < .45)) continue;
+          if ([...(I.bridgeAngles || []), ...(I.entryAngles || [])].some((b) => Math.abs(Math.atan2(Math.sin(th - b), Math.cos(th - b))) < .45)) continue;
           for (const r of [I.top(th) * .86, I.top(th) * .78, I.walk.radAt(th) + 1.6, I.walk.radAt(th) - 1.0, I.walk.radAt(th) - 1.6]) {
             if (r < 1.2) continue;
             const x = Math.cos(th) * r, z = Math.sin(th) * r;

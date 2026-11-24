@@ -3,8 +3,8 @@
 // 大俯衝、海面波浪段，再依序飛過循環挖寶島、手作體驗二島、美食補給島、手作體驗一島，回到車站。
 // 時程用「網路時間」排班（所有裝置看到同一班車）：停站 25 秒 → 跑一圈 → 回站。
 import * as THREE from 'three';
-import { TAU, clamp } from './kit.js?v=20261125b';
-import { H } from './world.js?v=20261125b';
+import { TAU, clamp } from './kit.js?v=20261125c';
+import { H } from './world.js?v=20261125c';
 
 export const COASTER_CAP = 8;                 // 4 節車廂 × 每節 2 人
 const DOCK = 25;                              // 停站秒數
@@ -522,6 +522,7 @@ export function createCoaster(W, opts) {
   const lp = new THREE.Vector3();
   W.surfaces.push((x, z) => { lp.set(x, 0, z).applyMatrix4(inv); const xi = lp.x * inX; return (xi > .58 && xi < PW + .7 && Math.abs(lp.z) < PLEN / 2) || (xi >= PW + .6 && xi < PW + .62 + WK && Math.abs(lp.z) < 1) ? H : null; });   // 平台＋木棧道接到島上
   const exitSpot = st.localToWorld(new THREE.Vector3(inX * (PW * .55 + .6), 0, 0)).setY(H);
+  const landSpot = st.localToWorld(new THREE.Vector3(inX * (PW + .62 + WK), 0, 0)).setY(H);   // 木棧道接上島的那一端
 
   // ------------------------------------------------ 列車：4 節彩色車廂，第一節是鯉魚頭
   const carCols = ['#e4532c', '#f0b429', '#2f7fd1', '#3e9b4f'];
@@ -632,7 +633,7 @@ export function createCoaster(W, opts) {
   }
   return {
     root, cars, cap: COASTER_CAP, length: L, cycle: CYCLE, ride: RIDE, topY,
-    station: { pos: stationC, exit: exitSpot, u: us, t: ts, name: STATION_NAME },
+    station: { pos: stationC, exit: exitSpot, land: landSpot, u: us, t: ts, name: STATION_NAME },
     update, seatPose, riderSpot, hashSeat,
     docked: () => cur.phase === 'dock',
     boardOpen: () => cur.phase === 'dock' && cur.left > 3,

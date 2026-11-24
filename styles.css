@@ -756,3 +756,6 @@ body.droning .hud, body.droning .tools, body.droning .ticket, body.droning #labe
 .wl-test { background: #eef6ff; border: 2px dashed #3f7fd1; border-radius: 14px; padding: 8px 12px; margin: 0 0 10px; display: flex; flex-direction: column; gap: 2px; }
 .wl-test label { cursor: pointer; } .wl-test input { width: 18px; height: 18px; vertical-align: -3px; }
 .hchip.coin.test b { color: #2f6fd1; }
+
+.dr-alt button { width: 72px; height: 66px; background: rgba(34, 120, 200, .85); }
+.dr-alt { grid-template-rows: 66px 66px; }

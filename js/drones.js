@@ -4,8 +4,8 @@
 // 2. 遙控無人機：從服務台旁的無人機基地起飛，用方向鍵／螢幕按鈕自己飛，可以空拍照相，電池 2 分鐘
 // 3. 送貨無人機：平常有幾台載著包裹在島之間飛；打工「無人機快遞」＝自己開無人機把包裹送到指定的島
 import * as THREE from 'three';
-import { TAU, rng } from './kit.js?v=20261125b';
-import { H } from './world.js?v=20261125b';
+import { TAU, rng } from './kit.js?v=20261125c';
+import { H } from './world.js?v=20261125c';
 
 const ease = (k) => (k <= 0 ? 0 : k >= 1 ? 1 : k * k * (3 - 2 * k));
 
@@ -65,12 +65,12 @@ export function createDrones(W, opts = {}) {
   // ================================================================ 2. 遙控無人機
   const me = makeDrone('#ff8a1f', 1.2, true); me.g.visible = false; scene.add(me.g);
   const P = { on: false, pos: new THREE.Vector3(), vel: new THREE.Vector3(), yaw: 0, vy: 0, left: 0, keys: {}, pad: {}, mission: null, onEnd: null, onInfo: null, camP: new THREE.Vector3(), camT: new THREE.Vector3(), tilt: 0, roll: 0, fpv: false };
-  const KEYMAP = { KeyW: 'f', ArrowUp: 'f', KeyS: 'b', ArrowDown: 'b', KeyA: 'l', ArrowLeft: 'l', KeyD: 'r', ArrowRight: 'r', Space: 'u', KeyE: 'u', ShiftLeft: 'd', ShiftRight: 'd', KeyQ: 'd' };
+  const KEYMAP = { KeyW: 'f', ArrowUp: 'f', KeyS: 'b', ArrowDown: 'b', KeyA: 'l', ArrowLeft: 'l', KeyD: 'r', ArrowRight: 'r', Space: 'u', KeyE: 'u', ShiftLeft: 'd', ShiftRight: 'd', KeyQ: 'd', KeyR: 'u', PageUp: 'u', KeyF: 'd', PageDown: 'd' };
   const kd = (e) => { if (!P.on || (e.target && e.target.matches && e.target.matches('input,textarea'))) return; if (e.target.closest && e.target.closest('dialog[open]')) return; const k = KEYMAP[e.code]; if (k) { P.keys[k] = true; e.preventDefault(); } if (e.code === 'KeyP' && !e.repeat && opts.onShotKey) opts.onShotKey(); };
   const ku = (e) => { const k = KEYMAP[e.code]; if (k) P.keys[k] = false; };
   addEventListener('keydown', kd, true); addEventListener('keyup', ku); addEventListener('blur', () => { P.keys = {}; });
   const groundAt = (x, z) => { const g = W.ground(x, z); return g == null ? 0 : g; };
-  const LIM = { r: 50, top: 30, speed: 7.5, climb: 4, turn: 1.9 };
+  const LIM = { r: 50, top: 30, speed: 7.5, climb: 6, turn: 1.9, cruise: 6 };   // cruise：起飛後自動爬升到離地幾公尺
 
   // 送貨任務的目標標記：光柱＋地上光圈
   const beamM = new THREE.MeshBasicMaterial({ color: '#ffd21f', transparent: true, opacity: .28, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
@@ -87,6 +87,7 @@ export function createDrones(W, opts = {}) {
     me.g.visible = true; parked.g.visible = false; me.box.visible = !!P.mission;
     const fwd = new THREE.Vector3(Math.sin(P.yaw), 0, Math.cos(P.yaw));
     P.camP.copy(P.pos).addScaledVector(fwd, -4.5).add(new THREE.Vector3(0, 2, 0)); P.camT.copy(P.pos);
+    P.auto = H + LIM.cruise;   // 起飛：先自動爬升，避開地面的攤位、樹和路燈
     if (P.mission) setTarget();
   }
   function setTarget() {
@@ -107,6 +108,8 @@ export function createDrones(W, opts = {}) {
     const fwd = new THREE.Vector3(Math.sin(P.yaw), 0, Math.cos(P.yaw));
     // 電池用完：自動飛回基地降落
     let want = fwd.clone().multiplyScalar(f * LIM.speed), wantVy = up * LIM.climb;
+    if (up) P.auto = null;
+    else if (P.auto != null) { const dy = P.auto - P.pos.y; wantVy = Math.max(-LIM.climb, Math.min(LIM.climb, dy * 2)); if (Math.abs(dy) < .15) P.auto = null; }
     if (lowBat) { const to = base.clone().sub(P.pos); to.y = 0; const d = to.length(); want = d > .4 ? to.normalize().multiplyScalar(Math.min(LIM.speed, d * 1.5)) : new THREE.Vector3(); wantVy = d < 1.5 ? -2 : (H + 6 - P.pos.y); P.yaw += Math.atan2(Math.sin(Math.atan2(to.x, to.z) - P.yaw), Math.cos(Math.atan2(to.x, to.z) - P.yaw)) * Math.min(1, dt * 2) * (d > .4 ? 1 : 0); }
     const a = 1 - Math.exp(-dt * 3);
     P.vel.lerp(want, a); P.vy += (wantVy - P.vy) * a;
