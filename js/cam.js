@@ -1,9 +1,9 @@
 // 鏡頭：拖曳旋轉縮放、回到全景、點島飛近（電影史詩運鏡）、開場、導覽、地面漫遊
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { TAU, clamp, lerp, easeInOut, smooth } from './kit.js?v=20261124j';
-import { H } from './world.js?v=20261124j';
-import { SHORE } from './scenery.js?v=20261124j';
+import { TAU, clamp, lerp, easeInOut, smooth } from './kit.js?v=20261124k';
+import { H } from './world.js?v=20261124k';
+import { SHORE } from './scenery.js?v=20261124k';
 
 export function createCam(W, canvas, hooks) {
   const camera = W.camera;
@@ -168,6 +168,21 @@ export function createCam(W, canvas, hooks) {
     const bl = W.balloonMove; W.balloonMove = null;
     if (bl && W.balloon && W.balloon.inBasket(walk.pos, bl.from)) walk.pos.add(bl.d);
     W.balloonRiding = !!(W.balloon && W.balloon.inBasket(walk.pos));
+    // 坐在鴨子船上：跟著船一起移動、轉向；沒在走路時坐到最近的座位踩踏板
+    const dm = W.duckMove; W.duckMove = null;
+    if (dm && W.duck && W.duck.inBoat(walk.pos, dm.from)) {
+      _inv.copy(dm.from).invert(); _l.copy(walk.pos).applyMatrix4(_inv).applyMatrix4(dm.to);
+      dm.from.decompose(_v, _q0, _v.clone()); dm.to.decompose(_v, _q1, _v.clone());
+      const y0 = new THREE.Euler().setFromQuaternion(_q0, 'YXZ').y, y1 = new THREE.Euler().setFromQuaternion(_q1, 'YXZ').y;
+      let dy = y1 - y0; while (dy > Math.PI) dy -= TAU; while (dy < -Math.PI) dy += TAU;
+      walk.pos.x = _l.x; walk.pos.z = _l.z; walk.yaw += dy;
+    }
+    W.duckRiding = !!(W.duck && W.duck.inBoat(walk.pos));
+    {
+      const k = walk.keys, p = walk.pad, idle = !(k.KeyW || k.KeyS || k.KeyA || k.KeyD || k.ArrowUp || k.ArrowDown || p.up || p.down);
+      walk.duckIdle = W.duckRiding && idle ? (walk.duckIdle || 0) + dt : 0;
+      if (walk.duckIdle > .35 && W.duck.pedaling()) { const st = W.duck.nearestSeat(walk.pos); if (st) { const f = Math.min(1, dt * 6); walk.pos.x += (st.x - walk.pos.x) * f; walk.pos.z += (st.z - walk.pos.z) * f; } }
+    }
     if (walk.frozen) { placeWalk(); return; }        // 躲貓貓當鬼閉眼時不能走
     const k = walk.keys, p = walk.pad;
     const fwd = (k.KeyW || k.ArrowUp || p.up ? 1 : 0) - (k.KeyS || k.ArrowDown || p.down ? 1 : 0);

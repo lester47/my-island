@@ -1,11 +1,11 @@
 // 115 鯉魚市集｜介面與流程
 import * as THREE from 'three';
-import { ROLES, OUTFITS, HATS } from './roles.js?v=20261124j';
-import { createMeowBox } from './meow.js?v=20261124j';
-import { REACTIONS, REACTION_IDS, playReaction } from './cats.js?v=20261124j';
-import { createCatNet, SEATS, REST, CALL, pad } from './catnet.js?v=20261124j';
-import { createWallet } from './wallet.js?v=20261124j';
-import { createJobs } from './jobs.js?v=20261124j';
+import { ROLES, OUTFITS, HATS } from './roles.js?v=20261124k';
+import { createMeowBox } from './meow.js?v=20261124k';
+import { REACTIONS, REACTION_IDS, playReaction } from './cats.js?v=20261124k';
+import { createCatNet, SEATS, REST, CALL, pad } from './catnet.js?v=20261124k';
+import { createWallet } from './wallet.js?v=20261124k';
+import { createJobs } from './jobs.js?v=20261124k';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -22,11 +22,11 @@ const pad2 = (n) => String(n).padStart(2, '0');
 const fmtH = (h) => { h = ((h % 24) + 24) % 24; return `${pad2(Math.floor(h))}:${pad2(Math.floor((h % 1) * 60))}`; };
 
 // 介面 Logo：低多邊形鯉魚（橘紅魚背、米白魚腹、魚頭朝右），首頁、怎麼逛、集章完成共用這一張
-const LOGO_SRC = 'assets/brand/koi-logo.png?v=20261124j';
+const LOGO_SRC = 'assets/brand/koi-logo.png?v=20261124k';
 const MASCOT = `<img src="${LOGO_SRC}" alt="115 鯉魚市集 Logo：低多邊形小鯉魚" decoding="async">`;
 
 let C = null;            // content.json
-let W = null, L = null, CAM = null, BAL = null, K = null;   // K：島上的貓
+let W = null, L = null, CAM = null, BAL = null, DUCK = null, K = null;   // K：島上的貓
 let WAL = null, JOBS = null;   // 線上鯉魚幣錢包、打工
 const SND = createMeowBox();
 const CR = createCatNet({
@@ -76,7 +76,15 @@ const BALLOON_DEF = {
   note: '熱氣球只在網站裡，市集現場沒有熱氣球。',
 };
 const balloonDef = () => Object.assign({}, BALLOON_DEF, C.balloon || {});
-function islandById(id) { return id === 'center' ? C.center : id === 'carp' ? C.carpBoat : id === 'balloon' ? balloonDef() : C.islands.find((i) => i.id === id); }
+// 🦆 鴨子船的文字：可以在 data/content.json 的 "duckBoat" 改
+const DUCK_DEF = {
+  name: '鴨子船', role: '腳踏遊船', color: '#b07a00',
+  intro: '原本浮在海上的大黃色小鴨，變成可以坐的腳踏船！停在手作體驗二島南側的木棧道旁，燈號亮綠燈時從棧道走進船艙，時間到就出發，大家一起踩踏板，在手作體驗二島南邊的海灣繞一圈再倒退回棧道。',
+  how: ['按「坐鴨子船」會走進船艙；停下來就會坐到椅子上，腳開始踩踏板，兩側的水車跟著轉。', '棧道燈號：綠燈可以上下船、黃燈快出發了、紅燈在海上。', '回到棧道停好後，從船艙靠棧道那一側的門口走回棧道就下船了；開船時不能下船。', '船上最多 4 位登入者（前後兩排），大家看到的是同一艘鴨子船。'],
+  note: '鴨子船只在網站裡，市集現場沒有鴨子船。',
+};
+const duckDef = () => Object.assign({}, DUCK_DEF, C.duckBoat || {});
+function islandById(id) { return id === 'center' ? C.center : id === 'carp' ? C.carpBoat : id === 'balloon' ? balloonDef() : id === 'duck' ? duckDef() : C.islands.find((i) => i.id === id); }
 const stallsOf = (id) => C.stalls.filter((x) => x.island === id).sort((a, b) => a.no - b.no);   // 攤號是識別碼：攤位跟著自己的資料走
 const stallByNo = (no) => C.stalls.find((x) => x.no === +no);
 // 攤位連結：新連結帶 roster=20；沒有名冊版本的舊連結（原 26 攤號）依對照表轉到新攤號
@@ -89,7 +97,7 @@ function resolveStallLink(no, roster) {
   return { st: null, msg: '找不到這個攤號' };
 }
 const nl = (t) => esc(t).replace(/\n/g, '<br>');
-function colorOf(id) { return id === 'center' ? '#3f7d3a' : id === 'carp' ? C.carpBoat.color : id === 'balloon' ? balloonDef().color : islandById(id).dark; }   // 介面用加深色，白字對比 ≥ 4.5
+function colorOf(id) { return id === 'center' ? '#3f7d3a' : id === 'carp' ? C.carpBoat.color : id === 'balloon' ? balloonDef().color : id === 'duck' ? duckDef().color : islandById(id).dark; }   // 介面用加深色，白字對比 ≥ 4.5
 function openDlg(id) { const d = $(id); if (!d.open) d.showModal(); return d; }
 document.addEventListener('click', (e) => { const b = e.target instanceof Element && e.target.closest('[data-close]'); if (b) b.closest('dialog').close(); });
 
@@ -674,6 +682,7 @@ function openIsland(id, opts = {}) {
   closePhotoBar();
   if (id === 'carp') { openBoat(opts); return; }
   if (id === 'balloon') { openBalloon(opts); return; }
+  if (id === 'duck') { openDuck(opts); return; }
   closeBubble(); toggleSettings(false);
   if (S.walking && !exitWalk(true)) return;
   if (S.tour) endTour(false);
@@ -705,7 +714,7 @@ function refreshBoatPanel(now) {
   if (b) b.textContent = `船上 ${st.s.seated} 位小朋友（示意角色）・登入者 ${boatRiders()}／${BOAT_CAP} 人（最多 ${BOAT_CAP} 人，靠港放下跳板才能上船）`;
 }
 // 前往鯉魚號碼頭：鏡頭飛到手作體驗二島西側的木棧道（從湖面這側斜看棧道和停靠的船）
-// 五島合照點：遠景／中景／近景三種角度，都拍得到幾何鯉魚風車與通往益智島的木橋
+// 五島合照點：遠景／中景／近景三種角度，都拍得到幾何鯉魚風車與通往手作體驗二島的木橋
 //   遠景：高一點、退遠一點，五座島和鯉魚號航道一起入鏡
 //   中景：原本的角度，風車＋木橋＋湖面
 //   近景：站在合照腳印旁，人物在前、風車在後
@@ -882,6 +891,86 @@ function balloonHints() {
   S.balHint = ph;
 }
 
+// ------------------------------------------------------------------ 🦆 鴨子船：和鯉魚號一樣可以點選、鏡頭跟著、走上船搭乘；坐好會自己踩踏板
+function duckStatus() {
+  const s = DUCK.status();
+  if (s.docked) return { short: s.left <= 6 ? '快出發了' : '停靠中・可上船', long: `🟢 停在手作體驗二島南側的棧道旁，現在可以從棧道走進船艙。約 ${s.left} 秒後出發。`, s };
+  return { short: s.phase === 'back' ? '回棧道中' : '踩踏中', long: s.phase === 'out' ? `🦆 出發囉！約 ${s.eta} 秒後回到棧道。` : s.phase === 'back' || s.phase === 'turn' ? `🦆 準備靠岸，倒退回棧道中，約 ${s.eta} 秒後可以上下船。` : `🦆 大家一起踩踏板，在手作體驗二島南邊的海灣繞圈，約 ${s.eta} 秒後回到棧道。`, s };
+}
+const duckRiders = () => (PL ? PL.inDuckCount() : 0) + (S.walking && DUCK && DUCK.inBoat(CAM.walk.pos) ? 1 : 0);
+const duckPax = () => `船上 ${duckRiders()}／${DUCK.cap} 位登入者（停靠、亮綠燈或黃燈時才能上下船）`;
+function duckPanelHTML() {
+  const B = duckDef(), c = B.color, st = duckStatus();
+  return `<div class="p-hd" style="--pc:${c};--ptint:#fff4cc;--pink:#5a3d00"><p class="eyebrow">🦆 ${esc(B.role)}</p><h2 id="panelTitle">${esc(B.name)}</h2><button type="button" class="x" data-panel-close aria-label="關閉">✕</button></div>
+    <div class="p-sec" style="--pc:${c}"><h3>現在在哪裡</h3><p class="boat-stat" id="duckStat" aria-live="polite">${esc(st.long)}</p><p class="foot" id="duckPax">${esc(duckPax())}</p>
+      <div class="chal-btns"><button type="button" class="btn" data-duck="board">🦆 坐鴨子船（漫遊）</button><button type="button" class="btn ghost" data-duck="dock">📍 前往鴨子船碼頭</button></div></div>
+    <div class="p-sec" style="--pc:${c}"><h3>介紹</h3><p class="intro-line">${esc(B.intro)}</p></div>
+    <div class="p-sec"><h3>怎麼玩</h3><ol class="boat-how">${B.how.map((t) => `<li>${esc(t)}</li>`).join('')}</ol><p class="foot" style="margin-top:8px">${WAL ? `🪙 一趟 ${ECO().prices.duck} 枚，每天最多 ${ECO().limits.duck} 趟。` : ''}${esc(B.note)}</p></div>`;
+}
+let duckT = 0;
+function refreshDuckPanel(now) {
+  if (S.open !== 'duck' || now - duckT < 500) return; duckT = now;
+  const st = duckStatus(), a = $('#duckStat'), b = $('#duckPax');
+  if (a && a.textContent !== st.long) a.textContent = st.long;
+  if (b) b.textContent = duckPax();
+}
+function showDuckPanel() {
+  const p = $('#panel'); p.innerHTML = duckPanelHTML(); p.hidden = false; S.open = 'duck';
+  p.querySelector('[data-panel-close]').onclick = () => closePanel(true);
+  p.querySelector('[data-duck="board"]').onclick = boardDuck;
+  p.querySelector('[data-duck="dock"]').onclick = goDuckDock;
+  for (const k in tags) tags[k].setAttribute('aria-expanded', String(k === 'duck'));
+  p.focus({ preventScroll: true });
+}
+function openDuck(opts = {}) {
+  if (!W || !DUCK) { toast('鴨子船只在 3D 畫面裡出現'); return; }
+  closeBubble(); toggleSettings(false);
+  if (S.walking && !exitWalk(true)) return;
+  if (S.tour) endTour(false);
+  panelOpener = opts.opener || tags.duck || null;
+  $('#panel').hidden = true;
+  CAM.flyToBoat(DUCK.anchor, showDuckPanel);   // 跟鯉魚號一樣：鏡頭飛過去、跟著船
+}
+function goDuckDock() {
+  closePanel(false);
+  const J = DUCK.jetty, T = J.j0.clone().lerp(J.j1, .6).setY(GROUND_H + .8);
+  const cam = T.clone().addScaledVector(J.side, -9).addScaledVector(J.d, 5).setY(GROUND_H + 6.5);
+  CAM.flight({ t: T, p: cam }, 1600, 2, () => toast('📍 這裡是鴨子船碼頭，在手作體驗二島南側；亮綠燈時從棧道走進船艙就能坐'));
+}
+function duckCheck() {
+  const s = DUCK.status();
+  if (!s.docked) return `鴨子船在海上，約 ${s.eta} 秒後回到棧道，亮綠燈才能上船`;
+  if (!DUCK.doorOpen()) return '鴨子船要出發囉，請等下一趟';
+  if (duckRiders() >= DUCK.cap) return `鴨子船已經坐滿 ${DUCK.cap} 個人了，請等下一趟`;
+  return rideCheck('duck');
+}
+// 漫遊時走上／走下鴨子船：停靠時才能上下，開船時不能離開船艙
+function duckGate(from, x, z) {
+  if (!DUCK) return true;
+  const wasIn = DUCK.inBoat(from), goIn = DUCK.floorAt(x, z) != null && DUCK.inBoat({ x, z, y: from.y }), open = DUCK.doorOpen();
+  if (!wasIn && goIn) { const why = open ? duckCheck() : DUCK.docked() ? '鴨子船要出發囉，請等下一趟' : '鴨子船在海上，請等它回到棧道'; if (why) { blockToast(why); return false; } }
+  if (wasIn && !goIn && !open) { blockToast(DUCK.docked() ? '鴨子船要出發囉！' : '開船中請待在船上，回到棧道停好後再下船'); return false; }
+  return true;
+}
+function boardDuck() {
+  if (!W || !DUCK) return;
+  const why = duckCheck();
+  if (why) { toast('⛔ ' + why); return; }
+  closePanel(false);
+  enterWalk(DUCK.boardSpot()); CAM.walk.pitch = -.12; S.duckHint = 'dock';
+  toast(`🦆 走進鴨子船了！約 ${DUCK.status().left} 秒後出發，站著不動就會坐下來踩踏板`);
+}
+// 搭乘中的提醒：出發、靠岸
+function duckHints() {
+  if (!S.walking || !DUCK || !DUCK.inBoat(CAM.walk.pos)) { S.duckHint = null; return; }
+  const ph = DUCK.status().phase;
+  if (ph === S.duckHint) return;
+  if (ph === 'out') toast('🦶 出發囉！坐好一起踩踏板，鴨子船往海上前進');
+  else if (ph === 'turn') toast('🦆 要回去了，鴨子船掉頭、倒退回棧道');
+  else if (ph === 'dock' && S.duckHint && S.duckHint !== 'dock') toast('🟢 回到棧道了！可以從船艙靠棧道那一側的門口走回棧道');
+  S.duckHint = ph;
+}
+
 // ------------------------------------------------------------------ 地點清單與搜尋
 let filter = '全部';
 function cardHTML(id) {
@@ -900,8 +989,9 @@ function renderList() {
   if (filter === '🐾 貓咪') { $('#listBody').innerHTML = catsListHTML(); return; }
   const ids = ['center', ...C.islands.map((i) => i.id)].filter((id) => filter === '全部' || (id === 'center' ? filter === '服務台' : islandById(id).group === filter));
   const boat = W && L && filter === '全部' ? `<article class="card" style="--c:${C.carpBoat.color}"><h3>⛵ ${esc(C.carpBoat.name)} <span class="grp">${esc(C.carpBoat.role)}</span></h3><p>${esc(C.carpBoat.intro)}</p><p class="foot">${esc(C.carpBoat.note)}</p><div class="acts"><button type="button" data-open="carp">在地圖上看</button></div></article>` : '';
+  const DD = duckDef(), duck = W && DUCK && filter === '全部' ? `<article class="card" style="--c:${DD.color}"><h3>🦆 ${esc(DD.name)} <span class="grp">${esc(DD.role)}</span></h3><p>${esc(DD.intro)}</p><p class="foot">${esc(DD.note)}</p><div class="acts"><button type="button" data-open="duck">在地圖上看</button></div></article>` : '';
   const BD = balloonDef(), bal = W && BAL && filter === '全部' ? `<article class="card" style="--c:${BD.color}"><h3>🎈 ${esc(BD.name)} <span class="grp">${esc(BD.role)}</span></h3><p>${esc(BD.intro)}</p><p class="foot">${esc(BD.note)}</p><div class="acts"><button type="button" data-open="balloon">在地圖上看</button></div></article>` : '';
-  $('#listBody').innerHTML = ids.map(cardHTML).join('') + boat + bal + `<p class="foot">作者：${esc(C.site.author)}｜${esc(C.site.layoutNote)}｜${esc(C.residentsNote)}吉祥物造型為示意。攤位清單資料來自主辦提供的檔案，可在各島下載。</p>`;
+  $('#listBody').innerHTML = ids.map(cardHTML).join('') + boat + duck + bal + `<p class="foot">作者：${esc(C.site.author)}｜${esc(C.site.layoutNote)}｜${esc(C.residentsNote)}吉祥物造型為示意。攤位清單資料來自主辦提供的檔案，可在各島下載。</p>`;
 }
 $('#filters').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { filter = b.dataset.f; renderList(); } });
 $('#listBody').addEventListener('click', (e) => { const b = e.target.closest('[data-open]'); if (b) { $('#listDlg').close(); openIsland(b.dataset.open, { opener: $('#listBtn'), no: b.dataset.no != null ? +b.dataset.no : undefined }); } });
@@ -919,6 +1009,7 @@ function search(q) {
   for (const I of C.islands) if ([I.name, I.group, I.intro, I.landmark].some(test)) hits.push({ id: I.id, text: `${I.name}・${I.group}` });
   if (W && L && [C.carpBoat.name, C.carpBoat.role, '船', '帆船', '碼頭', 'boat'].some(test)) hits.push({ id: 'carp', exact: test(C.carpBoat.name), text: `⛵ ${C.carpBoat.name}・${C.carpBoat.role}` });
   if (W && BAL && [balloonDef().name, balloonDef().role, '熱氣球', '氣球', '起降場', '飛', 'balloon'].some(test)) hits.push({ id: 'balloon', exact: test(balloonDef().name), text: `🎈 ${balloonDef().name}・${balloonDef().role}` });
+  if (W && DUCK && [duckDef().name, duckDef().role, '鴨', '小鴨', '腳踏船', '踩', 'duck'].some(test)) hits.push({ id: 'duck', exact: test(duckDef().name), text: `🦆 ${duckDef().name}・${duckDef().role}` });
   hits.sort((a, b) => (b.exact ? 1 : 0) - (a.exact ? 1 : 0) || (b.nameHit ? 1 : 0) - (a.nameHit ? 1 : 0));
   for (const d of C.cats || []) if (test(d.name) || test(d.coat) || q.includes('貓')) hits.push({ id: d.island, cat: d.id, text: `🐾 ${d.name}・${d.coat}（${islandById(d.island).name}）` });
   for (const r of C.residents) if (test(r.name) || test(r.job)) hits.push({ id: r.island, text: `${r.name}・${r.job}（${islandById(r.island).name}）` });
@@ -994,6 +1085,14 @@ function buildTags() {
     b.addEventListener('click', () => openBalloon({ opener: b }));
     box.append(b); tags.balloon = b;
   }
+  if (DUCK) {
+    const B = duckDef(), b = document.createElement('button'); b.type = 'button'; b.className = 'tag boat';
+    b.style.setProperty('--tc', B.color); b.style.setProperty('--ttint', '#fff4cc'); b.style.setProperty('--tink', '#5a3d00');
+    b.setAttribute('aria-expanded', 'false'); b.setAttribute('aria-controls', 'panel');
+    b.innerHTML = `<span class="no" aria-hidden="true">🦆</span><span>${esc(B.name)}</span><span class="ct"></span><span class="dir" aria-hidden="true">➜</span>`;
+    b.addEventListener('click', () => openDuck({ opener: b }));
+    box.append(b); tags.duck = b;
+  }
 }
 const _v = new THREE.Vector3();
 function placeTags() {
@@ -1034,6 +1133,15 @@ function placeTags() {
     const ct = t.querySelector('.ct'); if (ct.textContent !== st.short) { ct.textContent = st.short; t.setAttribute('aria-label', `${balloonDef().name}，${balloonDef().role}，${st.short}`); }
     if (vis) { const tw = t.offsetWidth || 160, th = t.offsetHeight || 44; S.balRect = { t, x: (_v.x + 1) / 2 * w - tw / 2, y: (1 - _v.y) / 2 * h - th, w: tw, h: th }; }
   }
+  S.duckRect = null;
+  if (tags.duck) {
+    const t = tags.duck, g = DUCK.g, st = duckStatus();
+    _v.set(g.position.x, 5.2, g.position.z).project(W.camera);
+    const vis = _v.z < 1 && Math.abs(_v.x) < 1.05 && Math.abs(_v.y) < 1.05;
+    t.style.visibility = vis ? 'visible' : 'hidden';
+    const ct = t.querySelector('.ct'); if (ct.textContent !== st.short) { ct.textContent = st.short; t.setAttribute('aria-label', `${duckDef().name}，${duckDef().role}，${st.short}`); }
+    if (vis) { const tw = t.offsetWidth || 150, th = t.offsetHeight || 44; S.duckRect = { t, x: (_v.x + 1) / 2 * w - tw / 2, y: (1 - _v.y) / 2 * h - th, w: tw, h: th }; }
+  }
   rects.sort((a, b) => a.y - b.y);
   for (let i = 0; i < rects.length; i++) for (let j = 0; j < i; j++) {
     const a = rects[j], b = rects[i];
@@ -1048,6 +1156,15 @@ function placeTags() {
     while ((r = hit(y)) && n++ < 8) y = r.y - B.h - 4;
     if (y < 70) { y = B.y; n = 0; while ((r = hit(y)) && n++ < 8) y = r.y + r.h + 4; }
     rects.push({ t: B.t, x: B.x, y, w: B.w, h: B.h });
+  }
+  // 鴨子船標籤也讓位給島名和鯉魚號的標籤
+  const DR = S.duckRect;
+  if (DR) {
+    const hit = (y) => rects.find((a) => a.vis !== false && DR.x < a.x + a.w + 4 && DR.x + DR.w + 4 > a.x && y < a.y + a.h + 4 && y + DR.h + 4 > a.y);
+    let y = DR.y, r, n = 0;
+    while ((r = hit(y)) && n++ < 8) y = r.y - DR.h - 4;
+    if (y < 70) { y = DR.y; n = 0; while ((r = hit(y)) && n++ < 8) y = r.y + r.h + 4; }
+    rects.push({ t: DR.t, x: DR.x, y, w: DR.w, h: DR.h });
   }
   // 熱氣球標籤也讓位給島名和船的標籤
   const BR = S.balRect;
@@ -1169,6 +1286,8 @@ function onCanvasUp(e) {
   if (bh && (!best || bh.distance < best.d)) { openBoat({ opener: tags.carp }); return; }
   const balH = BAL && ray.intersectObject(BAL.g, true)[0];
   if (balH && (!best || balH.distance < best.d)) { openBalloon({ opener: tags.balloon }); return; }
+  const dkH = DUCK && ray.intersectObject(DUCK.g, true)[0];
+  if (dkH && (!best || dkH.distance < best.d)) { openDuck({ opener: tags.duck }); return; }
   if (best) openIsland(best.id, { opener: tags[best.id] });
 }
 
@@ -1458,7 +1577,7 @@ function renderWallet() {
   const E = ECO(), w = WAL.state(), P = E.prices;
   const mode = WAL.mode === 'school' ? '' : `<p class="wl-trial">🧪 體驗錢包：還沒連上線（或老師還沒開放），錢只存在這台裝置。</p>`;
   const jobs = JOBS ? JOBS.JOBS.map((j) => { const s = JOBS.status(j.id); return `<li class="wl-job"><span class="ic" aria-hidden="true">${j.icon}</span><div><b>${esc(j.name)}</b>・${esc(j.where)}　<span class="pay">+${j.pay}</span><br><small>${esc(j.desc)}</small>${s.ok ? '' : `<br><small class="why">${esc(s.why)}</small>`}</div><button type="button" class="btn ${s.ok ? '' : 'ghost'}" data-job="${j.id}" ${s.ok || s.doing ? '' : 'disabled'}>${s.doing ? '放棄' : '開始'}</button></li>`; }).join('') : '<li>打工需要 3D 畫面</li>';
-  const prices = [['🐾', '擼貓（抽號碼牌）', P.cat, `每隻貓每天 ${E.limits.cat} 次`], ['⛵', '坐鯉魚號', P.boat, `每天 ${E.limits.boat} 次`], ['🎈', '坐彩虹熱氣球', P.balloon, `每天 ${E.limits.balloon} 次`], ['🎮', '攤位線上小遊戲', P.game, `每款每天 ${E.limits.game} 局`]];
+  const prices = [['🐾', '擼貓（抽號碼牌）', P.cat, `每隻貓每天 ${E.limits.cat} 次`], ['⛵', '坐鯉魚號', P.boat, `每天 ${E.limits.boat} 次`], ['🦆', '坐鴨子船（腳踏）', P.duck, `每天 ${E.limits.duck} 次`], ['🎈', '坐彩虹熱氣球', P.balloon, `每天 ${E.limits.balloon} 次`], ['🎮', '攤位線上小遊戲', P.game, `每款每天 ${E.limits.game} 局`]];
   const treatWhy = WAL.canTreat();
   const people = [...ONLINE.entries()].filter(([id]) => id !== WAL.uid);
   $('#walletBody').innerHTML = `${mode}
@@ -1593,17 +1712,18 @@ function renderAdmin(D) {
   if (keep && $('#' + keep)) $('#' + keep).focus();
 }
 // 坐船、坐熱氣球：上去的那一刻付錢（同一趟只付一次）
-const RIDE = { boat: false, balloon: false };
+const RIDE = { boat: false, balloon: false, duck: false };
 function rideCheck(kind) {
   if (!WAL || RIDE[kind]) return '';
   const E = ECO(); return WAL.canPay(E.prices[kind], kind, E.limits[kind]);
 }
 function rideTick() {
   if (!WAL || !W) return;
-  const onBoat = S.walking && W.onBoat && W.onBoat(CAM.walk.pos.x, CAM.walk.pos.z), inBal = S.walking && BAL && BAL.inBasket(CAM.walk.pos);
-  for (const [kind, on, label] of [['boat', onBoat, '坐鯉魚號'], ['balloon', inBal, '坐彩虹熱氣球']]) {
+  const inDuck0 = S.walking && DUCK && DUCK.inBoat(CAM.walk.pos);
+  const onBoat = !inDuck0 && S.walking && W.onBoat && W.onBoat(CAM.walk.pos.x, CAM.walk.pos.z), inBal = S.walking && BAL && BAL.inBasket(CAM.walk.pos), inDuck = S.walking && DUCK && DUCK.inBoat(CAM.walk.pos);
+  for (const [kind, on, label] of [['boat', onBoat, '坐鯉魚號'], ['balloon', inBal, '坐彩虹熱氣球'], ['duck', inDuck, '坐鴨子船']]) {
     if (on && !RIDE[kind]) { RIDE[kind] = true; const E = ECO(); const why = WAL.pay(E.prices[kind], kind, label, kind); if (!why) toast(`🪙 ${label}，付 ${E.prices[kind]} 枚（剩 ${WAL.bal()}）`); }
-    if (!on && RIDE[kind]) RIDE[kind] = false;
+    if (!on && RIDE[kind] && (kind !== 'duck' || DUCK.docked())) RIDE[kind] = false;   // 鴨子船：靠岸以後才算這一趟結束（船在動時一瞬間判定不在船上也不會再收一次）
   }
 }
 $('#coinBtn').addEventListener('click', () => { if (WAL) openWallet(); });
@@ -1678,6 +1798,9 @@ function exitWalk(instant) {
   const m = PL && PL.me();
   // 飛行中離開漫遊：人放回熱氣球起降場門口（不會留在半空中）
   if (m && BAL && BAL.inBasket(m.pos) && !BAL.docked()) { W.balloonRiding = false; const g = BAL.landSpot(); m.pos.set(g.x, g.y, g.z); }
+  // 鴨子船開出去時離開漫遊：人放回鴨子船碼頭的棧道
+  if (W) W.duckRiding = false;
+  if (m && DUCK && DUCK.inBoat(m.pos) && !DUCK.docked()) { const g = DUCK.landSpot(); m.pos.set(g.x, g.y, g.z); }
   if (m && (W.onBoat(m.pos.x, m.pos.z) || W.ground(m.pos.x, m.pos.z) == null)) {
     const P = W.pier, land = P ? P.E.clone().addScaledVector(P.d, P.ST0 - .4) : null;
     const g = land && W.ground(land.x, land.z) != null ? { x: land.x, y: W.ground(land.x, land.z), z: land.z } : W.nearestGround(m.pos.x, m.pos.z);
@@ -1871,7 +1994,7 @@ function balloonPopped() {
 }
 function startNet() {
   const M = C.multiplayer; if (!M || !M.enabled || !M.firebase || !PL) return;
-  import('./net.js?v=20261124j').then(({ createNet }) => {
+  import('./net.js?v=20261124k').then(({ createNet }) => {
     NET = createNet(M.firebase, {
       myPos: () => PL.myPos(), upsert: (id, info, pos) => { ONLINE.set(id, String(info.name || '').slice(0, 16)); PL.upsert(id, info, pos); }, remove: (id) => { ONLINE.delete(id); PL.remove(id); },
       onCount: (c) => { COUNT = c; const el = $('#onlineChip'); el.hidden = false; $('#onlineCount').textContent = c.players; el.setAttribute('aria-label', `市集島上 ${c.players} 人，開著網站 ${c.viewers} 人，點一下看各身分人數`); },
@@ -1882,7 +2005,7 @@ function startNet() {
     CR.attach(NET, meProfile);   // 擼貓號碼牌改用多人連線
     if (WAL) WAL.attach(NET, meProfile);   // 線上鯉魚幣錢包
     if (JOBS) JOBS.attach(NET);
-    import('./hidemp.js?v=20261124j').then(({ createHideMP }) => {
+    import('./hidemp.js?v=20261124k').then(({ createHideMP }) => {
       HM = createHideMP(NET, {
         toast, profile: meProfile, enterWalk: () => { if (!S.walking) enterWalk(); },
         walkPos: () => (S.walking ? CAM.walk.pos : null), posOf: (id) => PL.posOf(id),
@@ -2014,13 +2137,13 @@ async function boot() {
   if (Q.has('nogl') || !webglOK()) { textOnly(Q.has('nogl') ? '已切換為文字清單版' : '這台裝置無法顯示 3D 畫面'); applyTheme(); updateClock(); setInterval(updateClock, 10000); window.__ready = true; return; }
   let mods;
   try {
-    mods = await Promise.all([import('./world.js?v=20261124j'), import('./life.js?v=20261124j'), import('./cam.js?v=20261124j'), import('./players.js?v=20261124j'), import('./signs.js?v=20261124j'), import('./festival.js?v=20261124j'), import('./fauna.js?v=20261124j'), import('./interact.js?v=20261124j'), import('./games.js?v=20261124j')]);
+    mods = await Promise.all([import('./world.js?v=20261124k'), import('./life.js?v=20261124k'), import('./cam.js?v=20261124k'), import('./players.js?v=20261124k'), import('./signs.js?v=20261124k'), import('./festival.js?v=20261124k'), import('./fauna.js?v=20261124k'), import('./interact.js?v=20261124k'), import('./games.js?v=20261124k')]);
     const [{ createWorld, H: GROUND_H }, { createLife, makePerson }, { createCam }, { createPlayers }, { createSigns }, { createFestival }, { createFauna }, { createInteract }, { createGames, FISH }] = mods;
     const mobile = isLite();   // 手機和平板都用輕量版場景
     W = createWorld($('#gl'), { quality: S.quality, mobile });
     W.renderer.setPixelRatio(Math.min(devicePixelRatio, S.quality === 'low' ? 1 : (mobile ? 1.5 : 2)));
     L = createLife(W, C, { halfPeople: mobile || S.quality === 'low', quality: S.quality });
-    try { const { createCats } = await import('./cats.js?v=20261124j'); K = createCats(W, C, { reduced: () => S.reduced }); } catch (e) { console.warn('島上的貓載入失敗', e); K = null; }
+    try { const { createCats } = await import('./cats.js?v=20261124k'); K = createCats(W, C, { reduced: () => S.reduced }); } catch (e) { console.warn('島上的貓載入失敗', e); K = null; }
     CAM = createCam(W, $('#gl'), { onZoom: showZoom, onIntro: (k) => { L.setDeck(k < .3 ? 1 : Math.max(0, 1 - (k - .3) / .25)); if (k > .55) $('.intro-title').classList.add('show'); } });
     CAM.S.reduced = S.reduced; CAM.S.mobile = isMobile();
     PL = createPlayers(W, GROUND_H); renderMe(); startNet();
@@ -2029,13 +2152,19 @@ async function boot() {
     W.canLeave = () => { const s = L.carp.status(); if (s.docked && s.gang) return true; if (performance.now() - lastBlockToast > 3000) { lastBlockToast = performance.now(); toast('⛔ 航行中請待在船上，靠港放下跳板後再下船'); } return false; };
     // 彩虹熱氣球：起降場在服務台北側廣場；用網路時間排班，大家看到同一顆
     try {
-      const { createBalloon } = await import('./balloon.js?v=20261124j');
+      const { createBalloon } = await import('./balloon.js?v=20261124k');
       BAL = createBalloon(W, { pad: { x: 1, z: -5 }, now: () => (NET ? NET.now() : Date.now()), low: mobile || S.quality === 'low' });
       W.balloon = BAL; W.gates = [balloonGate];
     } catch (e) { console.warn('熱氣球載入失敗', e); BAL = null; }
-    KIT = await import('./kit.js?v=20261124j');
-    SG = createSigns(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261124j')).rng, low: mobile || S.quality === 'low' });
-    FX = createFestival(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261124j')).rng, low: mobile || S.quality === 'low', avoid: [...(BAL ? BAL.avoid : []), ...SG.signs.map((s) => s.g.position), ...Object.values(W.islands).flatMap((I) => (I.trees || []).filter((tr) => tr.visible).map((tr) => tr.position.clone().add(I.pos)))], carp: L.carp });
+    // 🦆 鴨子船：停在益智島南側的棧道；一樣用網路時間排班
+    try {
+      const { createDuckBoat } = await import('./duckboat.js?v=20261124k');
+      DUCK = createDuckBoat(W, { island: 'puzzle', now: () => (NET ? NET.now() : Date.now()), low: mobile || S.quality === 'low' });
+      W.duck = DUCK; W.gates = [...(W.gates || []), duckGate];
+    } catch (e) { console.warn('鴨子船載入失敗', e); DUCK = null; }
+    KIT = await import('./kit.js?v=20261124k');
+    SG = createSigns(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261124k')).rng, low: mobile || S.quality === 'low' });
+    FX = createFestival(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261124k')).rng, low: mobile || S.quality === 'low', avoid: [...(BAL ? BAL.avoid : []), ...(DUCK ? DUCK.avoid : []), ...SG.signs.map((s) => s.g.position), ...Object.values(W.islands).flatMap((I) => (I.trees || []).filter((tr) => tr.visible).map((tr) => tr.position.clone().add(I.pos)))], carp: L.carp });
     // 貓住在自己島上最空曠的地方，不被攤位和裝飾擋住
     if (K) K.setHomes((id) => {
       const I = W.islands[id]; if (!I || !I.walk) return null;
@@ -2049,7 +2178,7 @@ async function boot() {
       }
       return best;
     });
-    FA = createFauna(W, { H: GROUND_H, rng: (await import('./kit.js?v=20261124j')).rng });
+    FA = createFauna(W, { H: GROUND_H, rng: (await import('./kit.js?v=20261124k')).rng });
     IA = createInteract(W, C, GROUND_H, {
       toast, carp: L.carp,
       toastIf: (m) => { if (!S.intro) toast(m); },
@@ -2138,8 +2267,9 @@ async function boot() {
     W.setHour(S.hourShown); applyTheme();
     if ((clkN = (clkN + 1) % 30) === 0) updateClock();
     if (BAL) BAL.update(t, dt, moving);
-    rideTick();
+    if (DUCK) DUCK.update(t, dt, moving);
     CAM.update(dt);
+    rideTick();                 // 人跟著船／熱氣球移動之後再判斷有沒有在上面
     W.update(t, moving);
     L.update(t, dt, moving, W.state.n, W.camera);
     if (K) K.update(t, dt, moving, W.state.n, W.camera);
@@ -2164,6 +2294,7 @@ async function boot() {
     if (!S.walking) placeTags();
     refreshBoatPanel(now);
     if (BAL) { refreshBalloonPanel(now); balloonHints(); }
+    if (DUCK) { refreshDuckPanel(now); duckHints(); }
     placeBubble();
     // 效能：FPS 連續偏低就自動降級
     fpsN++; fpsT += dt;
