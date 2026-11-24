@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261125b">
+<link rel="stylesheet" href="styles.css?v=20261125c">
 <script type="importmap">{"imports":{"three":"./vendor/three/three.module.js","three/addons/":"./vendor/three/addons/"}}</script>
 </head>
 <body>
@@ -211,12 +211,12 @@
 </dialog>
 <section class="drui" id="drUI" hidden aria-label="遙控無人機">
   <div class="dr-info" id="drInfo" role="status" aria-live="off"></div>
-  <p class="dr-hint">W／↑ 前進、S／↓ 後退、A D／← → 轉向、空白鍵 上升、Shift 下降、P 拍照</p>
+  <p class="dr-hint">W／↑ 前進、S／↓ 後退、A D／← → 轉向、<b>空白鍵或 R 上升、Shift 或 F 下降</b>、P 拍照（起飛後會自動升到 6 公尺）</p>
   <div class="dr-pad dr-move" aria-label="移動">
     <button type="button" data-dp="f" aria-label="前進">▲</button><button type="button" data-dp="l" aria-label="左轉">⟲</button><button type="button" data-dp="r" aria-label="右轉">⟳</button><button type="button" data-dp="b" aria-label="後退">▼</button>
   </div>
   <div class="dr-pad dr-alt" aria-label="高度">
-    <button type="button" data-dp="u" aria-label="上升">⇧<small>升</small></button><button type="button" data-dp="d" aria-label="下降">⇩<small>降</small></button>
+    <button type="button" data-dp="u" aria-label="上升">⬆<small>上升</small></button><button type="button" data-dp="d" aria-label="下降">⬇<small>下降</small></button>
   </div>
   <div class="dr-acts"><button type="button" id="drShot">📸 拍照</button><button type="button" id="drFpv">👁️ 機頭視角</button><button type="button" id="drLand">✕ 降落結束</button></div>
 </section>
@@ -265,6 +265,6 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <noscript><p class="noscript">這個網站需要開啟 JavaScript。</p></noscript>
-<script type="module" src="js/main.js?v=20261125b"></script>
+<script type="module" src="js/main.js?v=20261125c"></script>
 </body>
 </html>

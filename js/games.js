@@ -214,7 +214,7 @@ export function createGames(W, content, H, api) {
   const coverKinds = Object.keys(COVER);
   // 掩體放在步道外側的草地：避開橋頭、攤子、樹和彼此
   function coverSpot(id) {
-    const I = islands[id], bA = I.bridgeAngles || [];
+    const I = islands[id], bA = [...(I.bridgeAngles || []), ...(I.entryAngles || [])];   // 橋頭、碼頭和棧道入口都要讓開
     for (let i = 0; i < 600; i++) {
       const th = R() * TAU; if (bA.some((b) => Math.abs(Math.atan2(Math.sin(th - b), Math.cos(th - b))) < .45)) continue;
       const lo = I.walk.radAt(th) + .9, hi = I.top(th) * .9; if (hi < lo) continue;
