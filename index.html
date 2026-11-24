@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261124l">
+<link rel="stylesheet" href="styles.css?v=20261124m">
 <script type="importmap">{"imports":{"three":"./vendor/three/three.module.js","three/addons/":"./vendor/three/addons/"}}</script>
 </head>
 <body>
@@ -119,7 +119,7 @@
   <button type="button" class="walk-view" id="walkView" hidden>👀 切換視角</button>
   <button type="button" class="walk-exit" id="walkExit">✕ 鳥瞰</button>
   <button type="button" class="walk-bike" id="bikeBtn" hidden>🚲 下車還車</button>
-  <div class="actpad" aria-label="動作"><button type="button" id="actJump" aria-label="跳躍（空白鍵）">⤴ 跳</button><button type="button" id="actCrouch" aria-label="蹲下（按住 Shift）">⤵ 蹲</button></div>
+  <div class="actpad" aria-label="動作"><button type="button" id="actDance" aria-label="閃身步（G 鍵）">💃</button><button type="button" id="actJump" aria-label="跳躍（空白鍵）">⤴ 跳</button><button type="button" id="actCrouch" aria-label="蹲下（按住 Shift）">⤵ 蹲</button></div>
   <div class="dpad" aria-label="方向鍵">
     <button type="button" data-d="up" aria-label="前進">▲</button>
     <button type="button" data-d="left" aria-label="向左轉">◀</button>
@@ -194,6 +194,10 @@
   <div class="dlg-hd"><h2 id="walletTitle">🪙 我的線上鯉魚幣</h2><button type="button" class="x" data-close aria-label="關閉">✕</button></div>
   <div id="walletBody"></div>
 </dialog>
+<dialog id="shopDlg" class="dlg wide" aria-labelledby="shopTitle">
+  <div class="dlg-hd"><h2 id="shopTitle">👕 服飾店</h2><button type="button" class="x" data-close aria-label="關閉">✕</button></div>
+  <div id="shopBody"></div>
+</dialog>
 <dialog id="agencyDlg" class="dlg wide" aria-labelledby="agencyTitle">
   <div class="dlg-hd"><h2 id="agencyTitle">🏢 服務台・打工仲介</h2><button type="button" class="x" data-close aria-label="關閉">✕</button></div>
   <div id="agencyBody"></div>
@@ -221,6 +225,6 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <noscript><p class="noscript">這個網站需要開啟 JavaScript。</p></noscript>
-<script type="module" src="js/main.js?v=20261124l"></script>
+<script type="module" src="js/main.js?v=20261124m"></script>
 </body>
 </html>
