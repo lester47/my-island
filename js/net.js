@@ -49,6 +49,7 @@ export function createNet(config, hooks) {
     viewerRef = ref(db, `${ROOT}/viewers/${uid}`);
     onDisconnect(viewerRef).remove().then(() => set(viewerRef, serverTimestamp())).catch((e) => status('error', e.code));
     if (me) publish(true);
+    if (Object.keys(fxMe).length) setFx({});   // 登入完成前設定的騎車／配件／寵物：現在補送（重新連線時也重送，因為斷線會被清掉）
   }
   function publish(force) {
     if (!uid || !me) return;
