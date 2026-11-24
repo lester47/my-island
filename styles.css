@@ -633,3 +633,15 @@ html[data-theme="deep"] .job-msg { background: #23402a; color: #bff0c6; } html[d
 .wl-treat textarea { flex: 1; min-width: 220px; border-radius: 10px; border: 2px solid var(--line); background: var(--surface); color: var(--ink); padding: 8px 10px; font-size: 15px; }
 .me-tch { margin: 8px 0 0; font-size: 14px; color: var(--muted); font-weight: 700; }
 .me-tch .linkish { font-size: 14px; }
+
+/* ---------------------------------------------------------------- 說明：大項目＋小項目，都有編號 */
+.help-hd { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; }
+.help-hd p { margin: 0; font-weight: 900; line-height: 1.6; }
+.help-toc { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px; margin: 0 0 12px; }
+.help-toc a { display: block; padding: 8px 10px; border-radius: 10px; background: var(--surface2); border: 2px solid var(--line); color: var(--ink); font-weight: 700; text-decoration: none; font-size: 14px; }
+.help-sec { margin: 0 0 14px; scroll-margin-top: 8px; }
+.help-sec h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 6px; font-size: 16px; padding-bottom: 4px; border-bottom: 2px solid var(--line); }
+.help-sec .hn { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--primary); color: var(--primary-ink); font-size: 14px; flex: none; }
+.help-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.help-list li { display: flex; gap: 8px; line-height: 1.6; }
+.help-list .sn { flex: none; min-width: 34px; color: var(--muted); font-weight: 900; font-variant-numeric: tabular-nums; }
