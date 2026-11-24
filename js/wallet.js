@@ -6,6 +6,8 @@
 //       market/treatLog（請客紀錄，老師看）、market/reports/{uid}（告訴老師）
 // 還沒連上線、或 Firebase 規則還沒貼上時：用「體驗錢包」，只存在這台裝置。
 const LKEY = 'liyu115.wallet.v1';
+const TKEY = 'liyu115.teacherTest';
+const testOn = () => { try { return localStorage.getItem(TKEY) !== '0'; } catch (e) { return true; } };   // 預設開啟
 const DAY_TZ = 'Asia/Taipei';
 export const emailKey = (e) => String(e || '').trim().toLowerCase().replace(/\./g, ',');
 
@@ -53,6 +55,9 @@ export function createWallet({ cfg, onChange, toast }) {
   const api = {
     get mode() { return st.mode; },
     get admin() { return st.admin; },
+    // 🧪 老師測試模式（名冊上的老師才有）：花費不扣錢、不受每日次數限制、打工沒有冷卻和每日上限。存檔的餘額不變。
+    get test() { return st.admin && testOn(); },
+    setTest(v) { try { localStorage.setItem(TKEY, v ? '1' : '0'); } catch (e) { /* 無痕模式 */ } onChange('test'); },
     get frozen() { return st.frozen; },
     get uid() { return st.uid; },
     get email() { return st.email || null; },
@@ -106,6 +111,7 @@ export function createWallet({ cfg, onChange, toast }) {
     // ---- 付錢
     canPay(price, key, limit) {
       const w = ensure();
+      if (api.test) return '';
       if (st.frozen) return '你的錢包被老師暫停使用了，請找老師';
       if (key && limit && (w.plays[key] || 0) >= limit) return `今天這個已經玩 ${limit} 次了，明天再來`;
       if (w.bal < price) return `線上鯉魚幣不夠（要 ${price}，你有 ${w.bal}），去打工賺一點吧`;
@@ -113,6 +119,7 @@ export function createWallet({ cfg, onChange, toast }) {
     },
     pay(price, kind, note, key) {
       const why = api.canPay(price, key, key ? Infinity : 0); if (why) return why;
+      if (api.test) { log(kind, 0, `🧪 ${note}（老師測試・免費，原價 ${price}）`); save(); return ''; }
       const w = st.w; w.bal -= price; w.outT += price; if (key) w.plays[key] = (w.plays[key] || 0) + 1;
       log(kind, -price, note); save(); return '';
     },
@@ -120,14 +127,15 @@ export function createWallet({ cfg, onChange, toast }) {
     // ---- 賺錢：打工有每日上限，錢包有上限
     earn(a, kind, note, isJob) {
       const w = ensure(); if (st.frozen) return 0;
+      if (api.test) { log(kind, 0, `🧪 ${note}（老師測試：會賺 ${a} 枚）`); save(); return a; }
       let got = Math.min(a, cfg.cap - w.bal);
       if (isJob) got = Math.min(got, cfg.dailyJob - w.earned);
       got = Math.max(0, got);
       if (got) { w.bal += got; w.inT += got; if (isJob) w.earned += got; log(kind, got, note); save(); }
       return got;
     },
-    jobLeft() { return Math.max(0, cfg.dailyJob - ensure().earned); },
-    jobWait(job, cool) { const t = ensure().jobAt[job] || 0; return Math.max(0, Math.ceil((t + cool * 1000 - now()) / 1000)); },
+    jobLeft() { return api.test ? Infinity : Math.max(0, cfg.dailyJob - ensure().earned); },
+    jobWait(job, cool) { if (api.test) return 0; const t = ensure().jobAt[job] || 0; return Math.max(0, Math.ceil((t + cool * 1000 - now()) / 1000)); },
     markJob(job) { ensure().jobAt[job] = now(); save(); },
     // 一輩子只發一次的獎勵（集章、圖鑑）
     bonusOnce(key, a, note) { const w = ensure(); if (w.bonusEver[key]) return 0; w.bonusEver[key] = 1; const got = Math.min(a, cfg.cap - w.bal); w.bal += got; w.inT += got; log('bonus', got, note); save(); return got; },

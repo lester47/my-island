@@ -2,8 +2,8 @@
 // 停靠時從籃子前面的門走進去，時間到就升空，繞五座島飛一圈再降落回起降場。
 // 時程用「網路時間」排班（所有裝置看到的熱氣球都在同一個位置），一起搭的人會在同一個籃子裡。
 import * as THREE from 'three';
-import { TAU, clamp, batchStatic } from './kit.js?v=20261125a';
-import { H } from './world.js?v=20261125a';
+import { TAU, clamp, batchStatic } from './kit.js?v=20261125b';
+import { H } from './world.js?v=20261125b';
 
 export const BALLOON_CAP = 4;                    // 籃子最多 4 位登入者
 const DOCK = 30, ASC = 10, DESC = 12, ALT = 13, SPEED = 3.2;   // 停靠秒數、升空、降落、飛行高度、巡航速度
@@ -68,11 +68,14 @@ export function createBalloon(W, opts) {
   // 球皮：彩虹 12 片，底下接一圈裙邊
   const env = new THREE.Group(); env.position.y = 5.0; g.add(env);
   const RAINBOW = ['#ff4d6d', '#ff8a3d', '#ffd23a', '#5ed37a', '#3fa7ff', '#7a6cff'];
+  // 🌙 晚上球皮會從裡面亮起來（燃燒器的火光透出來）：發光顏色＝球皮本身的顏色
+  const envMats = RAINBOW.map((c) => { const mm = m(c, { roughness: .7, emissive: c, emissiveIntensity: 0 }); mm.userData.dynamic = true; return mm; });
   for (let k = 0; k < 12; k++) {
-    const seg = new THREE.Mesh(new THREE.SphereGeometry(.5, 6, 12, k / 12 * TAU, TAU / 12), m(RAINBOW[k % 6], { roughness: .7 }));
+    const seg = new THREE.Mesh(new THREE.SphereGeometry(.5, 6, 12, k / 12 * TAU, TAU / 12), envMats[k % 6]);
     seg.scale.set(4.8, 5.3, 4.8); seg.castShadow = true; env.add(seg);
   }
-  const skirt = new THREE.Mesh(new THREE.CylinderGeometry(1.15, .5, .7, 12, 1, true), m('#ffd23a', { side: THREE.DoubleSide })); skirt.position.y = 2.45 - 5.0 + 0.05; env.add(skirt);
+  const skirtM = m('#ffd23a', { side: THREE.DoubleSide, emissive: '#ffa630', emissiveIntensity: 0 }); skirtM.userData.dynamic = true;
+  const skirt = new THREE.Mesh(new THREE.CylinderGeometry(1.15, .5, .7, 12, 1, true), skirtM); skirt.position.y = 2.45 - 5.0 + 0.05; env.add(skirt);
   box(env, m('#ffffff'), .5, .14, .5, 0, 2.62, 0);   // 頂部的白色排氣蓋
   // 起降坪：從島邊拉出一條木棧道，盡頭是一個圓形平台（像直升機停機坪）：
   //   深色圓坪＋黃色外圈＋白色內圈＋中間一顆大大的熱氣球記號，邊緣一圈小燈，平台四周有欄杆（棧道那邊留開口）
@@ -133,6 +136,24 @@ export function createBalloon(W, opts) {
   box(door, trim, doorW - .04, .07, .12, doorW / 2, .1 + WH - .02, 0);
   box(door, trim, .07, WH - .1, .1, doorW - .08, wy, .02);   // 門把那一側的框
   const DOOR_OPEN = -1.75; door.rotation.y = DOOR_OPEN;
+  // ✨ 小燈裝飾：籃子外圈一圈彩色燈（會跑馬）、籃子裡面一圈暖白燈、四條繩子上的燈串、裙邊和球皮腰帶各一圈
+  const glowVC = (mm) => { mm.onBeforeCompile = (sh) => { sh.fragmentShader = sh.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n#ifdef USE_COLOR\n totalEmissiveRadiance *= vColor.rgb;\n#endif'); }; mm.customProgramCacheKey = () => 'glowVC-balloon'; return mm; };
+  const bulbM = glowVC(new THREE.MeshStandardMaterial({ color: '#ffffff', emissive: '#ffffff', emissiveIntensity: .15, roughness: .4 }));
+  const bulbGeo = new THREE.SphereGeometry(.035, 6, 5), M4 = new THREE.Matrix4(), bc = new THREE.Color();
+  const circ = (n, fn) => { const pts = []; for (let i = 0; i < n; i++) pts.push(fn(i / n)); return pts; };
+  const rim = (off, y, step) => { const pts = [], L = (off * 2); const per = Math.max(2, Math.round(L / step)); for (const [ax, az, dx, dz] of [[-1, -1, 1, 0], [1, -1, 0, 1], [1, 1, -1, 0], [-1, 1, 0, -1]]) for (let i = 0; i < per; i++) { const t = i / per * L; pts.push(new THREE.Vector3(ax * off + dx * t, y, az * off + dz * t)); } return pts; };
+  const outPts = rim(HALF + .085, .1 + WH + .02, .16), inPts = rim(HALF - .07, .1 + WH - .1, .2);
+  const ropePts = []; for (const [x, z] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) for (let i = 1; i <= 5; i++) { const k = i / 6; ropePts.push(new THREE.Vector3(x * HALF, .74, z * HALF).lerp(new THREE.Vector3(x * .42, BY, z * .42), k)); }
+  const mkBulbs = (parent, pts, col) => { const im = new THREE.InstancedMesh(bulbGeo, bulbM, pts.length); pts.forEach((p, i) => { im.setMatrixAt(i, M4.makeTranslation(p.x, p.y, p.z)); im.setColorAt(i, bc.set(typeof col === 'function' ? col(i) : col)); }); parent.add(im); return im; };
+  const outBulbs = mkBulbs(g, outPts, (i) => RAINBOW[i % 6]);
+  mkBulbs(g, inPts, '#fff1c4');
+  mkBulbs(g, ropePts, (i) => (i % 2 ? '#ffd23a' : '#ffffff'));
+  mkBulbs(env, circ(16, (t) => new THREE.Vector3(Math.cos(t * TAU) * .52, 2.45 - 5.0 - .3, Math.sin(t * TAU) * .52)), '#ffe6a0');      // 裙邊
+  const beltR = 2.42; mkBulbs(env, circ(36, (t) => new THREE.Vector3(Math.cos(t * TAU) * beltR, 0, Math.sin(t * TAU) * beltR)), (i) => (i % 3 === 0 ? '#ffffff' : '#ffe08a'));   // 球皮腰帶
+  // 球皮外的柔和光暈（晚上才看得到）
+  const haloC = document.createElement('canvas'); haloC.width = haloC.height = 128; { const x = haloC.getContext('2d'), gr = x.createRadialGradient(64, 64, 20, 64, 64, 64); gr.addColorStop(0, 'rgba(255,200,140,.9)'); gr.addColorStop(1, 'rgba(255,200,140,0)'); x.fillStyle = gr; x.fillRect(0, 0, 128, 128); }
+  const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(haloC), transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending })); halo.scale.set(8.5, 9.5, 1); halo.visible = false; env.add(halo);
+  let chaseT = 0, glowN = -1;
   batchStatic(g, [flame, env, door]); batchStatic(door, []); batchStatic(env, []); batchStatic(padG, [lamp, edgeL]);
   if (opts.low) for (const c of env.children) c.castShadow = false;
 
@@ -157,6 +178,12 @@ export function createBalloon(W, opts) {
     // 球皮微微擺動（籃子不轉，站在裡面不會晃）
     env.rotation.z = moving && cur.phase !== 'dock' ? Math.sin(t * .6) * .03 : 0; env.rotation.x = moving && cur.phase !== 'dock' ? Math.sin(t * .45 + 1) * .025 : 0;
     const burn = cur.phase === 'up' || (cur.phase === 'fly' && Math.sin(t * .8) > .3);
+    // 🌙 夜間：球皮從裡面亮、燈泡亮、外圈彩燈跑馬
+    const n = W.state ? W.state.n : 0;
+    const fl = moving ? .06 * Math.sin(t * 13) + .04 * Math.sin(t * 29) : 0;
+    const gi = n * ((burn ? .62 : .4) + fl);
+    if (Math.abs(gi - glowN) > .005) { glowN = gi; for (const mm of envMats) mm.emissiveIntensity = gi; skirtM.emissiveIntensity = n * (burn ? 1.6 : .9); bulbM.emissiveIntensity = .15 + n * 2.6; halo.visible = n > .05; halo.material.opacity = n * (burn ? .4 : .28); }
+    if (n > .05 && moving && t - chaseT > .12) { chaseT = t; const sh = Math.floor(t * 8); for (let i = 0; i < outPts.length; i++) outBulbs.setColorAt(i, bc.set(RAINBOW[(i + sh) % 6])); outBulbs.instanceColor.needsUpdate = true; }
     flame.visible = cur.phase !== 'dock';
     // 門：停靠中而且還有 2 秒以上才起飛 → 打開；其他時間關上（起飛前 2 秒開始關）
     const want = cur.phase === 'dock' && cur.left > 2 ? DOOR_OPEN : 0;
