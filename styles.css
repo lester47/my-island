@@ -569,3 +569,61 @@ html[data-theme="deep"] .ticket { background: #4a3d1c; color: #ffe3a0; }
 @media (prefers-reduced-motion: reduce) { .ticket.ring, .bubble .acts button.ring, .bubble .seats .mine.call { animation: none; } }
 @media (max-width: 760px) { .ticket { right: 10px; bottom: 136px; } }
 @media (max-width: 480px) { #catBtn b { display: none; } .hud-right { gap: 4px; } .hud-right .hchip#catBtn { min-width: 38px; padding: 0 6px; } .ticket { bottom: 150px; font-size: 13px; } }
+
+/* 擼貓說明：固定在畫面上（電腦右側、手機上方），不跟著貓上下晃 */
+.bubble.catfixed { position: fixed; left: auto; right: 18px; top: 96px; width: 320px; max-height: calc(100vh - 210px); overflow: auto; transform: none !important; z-index: 23; }
+.bubble.catfixed::after { display: none; }
+@media (max-width: 760px) { .bubble.catfixed { left: 8px; right: 8px; top: 64px; width: auto; max-width: none; max-height: 52vh; } }
+
+/* ---------------------------------------------------------------- 🪙 線上鯉魚幣 */
+.hchip.coin b { color: #8a5a00; font-variant-numeric: tabular-nums; }
+html[data-theme="deep"] .hchip.coin b { color: #ffd77a; }
+.hchip.coin.frozen { outline: 2px dashed #dc4848; }
+.wl-trial { margin: 0 0 10px; padding: 8px 10px; border-radius: 10px; background: #fff4d6; color: #6b4a00; font-weight: 700; }
+html[data-theme="deep"] .wl-trial { background: #4a3d1c; color: #ffe3a0; }
+.wl-top { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.wl-bal { display: flex; align-items: baseline; gap: 6px; padding: 8px 14px; border-radius: 14px; background: var(--surface2); border: 2px solid var(--line); }
+.wl-bal span { font-size: 26px; } .wl-bal b { font-size: 34px; font-variant-numeric: tabular-nums; } .wl-bal small { color: var(--muted); font-weight: 700; }
+.wl-meta { flex: 1; min-width: 200px; line-height: 1.6; font-weight: 700; }
+.wl-meta small { color: var(--muted); font-weight: 500; }
+.wl-h { margin: 14px 0 6px; font-size: 15px; }
+.wl-jobs, .wl-price, .wl-log { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.wl-job { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 2px solid var(--line); border-radius: 12px; background: var(--surface); }
+.wl-job .ic { font-size: 24px; } .wl-job > div { flex: 1; line-height: 1.5; } .wl-job small { color: var(--muted); }
+.wl-job .pay { color: #2f7a35; font-weight: 900; } .wl-job .btn { flex: none; width: auto; padding: 0 14px; }
+.why { color: #b8520f; } html[data-theme="deep"] .why { color: #ffb070; }
+.wl-price li { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 10px; background: var(--surface2); }
+.wl-price li b { margin-left: auto; } .wl-price li small { color: var(--muted); min-width: 92px; text-align: right; }
+.wl-log li { display: flex; gap: 8px; align-items: baseline; font-size: 14px; padding: 2px 0; border-bottom: 1px dashed var(--line); }
+.wl-log li b { margin-left: auto; font-variant-numeric: tabular-nums; } .wl-log .pos { color: #2f7a35; } .wl-log .neg { color: #b03636; }
+html[data-theme="deep"] .wl-log .pos { color: #8fe09a; } html[data-theme="deep"] .wl-log .neg { color: #ff9a9a; }
+.wl-treat { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; }
+.wl-treat label { display: grid; gap: 4px; font-weight: 700; font-size: 14px; }
+.wl-treat select, .wl-treat input { min-height: 44px; border-radius: 10px; border: 2px solid var(--line); background: var(--surface); color: var(--ink); padding: 0 10px; font-size: 15px; }
+.wl-treat input { flex: 1; min-width: 200px; } .wl-treat .btn { width: auto; }
+.linkish { border: 0; background: none; color: var(--primary); text-decoration: underline; font-weight: 700; padding: 0 2px; min-height: 0; }
+code#wlUid { font-size: 12px; word-break: break-all; }
+.ad-wrap { overflow-x: auto; }
+.ad-tbl { width: 100%; border-collapse: collapse; font-size: 14px; }
+.ad-tbl th, .ad-tbl td { text-align: left; padding: 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.ad-tbl tr.old { opacity: .55; } .ad-tbl small { color: var(--muted); }
+.ad-act { display: flex; flex-wrap: wrap; gap: 4px; }
+.ad-act button { min-height: 34px; border: 2px solid var(--line); background: var(--surface2); border-radius: 8px; font-weight: 700; padding: 0 8px; }
+.jobbar { position: fixed; z-index: 22; left: 50%; top: 84px; transform: translateX(-50%); width: min(520px, calc(100vw - 24px)); background: var(--surface); border-radius: 16px; box-shadow: var(--shadow); padding: 10px 14px; border: 2px solid #e0b84a; }
+.jobbar .jt { margin: 0; font-weight: 900; } .jobbar .jm { margin: 2px 0 8px; line-height: 1.5; font-size: 14px; }
+.jobbar .jb { display: flex; gap: 6px; flex-wrap: wrap; }
+.jobbar .jb button { min-height: 40px; border: 2px solid var(--line); background: var(--surface2); border-radius: 10px; font-weight: 700; padding: 0 12px; }
+.job-h { margin: 0 0 6px; font-weight: 900; } .job-q { font-size: 18px; font-weight: 900; margin: 6px 0 10px; }
+.job-msg { margin: 0 0 6px; padding: 6px 10px; border-radius: 10px; background: #e3f6e5; color: #1e5d2a; font-weight: 700; }
+.job-msg.bad { background: #ffe9e1; color: #8e2323; }
+html[data-theme="deep"] .job-msg { background: #23402a; color: #bff0c6; } html[data-theme="deep"] .job-msg.bad { background: #4a2626; color: #ffc7c7; }
+.job-opts { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.job-opts.bins { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+.job-opts.care { grid-template-columns: 1fr; }
+.job-opts .btn { width: 100%; min-height: 52px; font-size: 15px; }
+.job-opts .btn.wrong { opacity: .45; text-decoration: line-through; }
+.btn.hold { position: relative; overflow: hidden; touch-action: none; user-select: none; }
+.btn.hold .fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: rgba(63, 125, 58, .25); }
+.btn.hold .lb { position: relative; }
+@media (max-width: 760px) { .jobbar { top: 64px; } }
+@media (max-width: 760px) { #coinBtn { position: fixed; left: 10px; bottom: calc(134px + env(safe-area-inset-bottom, 0px)); z-index: 15; } }

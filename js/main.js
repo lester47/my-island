@@ -1,9 +1,11 @@
 // 115 鯉魚市集｜介面與流程
 import * as THREE from 'three';
-import { ROLES, OUTFITS, HATS } from './roles.js?v=20261124a';
-import { createMeowBox } from './meow.js?v=20261124a';
-import { REACTIONS, REACTION_IDS, playReaction } from './cats.js?v=20261124a';
-import { createCatNet, SEATS, REST, CALL, pad } from './catnet.js?v=20261124a';
+import { ROLES, OUTFITS, HATS } from './roles.js?v=20261124b';
+import { createMeowBox } from './meow.js?v=20261124b';
+import { REACTIONS, REACTION_IDS, playReaction } from './cats.js?v=20261124b';
+import { createCatNet, SEATS, REST, CALL, pad } from './catnet.js?v=20261124b';
+import { createWallet } from './wallet.js?v=20261124b';
+import { createJobs } from './jobs.js?v=20261124b';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -20,18 +22,20 @@ const pad2 = (n) => String(n).padStart(2, '0');
 const fmtH = (h) => { h = ((h % 24) + 24) % 24; return `${pad2(Math.floor(h))}:${pad2(Math.floor((h % 1) * 60))}`; };
 
 // 介面 Logo：低多邊形鯉魚（橘紅魚背、米白魚腹、魚頭朝右），首頁、怎麼逛、集章完成共用這一張
-const LOGO_SRC = 'assets/brand/koi-logo.png?v=20261124a';
+const LOGO_SRC = 'assets/brand/koi-logo.png?v=20261124b';
 const MASCOT = `<img src="${LOGO_SRC}" alt="115 鯉魚市集 Logo：低多邊形小鯉魚" decoding="async">`;
 
 let C = null;            // content.json
 let W = null, L = null, CAM = null, BAL = null, K = null;   // K：島上的貓
+let WAL = null, JOBS = null;   // 線上鯉魚幣錢包、打工
 const SND = createMeowBox();
 const CR = createCatNet({
   onChange(why) {
     if (K) for (const c of K.cats) c.held = CR.busy(c.data.id);
     const cn = () => (catData(CR.myCat) || {}).name || '貓';
     if (why === 'called') { SND.unlock(); SND.chime(); toast(`🔔 叫號 ${pad(CR.myTicket)}！輪到你擼${cn()}了，請在 ${CALL} 秒內按「✋ 報到」`); $('#ticketChip').classList.remove('ring'); void $('#ticketChip').offsetWidth; $('#ticketChip').classList.add('ring'); }
-    if (why === 'missed') { toast('😢 過號了！沒有在時間內報到，可以再抽一張號碼牌。'); setCatSay('過號了……沒關係，再抽一張號碼牌就好。'); }
+    if (why === 'missed') { const r = WAL ? WAL.refund(C.economy.refund.catMissed, '擼貓過號退一半') : 0; toast(`😢 過號了！沒有在時間內報到${r ? `，退你 ${r} 枚` : ''}，可以再抽一張號碼牌。`); setCatSay('過號了……沒關係，再抽一張號碼牌就好。'); }
+    if (why === 'giveup-wait' && WAL) { const r = WAL.refund(C.economy.refund.catGiveupWait, '還沒叫號就放棄，全額退回'); if (r) toast(`↩️ 還沒輪到就放棄，${r} 枚退給你`); }
     if (why === 'turn') { toast('⏰ 時間到，換下一號擼貓囉！謝謝你的溫柔～想再擼可以再抽號。'); setCatSay('時間到囉，換下一號！想再擼可以再抽一張號碼牌。'); }
     if (why === 'idle') { toast('💤 你好一陣子沒摸貓，位置讓給下一號了。'); setCatSay('你好一陣子沒摸，位置先讓給下一號囉。'); }
     renderTicketChip();
@@ -176,6 +180,7 @@ function stamp(id) {
   S.stamps.push(id); store.set('stamps', S.stamps); renderHud();
   toast(`🏮 蓋章！${islandById(id).name}（${S.stamps.length}/6）`);
   $('#stampBtn').classList.remove('bump'); void $('#stampBtn').offsetWidth; $('#stampBtn').classList.add('bump');
+  if (S.stamps.length === 6 && WAL) { const g = WAL.bonusOnce('stamps', C.economy.bonus.stamps, '集滿六枚章'); if (g) setTimeout(() => toast(`🎁 集章獎勵 ${g} 枚${coinName()}！`), 2200); }
   if (S.stamps.length === 6 && !store.get('doneShown', false)) { store.set('doneShown', true); setTimeout(showDone, 900); }
 }
 function showDone() {
@@ -520,6 +525,11 @@ function gameHTML(st) { return st.game ? `<div class="gm-box" data-gm="${st.no}"
 let gameNo = null;
 function openGame(no) {
   const st = stallByNo(+no); if (!st || !st.game || !st.game.ready) return;
+  if (WAL && st.game.stamp !== false) {                  // 線上小遊戲每局付錢（創作小工具免費）
+    const E = C.economy, key = 'game:' + st.no, why = WAL.canPay(E.prices.game, key, E.limits.game);
+    if (why) { toast('🪙 ' + why); return; }
+    WAL.pay(E.prices.game, 'game', `玩第 ${pad2(st.no)} 攤線上遊戲`, key); toast(`🪙 付 ${E.prices.game} 枚，剩 ${WAL.bal()} 枚`);
+  }
   gameNo = st.no;
   $('#gameTitle').textContent = `第 ${pad2(st.no)} 攤・${st.game.title}`;
   $('#gameLoad').hidden = false;
@@ -564,6 +574,7 @@ function stallListHTML(id) {
   return `<ol class="stalls">${stallsOf(id).map((st) => `<li data-no="${st.no}"><button type="button" class="stall-row" id="sr-${st.no}" aria-expanded="false" aria-controls="sd-${st.no}"><span class="num" aria-hidden="true">${pad2(st.no)}</span><span class="nm ${st.namePending ? 'pending' : ''}"><span class="sr-only">攤號 ${st.no}，</span>${esc(st.name)}${st.short ? `<small class="short">｜${esc(st.short)}</small>` : ''}</span>${st.challengeEnabled ? `<span class="chk" data-chk="${st.no}">${ppDone(st.no) ? '✓ 已登記' : ''}</span>` : ''}<span class="chev" aria-hidden="true"></span></button><div class="stall-detail stall-detail-body" id="sd-${st.no}" role="region" aria-labelledby="sr-${st.no}" hidden>${stallDetailHTML(st)}</div></li>`).join('')}</ol>`;
 }
 function setStall(no, open, scroll = true) {
+  if (open && JOBS) JOBS.onStall(no);   // 打工：送貨員
   const p = $('#panel');
   for (const b of p.querySelectorAll('.stall-row')) {
     const on = open && b.id === `sr-${no}`;
@@ -733,7 +744,7 @@ function boardCheck() {
   const s = L.carp.status();
   if (!s.docked || !s.gang) return s.docked ? '鯉魚號正在靠港，等跳板放下就能上船' : `鯉魚號正在航行，約 ${s.eta} 秒後回到碼頭，靠港放下跳板才能上船`;
   if (boatRiders() >= BOAT_CAP) return `鯉魚號已經坐滿 ${BOAT_CAP} 人了，請等下一班`;
-  return '';
+  return rideCheck('boat');
 }
 let lastBlockToast = 0;
 function canBoardWalk() {
@@ -801,7 +812,7 @@ function balloonCheck() {
   if (!s.docked) return `熱氣球在天上，約 ${s.eta} 秒後降落回起降場，亮綠燈才能搭`;
   if (!BAL.doorOpen()) return '門關上了，熱氣球要起飛囉，請等下一趟';
   if (balloonRiders() >= BAL.cap) return `籃子已經有 ${BAL.cap} 個人了，請等下一趟`;
-  return '';
+  return rideCheck('balloon');
 }
 function blockToast(why) { if (performance.now() - lastBlockToast > 3000) { lastBlockToast = performance.now(); toast('⛔ ' + why); } }
 // 漫遊時走進／走出籃子的規則：停靠時才能進出，飛行中不能走出籃子
@@ -1015,6 +1026,7 @@ function openBubble(o) {
   if (o.agent) o.agent.talking = true; if (o.animal) o.animal.talking = true;
   if (o.cat) { o.cat.talking = true; S.bubble.msg = o.cat.state === 'sleep' ? `${o.cat.data.name}睡得正香……輕輕摸摸看？` : o.cat.data.lines[Math.floor(Math.random() * o.cat.data.lines.length)]; focusCat(o.cat); }
   $('#labels').classList.add('dim');
+  $('#bubble').classList.toggle('catfixed', !!o.cat); if (o.cat) $('#bubble').style.transform = '';   // 擼貓說明固定在畫面上，不跟著貓晃
   renderBubble(); $('#bubble').hidden = false;
   $('#bubble').querySelector('button')?.focus({ preventScroll: true });
 }
@@ -1054,7 +1066,7 @@ function closeBubble() {
   S.bubble = null; $('#bubble').hidden = true; $('#labels').classList.remove('dim');
 }
 function placeBubble() {
-  if (!S.bubble) return;
+  if (!S.bubble || S.bubble.o.cat) return;
   const p = headOf(S.bubble.o).project(W.camera), el = $('#bubble');
   const x = (p.x + 1) / 2 * innerWidth, y = (1 - p.y) / 2 * innerHeight;
   const w = el.offsetWidth, half = w / 2;
@@ -1076,6 +1088,7 @@ function onCanvasUp(e) {
   if (FX) { const bh = ray.intersectObjects(FX.balloons(), false)[0]; if (bh && FX.pop(bh.object)) { balloonPopped(); return; } }
   if (GM && GM.pick(ray)) return;                 // 釣魚區、躲貓貓
   if (IA && IA.pick(ray)) return;                 // 可以互動的地標（果汁杯、貼紙牆、彈珠、書櫃、合照點）
+  if (JOBS && JOBS.pick(ray)) return;             // 打工：沙灘清潔員撿垃圾
   // 漫遊時點攤位招牌或攤子：留在地面，右邊直接打開那一攤的介紹（不飛回鳥瞰）
   if (S.walking && SG) {
     const sw = ray.intersectObjects(SG.pickables.map((p) => p.obj), false)[0];
@@ -1174,7 +1187,7 @@ function openCats() {
 function focusCat(c) {
   if (!CAM || S.walking) return;
   if (S.tour) endTour(false);
-  const p = c.M.g.position, t = p.clone().setY(p.y + .55 * (c.data.scale || 1) + (isMobile() ? 2.3 : 1.8));   // 鏡頭看貓的上方，讓貓落在畫面下半部、不被對話框擋住
+  const p = c.M.g.position, t = p.clone().setY(p.y + .55 * (c.data.scale || 1) + (isMobile() ? 2.4 : .7));   // 鏡頭看貓的上方，讓貓落在畫面下半部、不被對話框擋住
   const dir = W.camera.position.clone().sub(t); dir.y = 0; if (dir.lengthSq() < .01) dir.set(0, 0, 1); dir.normalize();
   const dist = isMobile() ? 8.5 : 7.5, el = .5;
   const pos = t.clone().addScaledVector(dir, dist * Math.cos(el)); pos.y = t.y + dist * Math.sin(el);
@@ -1216,7 +1229,7 @@ function updateCatBubble() {
   let pt = '🖐 擼貓', dis = false, ring = false;
   if (st.rest) { pt = `😌 冷靜一下 ${st.rest} 秒`; dis = true; }
   else if (st.other) { pt = `🎫 你拿的是${(catData(st.other) || {}).name}的號碼`; dis = true; }
-  else if (!st.has) pt = `🎫 抽號碼牌（${pad(st.nextT)}）`;
+  else if (!st.has) pt = `🎫 抽號碼牌・${C.economy ? C.economy.prices.cat + ' 枚' : pad(st.nextT)}`;
   else if (!st.seated) { pt = `⏳ 等待叫號・前面 ${st.ahead} 位`; dis = true; }
   else if (st.called) { pt = `✋ 報到（${st.callLeft} 秒）`; ring = true; }
   else if (cool) { pt = `😾 貓在休息 ${cool}`; dis = true; }
@@ -1258,9 +1271,12 @@ function petCat(c) {
   if (st.other) { setCatSay(`你手上已經有${(catData(st.other) || {}).name}的號碼牌了。一次只能拿一張，要先放棄那張才能抽這裡的。`); return null; }
   if (!st.has) {
     if (S.taking) return null;
+    const E = C.economy, payWhy = WAL ? WAL.canPay(E.prices.cat, 'cat:' + id, E.limits.cat) : '';
+    if (payWhy) { setCatSay(`🪙 ${payWhy}`); return null; }
     S.taking = true; setCatSay('🎫 取號中……');
     CR.take(id).then(() => {
       S.taking = false; const s2 = CR.status(id); if (!s2.has) { updateCatBubble(); return; }
+      if (WAL) WAL.pay(E.prices.cat, 'cat', `擼${name}的號碼牌`, 'cat:' + id);
     if (s2.seated && s2.ok) setCatSay(`🎫 你抽到 ${pad(s2.ticket)} 號，馬上就輪到你！輕輕摸摸${name}吧。`);
     else if (s2.called) setCatSay(`🎫 你抽到 ${pad(s2.ticket)} 號，現在就輪到你了！按「✋ 報到」開始擼貓。`);
     else { setCatSay(`🎫 你抽到 ${pad(s2.ticket)} 號，前面還有 ${s2.ahead} 位。可以先去逛逛，叫號時會叮咚提醒你！`); toast(`🎫 號碼牌 ${pad(s2.ticket)}・前面 ${s2.ahead} 位`); }
@@ -1303,6 +1319,7 @@ function markPetted(d) {
   const tot = (C.cats || []).length;
   toast(`🐾 ${d.name} 收進貓咪圖鑑了！（${S.petted.length}/${tot}）`);
   $('#catBtn').classList.remove('bump'); void $('#catBtn').offsetWidth; $('#catBtn').classList.add('bump');
+  if (S.petted.length === tot && WAL) { const g = WAL.bonusOnce('cats', C.economy.bonus.cats, '六隻貓都擼過'); if (g) setTimeout(() => toast(`🎁 貓咪圖鑑完成獎勵 ${g} 枚！`), 1800); }
   if (S.petted.length === tot && !store.get('catsDone', false)) { store.set('catsDone', true); setTimeout(showCatDone, 2600); }
 }
 function showCatDone() {
@@ -1361,6 +1378,111 @@ function strokeUp(e) {
   if (s.tot < 8) petCat(s.c);                       // 點一下也算摸一下
 }
 
+// ------------------------------------------------------------------ 🪙 線上鯉魚幣：錢包、打工、請客券、老師後台
+const ONLINE = new Map();     // 在線上、有暱稱的人（請客券用）：uid → 暱稱
+const ECO = () => C.economy;
+const coinName = () => ECO().name || '線上鯉魚幣';
+function walletChanged(why) {
+  if (!WAL) return;
+  const el = $('#coinCount'); if (el) el.textContent = WAL.bal();
+  $('#coinBtn')?.classList.toggle('frozen', WAL.frozen);
+  if (why === 'admin') { renderMe(); if (NET) NET.setMe(meProfile()); }
+  if (why === 'inbox' && WAL.inbox.length && !$('#treatDlg').open) showTreat(WAL.inbox[0]);
+  if ($('#walletDlg').open && why !== 'inbox') renderWallet();
+}
+function fmtT(t) { const d = new Date(t); return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`; }
+function openWallet() { renderWallet(); openDlg('#walletDlg'); }
+function renderWallet() {
+  const E = ECO(), w = WAL.state(), P = E.prices;
+  const mode = WAL.mode === 'school' ? '' : `<p class="wl-trial">🧪 體驗錢包：還沒連上線（或老師還沒開放），錢只存在這台裝置。</p>`;
+  const jobs = JOBS ? JOBS.JOBS.map((j) => { const s = JOBS.status(j.id); return `<li class="wl-job"><span class="ic" aria-hidden="true">${j.icon}</span><div><b>${esc(j.name)}</b>・${esc(j.where)}　<span class="pay">+${j.pay}</span><br><small>${esc(j.desc)}</small>${s.ok ? '' : `<br><small class="why">${esc(s.why)}</small>`}</div><button type="button" class="btn ${s.ok ? '' : 'ghost'}" data-job="${j.id}" ${s.ok || s.doing ? '' : 'disabled'}>${s.doing ? '放棄' : '開始'}</button></li>`; }).join('') : '<li>打工需要 3D 畫面</li>';
+  const prices = [['🐾', '擼貓（抽號碼牌）', P.cat, `每隻貓每天 ${E.limits.cat} 次`], ['⛵', '坐鯉魚號', P.boat, `每天 ${E.limits.boat} 次`], ['🎈', '坐彩虹熱氣球', P.balloon, `每天 ${E.limits.balloon} 次`], ['🎮', '攤位線上小遊戲', P.game, `每款每天 ${E.limits.game} 局`]];
+  const treatWhy = WAL.canTreat();
+  const people = [...ONLINE.entries()].filter(([id]) => id !== WAL.uid);
+  $('#walletBody').innerHTML = `${mode}
+    <div class="wl-top"><div class="wl-bal"><span aria-hidden="true">🪙</span><b>${w.bal}</b><small>枚${esc(coinName())}</small></div>
+      <div class="wl-meta">今天打工 ${w.earned}／${E.dailyJob}　錢包上限 ${E.cap}<br><small>每天固定發 ${E.start} 枚，當天結束歸零，隔天重新發。${WAL.frozen ? '<b class="why">錢包被老師暫停中</b>' : ''}</small></div></div>
+    <p class="foot" style="margin:6px 0 10px">${esc(E.note)}</p>
+    <h3 class="wl-h">💼 打工賺鯉魚幣</h3><ul class="wl-jobs">${jobs}</ul>
+    <h3 class="wl-h">🧾 價目表</h3><ul class="wl-price">${prices.map(([ic, n, p, lim]) => `<li><span aria-hidden="true">${ic}</span>${esc(n)}<b>${p} 枚</b><small>${esc(lim)}</small></li>`).join('')}<li><span aria-hidden="true">🆓</span>逛島、看攤位、集章、跟居民交換<b>免費</b><small>永遠免費</small></li></ul>
+    <h3 class="wl-h">🎟️ 請客券</h3>${treatWhy ? `<p class="foot">${esc(treatWhy)}</p>` : people.length ? `<form id="treatForm" class="wl-treat"><label>請誰？<select id="treatTo">${people.map(([id, n]) => `<option value="${esc(id)}">${esc(n)}</option>`).join('')}</select></label><label>幾枚？<select id="treatAmt">${[5, 10, 15].filter((a) => a <= E.treatMax).map((a) => `<option>${a}</option>`).join('')}</select></label><button type="submit" class="btn">送出請客券</button></form><p class="foot">每天可以請 ${E.treatPerDay} 位同學，最多 ${E.treatMax} 枚。對方要按「收下」才算；對方不想要，錢會退回給你。</p>` : '<p class="foot">現在島上沒有其他有暱稱的人可以請客。</p>'}
+    <h3 class="wl-h">📒 今天的紀錄</h3><ul class="wl-log">${(w.log || []).slice(0, 15).map((x) => `<li><small>${fmtT(x.t)}</small> ${esc(x.n)}<b class="${x.a < 0 ? 'neg' : 'pos'}">${x.a > 0 ? '+' : ''}${x.a}</b></li>`).join('') || '<li>還沒有紀錄</li>'}</ul>
+    <div class="chal-btns"><button type="button" class="btn ghost" id="wlHelp">😟 有人逼我請客或給錢</button>${WAL.admin ? '<button type="button" class="btn" id="wlAdmin">🧑‍🏫 老師後台</button>' : ''}</div>
+    <p class="foot">裝置代碼：<code id="wlUid">${esc(WAL.uid || '（還沒連上線）')}</code> ${WAL.uid ? '<button type="button" class="linkish" id="wlCopy">複製</button>' : ''}<br>老師要授權你、或你要當老師時，把這個代碼給老師。</p>`;
+  $('#walletBody').querySelectorAll('[data-job]').forEach((b) => (b.onclick = () => { const id = b.dataset.job; if (JOBS.active === id) JOBS.quit(); else if (JOBS.start(id)) $('#walletDlg').close(); renderWallet(); }));
+  const tf = $('#treatForm'); if (tf) tf.onsubmit = async (e) => { e.preventDefault(); const to = $('#treatTo').value, a = +$('#treatAmt').value; const why = await WAL.sendTreat(to, ONLINE.get(to) || '同學', a); toast(why ? '🎟️ ' + why : `🎟️ 請客券送出去了：${a} 枚給 ${ONLINE.get(to)}`); renderWallet(); };
+  $('#wlHelp').onclick = () => { if (WAL.report('有人逼我請客或給錢')) toast('已經告訴老師了，老師會來幫你 💪'); else toast('現在沒有連上線，請直接找老師'); };
+  if ($('#wlAdmin')) $('#wlAdmin').onclick = () => { $('#walletDlg').close(); openAdmin(); };
+  if ($('#wlCopy')) $('#wlCopy').onclick = () => { navigator.clipboard?.writeText(WAL.uid).then(() => toast('已複製裝置代碼'), () => toast(WAL.uid)); };
+}
+// 收到請客券
+function showTreat(item) {
+  $('#treatBody').innerHTML = `<p style="margin:0 0 10px;font-size:16px;line-height:1.7"><b>${esc(item.fromName || '同學')}</b> 請你 <b>${item.a}</b> 枚${esc(coinName())}！</p>
+    <div class="chal-btns"><button type="button" class="btn" data-t="ok">🙏 收下，謝謝</button><button type="button" class="btn ghost" data-t="no">不用了，退回</button></div>
+    <p class="foot">不想要可以退回，不用不好意思。如果有人逼你、或用請客換條件，按這裡：<button type="button" class="linkish" data-t="report">告訴老師</button></p>`;
+  openDlg('#treatDlg');
+  $('#treatBody').querySelectorAll('[data-t]').forEach((b) => (b.onclick = async () => {
+    const how = b.dataset.t; $('#treatDlg').close();
+    const got = await WAL.answerTreat(item, how);
+    toast(how === 'ok' ? `🎟️ 收下 ${got} 枚，記得跟 ${item.fromName || '同學'} 說謝謝` : how === 'report' ? '已經退回，也告訴老師了' : '已經退回請客券');
+    setTimeout(() => { if (WAL.inbox.length && !$('#treatDlg').open) showTreat(WAL.inbox[0]); }, 400);
+  }));
+}
+// 老師後台：看每個人的錢包，加發、扣回、凍結；授權其他老師；看請客紀錄與求助
+let adminOff = [];
+function openAdmin() {
+  if (!WAL.admin) { toast('只有老師可以打開'); return; }
+  adminOff.forEach((f) => f && f()); adminOff = [];
+  const D = { wallets: {}, frozen: {}, admins: {}, treatLog: {}, reports: {} };
+  const draw = () => renderAdmin(D);
+  adminOff.push(WAL.watchAll((v) => { D.wallets = v; draw(); }));
+  for (const k of ['frozen', 'admins', 'treatLog', 'reports']) adminOff.push(WAL.watchPath(k, (v) => { D[k] = v; draw(); }));
+  openDlg('#adminDlg'); draw();
+}
+$('#adminDlg').addEventListener('close', () => { adminOff.forEach((f) => f && f()); adminOff = []; });
+function renderAdmin(D) {
+  const E = ECO(), today = new Date((NET ? NET.now() : Date.now())).toLocaleDateString('sv-SE', { timeZone: 'Asia/Taipei' });
+  const rows = Object.entries(D.wallets).map(([id, w]) => ({ id, ...w })).sort((a, b) => (b.day === today) - (a.day === today) || String(a.name).localeCompare(String(b.name)));
+  const reps = Object.entries(D.reports).flatMap(([id, r]) => Object.values(r || {}).map((x) => ({ id, ...x }))).sort((a, b) => (b.t || 0) - (a.t || 0)).slice(0, 20);
+  const tl = Object.values(D.treatLog).sort((a, b) => (b.t || 0) - (a.t || 0)).slice(0, 20);
+  const stName = { sent: '待收下', ok: '已收下', no: '退回', report: '退回並告訴老師' };
+  const keep = document.activeElement && document.activeElement.id;
+  $('#adminBody').innerHTML = `<p class="foot" style="margin:0 0 8px">共 ${rows.length} 個錢包（今天有開的排前面）。「帳」不平代表錢包數字跟紀錄對不上，可能被改過。</p>
+    ${reps.length ? `<h3 class="wl-h">😟 求助（${reps.length}）</h3><ul class="wl-log">${reps.map((r) => `<li><small>${r.t ? fmtT(r.t) : ''}</small> <b>${esc(r.name || '（沒暱稱）')}</b>：${esc(r.n)}</li>`).join('')}</ul>` : ''}
+    <div class="ad-wrap"><table class="ad-tbl"><thead><tr><th>暱稱</th><th>餘額</th><th>今天打工</th><th>帳</th><th>操作</th></tr></thead><tbody>
+    ${rows.map((w) => { const ok = (w.inT || 0) - (w.outT || 0) === w.bal; const fz = !!D.frozen[w.id]; const old = w.day !== today; return `<tr class="${old ? 'old' : ''}"><td>${esc(w.name || '（沒暱稱）')}${D.admins[w.id] ? ' 🧑‍🏫' : ''}${fz ? ' ⛔' : ''}<br><small>${old ? `上次 ${esc(w.day || '')}` : esc(w.role || '')}</small></td><td><b>${old ? '—' : w.bal}</b></td><td>${old ? '—' : `${w.earned || 0}/${E.dailyJob}`}</td><td>${old ? '' : ok ? '✓' : '<b class="why">不平</b>'}</td>
+      <td class="ad-act"><button type="button" data-a="+10" data-u="${esc(w.id)}">+10</button><button type="button" data-a="-10" data-u="${esc(w.id)}">−10</button><button type="button" data-a="custom" data-u="${esc(w.id)}">…</button><button type="button" data-a="${fz ? 'unfreeze' : 'freeze'}" data-u="${esc(w.id)}">${fz ? '解凍' : '凍結'}</button>${D.admins[w.id] ? (w.id !== WAL.uid ? `<button type="button" data-a="unadmin" data-u="${esc(w.id)}">取消老師</button>` : '') : `<button type="button" data-a="admin" data-u="${esc(w.id)}">設為老師</button>`}</td></tr>`; }).join('') || '<tr><td colspan="5">還沒有人開錢包</td></tr>'}
+    </tbody></table></div>
+    <h3 class="wl-h">🧑‍🏫 用裝置代碼授權老師</h3><form id="adForm" class="wl-treat"><input id="adUid" class="pp-in" placeholder="貼上對方錢包裡的裝置代碼" autocomplete="off"><button class="btn" type="submit">授權</button></form>
+    <h3 class="wl-h">🎟️ 請客紀錄</h3><ul class="wl-log">${tl.map((x) => `<li><small>${x.t ? fmtT(x.t) : ''}</small> ${esc(x.fromName || '?')} → ${esc(x.toName || '?')}　${x.a} 枚・${esc(stName[x.st] || x.st || '')}</li>`).join('') || '<li>還沒有</li>'}</ul>`;
+  $('#adminBody').querySelectorAll('[data-a]').forEach((b) => (b.onclick = async () => {
+    const a = b.dataset.a, u = b.dataset.u, nm = (D.wallets[u] || {}).name || '這位';
+    try {
+      if (a === '+10' || a === '-10') { await WAL.grant(u, +a, a === '+10' ? '表現很棒' : '老師調整'); toast(`已${a === '+10' ? '加發' : '扣回'} 10 枚給 ${nm}`); }
+      else if (a === 'custom') { const v = prompt(`給 ${nm} 加發（正數）或扣回（負數）幾枚？`, '5'); if (v == null || !Number.isFinite(+v) || +v === 0) return; const why = prompt('原因（會讓學生看到）', '') || ''; await WAL.grant(u, Math.round(+v), why); toast('已送出'); }
+      else if (a === 'freeze' || a === 'unfreeze') { await WAL.freeze(u, a === 'freeze'); toast(a === 'freeze' ? `已凍結 ${nm} 的錢包` : `已解凍 ${nm} 的錢包`); }
+      else if (a === 'admin') { if (confirm(`確定把 ${nm} 設為老師？老師可以替所有人加錢、扣錢、凍結。`)) { await WAL.addAdmin(u); toast(`${nm} 現在是老師了`); } }
+      else if (a === 'unadmin') { await WAL.removeAdmin(u); toast(`已取消 ${nm} 的老師身分`); }
+    } catch (e) { toast('沒有成功：請確認 Firebase 規則已更新'); }
+  }));
+  $('#adForm').onsubmit = async (e) => { e.preventDefault(); const u = $('#adUid').value.trim(); if (!/^[A-Za-z0-9_-]{10,64}$/.test(u)) { toast('裝置代碼格式不對'); return; } try { await WAL.addAdmin(u); toast('已授權為老師'); $('#adUid').value = ''; } catch (err) { toast('沒有成功：請確認 Firebase 規則已更新'); } };
+  if (keep && $('#' + keep)) $('#' + keep).focus();
+}
+// 坐船、坐熱氣球：上去的那一刻付錢（同一趟只付一次）
+const RIDE = { boat: false, balloon: false };
+function rideCheck(kind) {
+  if (!WAL || RIDE[kind]) return '';
+  const E = ECO(); return WAL.canPay(E.prices[kind], kind, E.limits[kind]);
+}
+function rideTick() {
+  if (!WAL || !W) return;
+  const onBoat = S.walking && W.onBoat && W.onBoat(CAM.walk.pos.x, CAM.walk.pos.z), inBal = S.walking && BAL && BAL.inBasket(CAM.walk.pos);
+  for (const [kind, on, label] of [['boat', onBoat, '坐鯉魚號'], ['balloon', inBal, '坐彩虹熱氣球']]) {
+    if (on && !RIDE[kind]) { RIDE[kind] = true; const E = ECO(); const why = WAL.pay(E.prices[kind], kind, label, kind); if (!why) toast(`🪙 ${label}，付 ${E.prices[kind]} 枚（剩 ${WAL.bal()}）`); }
+    if (!on && RIDE[kind]) RIDE[kind] = false;
+  }
+}
+$('#coinBtn').addEventListener('click', () => { if (WAL) openWallet(); });
 let TOUR = ['center', 'food', 'craft', 'puzzle', 'recycle', 'sport'];   // 開機後依 content.json 的島嶼順序重設
 const DWELL = () => (S.reduced ? 8000 : 5000);
 function startTour() {
@@ -1383,9 +1505,9 @@ function stepTour(now) {
   const T = S.tour; if (!T || T.flying) return;
   const dt = now - T.last; T.last = now; if (T.paused) return;
   T.left -= dt; $('#tourBar').style.width = `${Math.min(100, (1 - T.left / DWELL()) * 100)}%`;
-  if (T.left <= 0) { if (T.i === TOUR.length - 1) endTour(true); else goStation(T.i + 1); }
+  if (T.left <= 0) { if (T.i === TOUR.length - 1) { S.tourNatural = true; endTour(true); } else goStation(T.i + 1); }
 }
-function endTour(goHome) { if (!S.tour) return; S.tour = null; $('#tour').hidden = true; $('#tourBtn').classList.remove('on'); if (goHome) CAM.home(); }
+function endTour(goHome) { if (!S.tour) return; const nat = !!S.tourNatural; S.tourNatural = false; if (JOBS) setTimeout(() => JOBS.onTourEnd(nat)); S.tour = null; $('#tour').hidden = true; $('#tourBtn').classList.remove('on'); if (goHome) CAM.home(); }
 $('#tourBtn').addEventListener('click', () => (S.tour ? endTour(true) : startTour()));
 $('#tourPrev').addEventListener('click', () => goStation(S.tour.i - 1));
 $('#tourNext').addEventListener('click', () => { if (S.tour.i === TOUR.length - 1) endTour(true); else goStation(S.tour.i + 1); });
@@ -1454,7 +1576,7 @@ function nameProblem(n) {
   if (BAD_WORDS.some((w) => low.includes(w))) return '這個暱稱不太適合，換一個吧';
   return '';
 }
-const meProfile = () => store.get('me', null);
+const meProfile = () => { const p = store.get('me', null); return p && p.role === 'teacher' && !(WAL && WAL.admin) ? { ...p, role: 'visitor' } : p; };   // 只有老師名單上的帳號能當老師，其他人都是參觀者
 function renderMe() {
   const p = meProfile(), R = p && ROLES[p.role];
   $('#meName').textContent = p ? p.name : '加入';
@@ -1472,7 +1594,7 @@ function openMe() {
     <label for="meNick" class="pp-lab">暱稱（最多 10 個字）</label>
     <input id="meNick" class="pp-in" type="text" maxlength="12" autocomplete="nickname" placeholder="例如：小鯉魚" value="${esc(p.name || (pass ? pass.name : ''))}" required>
     <p class="pp-err" id="meErr" role="alert" hidden></p>
-    <fieldset class="me-set"><legend class="pp-lab">身分</legend><div class="me-roles">${Object.entries(ROLES).map(([k, r]) => `<label class="me-role" style="--rc:${r.color}"><input type="radio" name="role" value="${k}" ${k === role ? 'checked' : ''}><span>${r.icon} ${r.label}</span></label>`).join('')}</div></fieldset>
+    <fieldset class="me-set"><legend class="pp-lab">身分</legend><div class="me-roles">${Object.entries(ROLES).filter(([k]) => k !== 'teacher' || (WAL && WAL.admin)).map(([k, r]) => `<label class="me-role" style="--rc:${r.color}"><input type="radio" name="role" value="${k}" ${k === role ? 'checked' : ''}><span>${r.icon} ${r.label}</span></label>`).join('')}</div></fieldset>
     <fieldset class="me-set"><legend class="pp-lab">衣服顏色</legend><div class="me-colors">${OUTFITS.map((c, i) => `<label class="me-color" style="--c:${c}"><input type="radio" name="shirt" value="${c}" ${c === shirt ? 'checked' : ''} aria-label="顏色 ${i + 1}"><span></span></label>`).join('')}</div></fieldset>
     <fieldset class="me-set"><legend class="pp-lab">帽子（每頂都有小鯉魚 Logo）</legend><div class="me-roles me-hats">${Object.entries(HATS).map(([k, h]) => `<label class="me-role" style="--rc:#e8762b"><input type="radio" name="hat" value="${k}" ${k === (p.hat || 'none') ? 'checked' : ''}><span>${h.icon} ${h.label}</span></label>`).join('')}</div></fieldset>
     <div class="chal-btns"><button type="submit" class="btn">${p.name ? '儲存' : '加入市集'}</button>${p.name ? '<button type="button" class="btn ghost" id="meLeave">離開市集</button>' : ''}</div>
@@ -1483,7 +1605,7 @@ function openMe() {
     const name = cleanName($('#meNick').value), bad = nameProblem(name);
     if (bad) { const er = $('#meErr'); er.textContent = bad; er.hidden = false; $('#meNick').focus(); return; }
     const f = new FormData(e.target);
-    const next = { id: p.id || `u${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`, name, role: f.get('role') || 'student', shirt: f.get('shirt') || shirt, hat: f.get('hat') || 'none', joinedAt: p.joinedAt || new Date().toISOString() };
+    const next = { id: p.id || `u${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`, name, role: (f.get('role') === 'teacher' && !(WAL && WAL.admin) ? 'visitor' : f.get('role')) || 'student', shirt: f.get('shirt') || shirt, hat: f.get('hat') || 'none', joinedAt: p.joinedAt || new Date().toISOString() };
     store.set('me', next); $('#meDlg').close(); renderMe();
     toast(p.name ? '已更新你的名牌' : `👋 歡迎 ${name}！按「🚶 漫遊」就能帶著自己的人物逛島`);
   };
@@ -1624,15 +1746,17 @@ function balloonPopped() {
 }
 function startNet() {
   const M = C.multiplayer; if (!M || !M.enabled || !M.firebase || !PL) return;
-  import('./net.js?v=20261124a').then(({ createNet }) => {
+  import('./net.js?v=20261124b').then(({ createNet }) => {
     NET = createNet(M.firebase, {
-      myPos: () => PL.myPos(), upsert: (id, info, pos) => PL.upsert(id, info, pos), remove: (id) => PL.remove(id),
+      myPos: () => PL.myPos(), upsert: (id, info, pos) => { ONLINE.set(id, String(info.name || '').slice(0, 16)); PL.upsert(id, info, pos); }, remove: (id) => { ONLINE.delete(id); PL.remove(id); },
       onCount: (c) => { COUNT = c; const el = $('#onlineChip'); el.hidden = false; $('#onlineCount').textContent = c.players; el.setAttribute('aria-label', `市集島上 ${c.players} 人，開著網站 ${c.viewers} 人，點一下看各身分人數`); },
       onStatus: (s, msg) => { $('#onlineChip').classList.toggle('off', s !== 'online'); if (s === 'error') console.warn('連線錯誤', msg); },
     });
     NET.setMe(meProfile());
     CR.attach(NET, meProfile);   // 擼貓號碼牌改用多人連線
-    import('./hidemp.js?v=20261124a').then(({ createHideMP }) => {
+    if (WAL) WAL.attach(NET, meProfile);   // 線上鯉魚幣錢包
+    if (JOBS) JOBS.attach(NET);
+    import('./hidemp.js?v=20261124b').then(({ createHideMP }) => {
       HM = createHideMP(NET, {
         toast, profile: meProfile, enterWalk: () => { if (!S.walking) enterWalk(); },
         walkPos: () => (S.walking ? CAM.walk.pos : null), posOf: (id) => PL.posOf(id),
@@ -1753,7 +1877,8 @@ function webglOK() { try { const c = document.createElement('canvas'); return !!
 async function boot() {
   $('#brandMascot').innerHTML = MASCOT;
   C = await fetch('data/content.json', { cache: 'no-cache' }).then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); });
-  TOUR = ['center', ...C.islands.map((i) => i.id)]; PP.data = ppRead();   // 讀護照時順便完成名冊改版轉換
+  TOUR = ['center', ...C.islands.map((i) => i.id)]; PP.data = ppRead();
+  if (C.economy) { WAL = createWallet({ cfg: C.economy, toast, onChange: walletChanged }); $('#coinBtn').hidden = false; walletChanged(); }   // 讀護照時順便完成名冊改版轉換
   buildSettings(); renderHud();
   if (route().errs.length) { console.warn('路線設定錯誤', route().errs); setTimeout(() => toast(`⚠ 路線設定錯誤 ${route().errs.length} 項：${route().errs[0]}（詳見護照頁）`), 1200); }
   S.autoStart = performance.now();
@@ -1762,13 +1887,13 @@ async function boot() {
   if (Q.has('nogl') || !webglOK()) { textOnly(Q.has('nogl') ? '已切換為文字清單版' : '這台裝置無法顯示 3D 畫面'); applyTheme(); updateClock(); setInterval(updateClock, 10000); window.__ready = true; return; }
   let mods;
   try {
-    mods = await Promise.all([import('./world.js?v=20261124a'), import('./life.js?v=20261124a'), import('./cam.js?v=20261124a'), import('./players.js?v=20261124a'), import('./signs.js?v=20261124a'), import('./festival.js?v=20261124a'), import('./fauna.js?v=20261124a'), import('./interact.js?v=20261124a'), import('./games.js?v=20261124a')]);
+    mods = await Promise.all([import('./world.js?v=20261124b'), import('./life.js?v=20261124b'), import('./cam.js?v=20261124b'), import('./players.js?v=20261124b'), import('./signs.js?v=20261124b'), import('./festival.js?v=20261124b'), import('./fauna.js?v=20261124b'), import('./interact.js?v=20261124b'), import('./games.js?v=20261124b')]);
     const [{ createWorld, H: GROUND_H }, { createLife, makePerson }, { createCam }, { createPlayers }, { createSigns }, { createFestival }, { createFauna }, { createInteract }, { createGames, FISH }] = mods;
     const mobile = isLite();   // 手機和平板都用輕量版場景
     W = createWorld($('#gl'), { quality: S.quality, mobile });
     W.renderer.setPixelRatio(Math.min(devicePixelRatio, S.quality === 'low' ? 1 : (mobile ? 1.5 : 2)));
     L = createLife(W, C, { halfPeople: mobile || S.quality === 'low', quality: S.quality });
-    try { const { createCats } = await import('./cats.js?v=20261124a'); K = createCats(W, C, { reduced: () => S.reduced }); } catch (e) { console.warn('島上的貓載入失敗', e); K = null; }
+    try { const { createCats } = await import('./cats.js?v=20261124b'); K = createCats(W, C, { reduced: () => S.reduced }); } catch (e) { console.warn('島上的貓載入失敗', e); K = null; }
     CAM = createCam(W, $('#gl'), { onZoom: showZoom, onIntro: (k) => { L.setDeck(k < .3 ? 1 : Math.max(0, 1 - (k - .3) / .25)); if (k > .55) $('.intro-title').classList.add('show'); } });
     CAM.S.reduced = S.reduced; CAM.S.mobile = isMobile();
     PL = createPlayers(W, GROUND_H); renderMe(); startNet();
@@ -1777,13 +1902,13 @@ async function boot() {
     W.canLeave = () => { const s = L.carp.status(); if (s.docked && s.gang) return true; if (performance.now() - lastBlockToast > 3000) { lastBlockToast = performance.now(); toast('⛔ 航行中請待在船上，靠港放下跳板後再下船'); } return false; };
     // 彩虹熱氣球：起降場在服務台北側廣場；用網路時間排班，大家看到同一顆
     try {
-      const { createBalloon } = await import('./balloon.js?v=20261124a');
+      const { createBalloon } = await import('./balloon.js?v=20261124b');
       BAL = createBalloon(W, { pad: { x: 1, z: -5 }, now: () => (NET ? NET.now() : Date.now()), low: mobile || S.quality === 'low' });
       W.balloon = BAL; W.gates = [balloonGate];
     } catch (e) { console.warn('熱氣球載入失敗', e); BAL = null; }
-    KIT = await import('./kit.js?v=20261124a');
-    SG = createSigns(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261124a')).rng, low: mobile || S.quality === 'low' });
-    FX = createFestival(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261124a')).rng, low: mobile || S.quality === 'low', avoid: [...(BAL ? BAL.avoid : []), ...SG.signs.map((s) => s.g.position), ...Object.values(W.islands).flatMap((I) => (I.trees || []).filter((tr) => tr.visible).map((tr) => tr.position.clone().add(I.pos)))], carp: L.carp });
+    KIT = await import('./kit.js?v=20261124b');
+    SG = createSigns(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261124b')).rng, low: mobile || S.quality === 'low' });
+    FX = createFestival(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261124b')).rng, low: mobile || S.quality === 'low', avoid: [...(BAL ? BAL.avoid : []), ...SG.signs.map((s) => s.g.position), ...Object.values(W.islands).flatMap((I) => (I.trees || []).filter((tr) => tr.visible).map((tr) => tr.position.clone().add(I.pos)))], carp: L.carp });
     // 貓住在自己島上最空曠的地方，不被攤位和裝飾擋住
     if (K) K.setHomes((id) => {
       const I = W.islands[id]; if (!I || !I.walk) return null;
@@ -1797,7 +1922,7 @@ async function boot() {
       }
       return best;
     });
-    FA = createFauna(W, { H: GROUND_H, rng: (await import('./kit.js?v=20261124a')).rng });
+    FA = createFauna(W, { H: GROUND_H, rng: (await import('./kit.js?v=20261124b')).rng });
     IA = createInteract(W, C, GROUND_H, {
       toast, carp: L.carp,
       toastIf: (m) => { if (!S.intro) toast(m); },
@@ -1818,6 +1943,15 @@ async function boot() {
       reward: (k, n) => { S.bag[k] = (S.bag[k] || 0) + n; saveBag(); },
       openFishLog, openRules, openHideMenu,
     });
+    if (WAL) JOBS = createJobs({
+      C, W, K, wallet: WAL, toast, esc, THREE, onChange: () => walletChanged(),
+      islandName: (id) => (islandById(id) || {}).name || id,
+      openIsland: (id) => { if (S.walking && !exitWalk(true)) return; openIsland(id); },
+      startTour: () => startTour(),
+      flyTo: (p) => { if (S.walking) exitWalk(true); closePanel(false); const t = p.clone().setY(p.y + 1); const d = W.camera.position.clone().sub(t).setY(0).normalize(); CAM.flight({ t, p: t.clone().addScaledVector(d, 14).setY(t.y + 9) }, 1200, 2); },
+      catFace, catPurr: (c) => { if (K) K.remote(c, 'purr', SND); },
+    });
+    if (JOBS && NET) JOBS.attach(NET);
   } catch (err) { console.warn(err); textOnly('3D 畫面載入失敗'); window.__ready = true; return; }
   if (S.quality === 'low') setQuality('low');
   buildTags();
@@ -1876,6 +2010,7 @@ async function boot() {
     W.setHour(S.hourShown); applyTheme();
     if ((clkN = (clkN + 1) % 30) === 0) updateClock();
     if (BAL) BAL.update(t, dt, moving);
+    rideTick();
     CAM.update(dt);
     W.update(t, moving);
     L.update(t, dt, moving, W.state.n, W.camera);
@@ -1910,7 +2045,7 @@ async function boot() {
     if (shadowOff.length && Math.abs(S.hourShown - shadowHour) > .1) { shadowHour = S.hourShown; W.renderer.shadowMap.needsUpdate = true; }
   }
   requestAnimationFrame(frame);
-  window.__isle = { W, L, CAM, S, THREE, get K() { return K; }, CR, SND, get PL() { return PL; }, get NET() { return NET; }, get SG() { return SG; }, get FX() { return FX; }, get FA() { return FA; }, get IA() { return IA; }, get GM() { return GM; }, get BAL() { return BAL; } };   // 給自動測試讀取狀態用
+  window.__isle = { W, L, CAM, S, THREE, get K() { return K; }, CR, SND, get WAL() { return WAL; }, get JOBS() { return JOBS; }, get PL() { return PL; }, get NET() { return NET; }, get SG() { return SG; }, get FX() { return FX; }, get FA() { return FA; }, get IA() { return IA; }, get GM() { return GM; }, get BAL() { return BAL; } };   // 給自動測試讀取狀態用
   await playIntro(false);
   const deep = Q.get('island') || location.hash.slice(1), lk = Q.get('stall') ? resolveStallLink(Q.get('stall'), Q.get('roster')) : null, dst = lk && lk.st;
   if (lk && lk.msg && dst) S.legacyNote = { no: dst.no, msg: lk.msg };   // 舊攤號連結：說明寫在攤位卡上（蓋章提示不會蓋掉它）
