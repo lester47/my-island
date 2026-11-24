@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261124g">
+<link rel="stylesheet" href="styles.css?v=20261124h">
 <script type="importmap">{"imports":{"three":"./vendor/three/three.module.js","three/addons/":"./vendor/three/addons/"}}</script>
 </head>
 <body>
@@ -80,6 +80,13 @@
   <button type="button" class="hchip" id="catBtn" aria-label="貓咪圖鑑"><span aria-hidden="true">🐾</span><b id="catCount">0/6</b></button>
 </div>
 <button type="button" class="ticket" id="ticketChip" hidden></button>
+<div class="photobar" id="photoBar" role="toolbar" aria-label="合照視角" hidden>
+  <button type="button" data-view="far">🏞️ 遠景</button>
+  <button type="button" data-view="mid">🌳 中景</button>
+  <button type="button" data-view="near">🧍 近景</button>
+  <button type="button" class="share" data-photo-share>📤 分享卡片</button>
+  <button type="button" class="x" data-photo-close aria-label="關閉合照視角">✕</button>
+</div>
 <div class="jobbar" id="jobBar" role="status" aria-live="polite" hidden></div>
 <p class="layout-note">示意配置，非實際場地比例</p>
 <div class="notice-bar" id="noticeBar" role="status" hidden><span aria-hidden="true">📢</span><span class="nt"></span><small class="nw"></small><button type="button" class="nx" aria-label="關閉公告">✕</button></div>
@@ -209,6 +216,6 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <noscript><p class="noscript">這個網站需要開啟 JavaScript。</p></noscript>
-<script type="module" src="js/main.js?v=20261124g"></script>
+<script type="module" src="js/main.js?v=20261124h"></script>
 </body>
 </html>

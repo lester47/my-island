@@ -645,3 +645,12 @@ html[data-theme="deep"] .job-msg { background: #23402a; color: #bff0c6; } html[d
 .help-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
 .help-list li { display: flex; gap: 8px; line-height: 1.6; }
 .help-list .sn { flex: none; min-width: 34px; color: var(--muted); font-weight: 900; font-variant-numeric: tabular-nums; }
+
+/* 📸 合照點：遠景／中景／近景切換列 */
+.photobar { position: fixed; z-index: 22; left: 50%; bottom: 82px; transform: translateX(-50%); display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; width: max-content; max-width: calc(100vw - 24px); background: var(--surface); border-radius: 18px; box-shadow: var(--shadow); padding: 8px; border: 2px solid #e8762b; }
+.photobar[hidden] { display: none; }
+.photobar button { min-height: 40px; padding: 0 12px; border: 0; border-radius: 12px; background: #fff1e4; color: #7a3d00; font-weight: 900; font-size: 14px; cursor: pointer; }
+.photobar button.on { background: #e8762b; color: #fff; }
+.photobar .share { background: #e7f6ec; color: #1d6b3a; }
+.photobar .x { min-width: 40px; padding: 0; background: #f1f1f1; color: #555; }
+@media (max-width: 480px) { .photobar { bottom: 192px; gap: 3px; padding: 5px; flex-wrap: nowrap; } .photobar button { padding: 0 7px; font-size: 12.5px; min-height: 38px; white-space: nowrap; } .photobar .x { min-width: 32px; } }
