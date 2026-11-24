@@ -3,8 +3,8 @@
 // 大俯衝、海面波浪段，再依序飛過循環挖寶島、手作體驗二島、美食補給島、手作體驗一島，回到車站。
 // 時程用「網路時間」排班（所有裝置看到同一班車）：停站 25 秒 → 跑一圈 → 回站。
 import * as THREE from 'three';
-import { TAU, clamp } from './kit.js?v=20261124u';
-import { H } from './world.js?v=20261124u';
+import { TAU, clamp } from './kit.js?v=20261124v';
+import { H } from './world.js?v=20261124v';
 
 export const COASTER_CAP = 8;                 // 4 節車廂 × 每節 2 人
 const DOCK = 25;                              // 停站秒數
@@ -141,49 +141,118 @@ export function createCoaster(W, opts) {
   posts.forEach((q, k) => { const h = q.y1 - q.y0; pm.setMatrixAt(k, M4.compose(V1.set(q.x, q.y0 + h / 2, q.z), Q.identity(), new THREE.Vector3(1, h, 1))); });
   pm.castShadow = !low; root.add(pm);
 
-  // ------------------------------------------------ 🕳️ 鯉魚嘴山洞：美食補給島和手作體驗一島之間，貼著海面那段鑽進一座海上岩山
+  const fishWaving = [];
+  // ------------------------------------------------ 🐟 鯉魚山洞：美食補給島和手作體驗一島之間，貼著海面那段鑽進一條「大鯉魚」的身體
+  //   魚身（紅白錦鯉：白底、紅斑、頭頂紅冠、魚鱗、鰓線、背鰭、胸鰭、腹鰭、尾鰭）整條包住軌道：火車從張開的嘴巴進去、從尾鰭中間出來
+  //   只有魚肚子下面的支撐（岩石底座、石柱）用別的材料
   const caveC = polar(mid(a.food, a.craft, .55), 32.5, 3.4);
   let caveS = 0, cbest = 1e9; for (let i = 0; i <= N; i++) { const d = P[i].distanceToSquared(caveC); if (d < cbest) { cbest = d; caveS = i / N * L; } }
   const CAVE0 = caveS - 6, CAVE1 = caveS + 6;
   {
+    const fish = new THREE.Group(); root.add(fish);
+    const LEN = CAVE1 - CAVE0, RING = 26, STEP = .3;
+    const sm = (x) => x * x * (3 - 2 * x);
+    const prof = (t) => (t < .1 ? .82 + sm(t / .1) * .2 : t < .4 ? 1.02 + sm((t - .1) / .3) * .38 : t < .62 ? 1.4 - sm((t - .4) / .22) * .2 : 1.2 - sm((t - .62) / .38) * .62);   // 魚身粗細：圓鈍的頭→中段圓滾滾最胖→往尾巴收成細細的尾柄
+    const tall = (t) => 1 + .12 * Math.sin(Math.PI * Math.min(1, Math.max(0, (t - .1) / .6)));   // 中段的背和肚子再高一點（錦鯉是圓胖的身體）
+    const WX = 2.0, HY = 2.25, CY = .95;                         // 半寬、半高、中心比軌道高多少（軌道在魚肚子下半部）
+    const WHITE = new THREE.Color('#fff8f0'), RED = new THREE.Color('#e8401c'), RED2 = new THREE.Color('#ff6a2a'), GILL = new THREE.Color('#f0c9b8');
+    const red = (t, ang) => {                                    // 紅斑：頭頂紅冠＋背上幾塊不規則的紅斑（肚子保持白色）
+      const top = Math.cos(ang);                                 // 1＝背、-1＝肚子
+      if (t < .14 && top > .35) return RED;
+      if (top < -.1) return null;
+      const n = Math.sin(t * 15 + ang * 2.2) + Math.sin(t * 7.3 - ang * 3.1 + 1.7) + top * .6;
+      return n > 1.05 ? (n > 1.6 ? RED : RED2) : null;
+    };
+    const frame = (s0) => { const sp = sample(s0); return { ...sp, up: new THREE.Vector3().crossVectors(sp.t, sp.r) }; };
+    const ringPt = (fr, f, ang, k = 1, ht = 1) => fr.p.clone().addScaledVector(fr.r, Math.sin(ang) * WX * f * k).addScaledVector(fr.up, CY * f + Math.cos(ang) * HY * f * k * ht);
+    // 魚皮（外面）和肚子裡（裡面）：沿著軌道一圈一圈的環
+    const outPos = [], outCol = [], inPos = [], idx = [];
+    const rings = Math.round(LEN / STEP);
+    for (let i = 0; i <= rings; i++) {
+      const t = i / rings, fr = frame(CAVE0 + t * LEN), f = prof(t);
+      for (let j = 0; j < RING; j++) {
+        const ang = j / RING * TAU;
+        const ht = tall(t);
+        const po = ringPt(fr, f, ang, 1, ht); outPos.push(po.x, po.y, po.z);   // 魚皮表面平順（不做一圈一圈的起伏，才不會像毛毛蟲）
+        const pi = ringPt(fr, f, ang, .9, ht); inPos.push(pi.x, pi.y, pi.z);
+        const gill = Math.abs(t - .2) < .018 && Math.cos(ang) > -.6;     // 鰓線
+        const c = gill ? GILL : (red(t, ang) || WHITE);
+        const shade = .95 + .05 * (((i + (j >> 1)) % 3) === 0 ? 1 : 0);   // 魚鱗：淡淡的斜紋
+        outCol.push(c.r * shade, c.g * shade, c.b * shade);
+      }
+    }
+    for (let i = 0; i < rings; i++) for (let j = 0; j < RING; j++) { const a0 = i * RING + j, a1 = i * RING + (j + 1) % RING, b0 = a0 + RING, b1 = a1 + RING; idx.push(a0, b0, a1, a1, b0, b1); }
+    const mk = (pos, col, mat) => { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); if (col) g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); g.setIndex(idx); g.computeVertexNormals(); const m = new THREE.Mesh(g, mat); m.castShadow = !low; m.receiveShadow = true; fish.add(m); return m; };
+    mk(outPos, outCol, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .55, flatShading: true, side: THREE.FrontSide }));
+    mk(inPos, null, new THREE.MeshStandardMaterial({ color: '#b5654a', emissive: '#5a2414', emissiveIntensity: .5, roughness: .9, flatShading: true, side: THREE.BackSide }));   // 肚子裡：暖暖的紅色
+    // 肚子裡的小燈：兩邊輪流
+    for (let s0 = CAVE0 + 1; s0 < CAVE1 - .5; s0 += 1.4) {
+      const fr = frame(s0), sd = Math.round(s0 / 1.4) % 2 ? 1 : -1;
+      const lm = new THREE.Mesh(new THREE.SphereGeometry(.13, 8, 6), new THREE.MeshStandardMaterial({ color: '#fff1b0', emissive: '#ffcc55', emissiveIntensity: 3 }));
+      lm.position.copy(fr.p).addScaledVector(fr.r, sd * 1.25).addScaledVector(fr.up, 1.5); fish.add(lm);
+    }
+    const orange = new THREE.MeshStandardMaterial({ color: '#ff6a2a', roughness: .55, flatShading: true, side: THREE.DoubleSide });
+    const finM = new THREE.MeshStandardMaterial({ color: '#ffa36b', roughness: .5, flatShading: true, side: THREE.DoubleSide, transparent: true, opacity: .9 });   // 魚鰭：半透明的橘色
+    const finEdge = new THREE.MeshStandardMaterial({ color: '#fff3e6', roughness: .5, side: THREE.DoubleSide });
+    const waving = fishWaving;                                   // 會擺動的鰭
+    const white = new THREE.MeshStandardMaterial({ color: '#fff7ee', roughness: .6, flatShading: true });
+    const black = new THREE.MeshStandardMaterial({ color: '#141414', roughness: .3 });
+    const finShape = (pts) => { const sh = new THREE.Shape(); sh.moveTo(pts[0][0], pts[0][1]); for (const q of pts.slice(1)) sh.lineTo(q[0], q[1]); return new THREE.ShapeGeometry(sh); };
+    const place = (geo, mat, fr, dx, dy, ry = 0, rz = 0, rx = 0) => { const m = new THREE.Mesh(geo, mat); m.position.copy(fr.p).addScaledVector(fr.r, dx).addScaledVector(fr.up, dy); m.quaternion.setFromRotationMatrix(basis(fr.t, fr.r)); m.rotateY(ry); m.rotateZ(rz); m.rotateX(rx); m.castShadow = !low; fish.add(m); return m; };
+    // 嘴巴：張開的圓嘴唇（火車從這裡鑽進去），兩對鬍鬚
+    const f0 = frame(CAVE0), fm = prof(0);
+    const lip = new THREE.Mesh(new THREE.TorusGeometry(WX * fm * .92, .32, 8, 22), orange); lip.position.copy(f0.p).addScaledVector(f0.up, CY * fm); lip.quaternion.setFromRotationMatrix(basis(f0.t, f0.r)); lip.scale.set(1, HY / WX, 1); fish.add(lip);
+    for (const sd of [-1, 1]) for (const [dy, len, tilt] of [[-.2, 1.6, .5], [.35, 1.1, .2]]) {
+      const wh = new THREE.Mesh(new THREE.CylinderGeometry(.07, .025, len, 6), orange);
+      wh.position.copy(f0.p).addScaledVector(f0.r, sd * (WX * fm * .95)).addScaledVector(f0.up, CY * fm + dy).addScaledVector(f0.t, -len * .35);
+      wh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), f0.t.clone().multiplyScalar(-1).addScaledVector(f0.r, sd * .6).addScaledVector(f0.up, -tilt).normalize()); fish.add(wh);
+    }
+    // 眼睛：頭的兩側
+    const fe = frame(CAVE0 + LEN * .07), fE = prof(.07);
+    for (const sd of [-1, 1]) {
+      const e = new THREE.Mesh(new THREE.SphereGeometry(.42, 14, 10), white); e.position.copy(fe.p).addScaledVector(fe.r, sd * WX * fE * .92).addScaledVector(fe.up, CY * fE + HY * fE * .38); fish.add(e);
+      const pu = new THREE.Mesh(new THREE.SphereGeometry(.25, 12, 8), black); pu.position.copy(e.position).addScaledVector(fe.r, sd * .26).addScaledVector(fe.t, -.06); fish.add(pu);
+      const hl = new THREE.Mesh(new THREE.SphereGeometry(.07, 8, 6), white); hl.position.copy(pu.position).addScaledVector(fe.r, sd * .2).addScaledVector(fe.up, .1); fish.add(hl);
+    }
+    // 背鰭：從背上長出來，一長條
+    { const L0 = LEN * .32, L1 = LEN * .72, fr = frame(CAVE0 + (L0 + L1) / 2), f = prof(.52), half = (L1 - L0) / 2;
+      const g = finShape([[-half, 0], [-half * .6, 2.1], [half * .1, 1.8], [half, .3], [half, 0]]);
+      place(g, finM, fr, 0, CY * f + HY * f * .95, -Math.PI / 2);
+      for (let k = 0; k < 5; k++) { const x0 = -half * .8 + k * half * .38; const ray = finShape([[x0, 0], [x0 + .12, 0], [x0 - half * .18 + .1, 1.85 - k * .25], [x0 - half * .18, 1.85 - k * .25]]); const m = place(ray, orange, fr, 0, CY * f + HY * f * .95, -Math.PI / 2); m.translateZ(.012); }   // 鰭上的紋路
+    }
+    // 胸鰭（頭後面兩側）、腹鰭（肚子兩側）：斜斜往後張開
+    for (const [tt, sz, dy, spread] of [[.2, 2.3, -.5, .9], [.55, 1.5, -.9, .7]]) for (const sd of [-1, 1]) {
+      const fr = frame(CAVE0 + LEN * tt), f = prof(tt);
+      const g = finShape([[0, 0], [-sz * .15, sz], [-sz, sz * .8], [-sz * .75, .1]]);
+      const m = place(g, finM, fr, sd * WX * f * .96, CY * f + HY * f * dy, sd > 0 ? 0 : Math.PI, 0, 0);
+      m.rotateX(sd * spread); m.rotateY(sd * .4); waving.push({ m, base: m.quaternion.clone(), axis: 'x', amp: .18 * sd, sp: 2.2, ph: tt * 3 });
+    }
+    // 尾鰭：直立的燕尾，上下兩片，火車從中間出來
+    { const fr = frame(CAVE1 - .3), f = prof(1);
+      const tail = new THREE.Group(); tail.position.copy(fr.p).addScaledVector(fr.up, CY * f); tail.quaternion.setFromRotationMatrix(basis(fr.t, fr.r)); tail.rotateY(-Math.PI / 2); fish.add(tail);
+      const lobe = (sgn, y0) => {
+        const g = finShape([[0, 0], [1.4, sgn * 1.2], [3.0, sgn * 3.0], [3.4, sgn * 2.6], [2.2, sgn * .9], [1.0, 0]]);
+        const m = new THREE.Mesh(g, finM); m.position.y = y0; m.castShadow = !low; tail.add(m);
+        for (let k = 0; k < 4; k++) { const r0 = .5 + k * .45; const ray = finShape([[r0, 0], [r0 + .14, 0], [r0 + 1.6 + k * .3, sgn * (2.2 + k * .2)], [r0 + 1.45 + k * .3, sgn * (2.25 + k * .2)]]); const rm = new THREE.Mesh(ray, k % 2 ? orange : finEdge); rm.position.set(0, y0, .012); tail.add(rm); }
+      };
+      lobe(1, HY * f * .5); lobe(-1, -HY * f * .62);
+      waving.push({ m: tail, base: tail.quaternion.clone(), axis: 'y', amp: .16, sp: 1.6, ph: 0 });
+    }
+    // 下半部的支撐：魚肚子底下的岩石底座＋兩根石柱（從海裡撐上來）
     const rockM = new THREE.MeshStandardMaterial({ color: '#7d6e63', roughness: .95, flatShading: true });
     const rock2 = new THREE.MeshStandardMaterial({ color: '#94857a', roughness: .95, flatShading: true });
-    const darkM = new THREE.MeshStandardMaterial({ color: '#6b5a4c', emissive: '#3a2a1c', emissiveIntensity: .55, roughness: 1, side: THREE.DoubleSide, flatShading: true });   // 洞裡：暗暗的暖色岩壁，看得到
-    const cave = new THREE.Group(); root.add(cave);
-    const B = new THREE.BoxGeometry(1, 1, 1), ICO = new THREE.IcosahedronGeometry(1, 0), PL = new THREE.PlaneGeometry(1, 1);
-    let seed = 7; const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
-    for (let s0 = CAVE0; s0 <= CAVE1; s0 += .7) {
-      const sp = sample(s0), up = new THREE.Vector3().crossVectors(sp.t, sp.r), q = new THREE.Quaternion().setFromRotationMatrix(basis(sp.t, sp.r));
-      const y = sp.p.y;
-      for (const sd of [-1, 1]) {                                     // 兩側岩壁：一路到海面
-        const w = new THREE.Mesh(B, rockM); w.position.copy(sp.p).addScaledVector(sp.r, sd * 1.45).setY((y + 2.3) / 2 - .1); w.scale.set(.6, y + 2.5, .8); w.quaternion.copy(q); w.castShadow = !low; cave.add(w);
-        if (!low && rnd() < .7) { const l = new THREE.Mesh(ICO, rnd() < .5 ? rockM : rock2); l.position.copy(sp.p).addScaledVector(sp.r, sd * (2.0 + rnd() * .5)).setY(y - .5 + rnd() * 2.6); l.scale.setScalar(.6 + rnd() * .7); l.rotation.set(rnd() * 3, rnd() * 3, 0); cave.add(l); }
-      }
-      const roof = new THREE.Mesh(B, rockM); roof.position.copy(sp.p).addScaledVector(up, 2.35); roof.scale.set(3.5, .7, .8); roof.quaternion.copy(q); roof.castShadow = !low; cave.add(roof);
-      const top = new THREE.Mesh(ICO, rock2); top.position.copy(sp.p).addScaledVector(up, 2.9 + rnd() * .5).addScaledVector(sp.r, (rnd() - .5) * 1.6); top.scale.set(1.1 + rnd() * .6, .6 + rnd() * .5, 1 + rnd() * .5); top.rotation.set(rnd(), rnd() * 3, 0); cave.add(top);
-      // 洞裡的岩壁和洞頂：只有兩側和上面（前後是開的，火車才看得到前面）
-      for (const sd of [-1, 1]) { const w = new THREE.Mesh(PL, darkM); w.position.copy(sp.p).addScaledVector(sp.r, sd * 1.12).addScaledVector(up, .85); w.quaternion.copy(q); w.rotateY(Math.PI / 2); w.scale.set(.8, 2.5, 1); cave.add(w); }
-      const ce = new THREE.Mesh(PL, darkM); ce.position.copy(sp.p).addScaledVector(up, 2.0); ce.quaternion.copy(q); ce.rotateX(Math.PI / 2); ce.scale.set(2.3, .8, 1); cave.add(ce);
-      if (Math.round(s0 / .7) % 2 === 0) {                           // 洞裡的小燈：兩邊輪流，一盞一盞往後閃過去
-        const sd = Math.round(s0 / .7) % 4 === 0 ? 1 : -1;
-        const lm = new THREE.Mesh(new THREE.SphereGeometry(.14, 8, 6), new THREE.MeshStandardMaterial({ color: '#fff1b0', emissive: '#ffcc55', emissiveIntensity: 3 }));
-        lm.position.copy(sp.p).addScaledVector(sp.r, sd * 1.05).addScaledVector(up, 1.5); cave.add(lm);
-      }
+    const ICO = new THREE.IcosahedronGeometry(1, 0);
+    let seed = 11; const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+    for (let k = 0; k < (low ? 7 : 14); k++) {
+      const tt = .08 + k / (low ? 7 : 14) * .84, fr = frame(CAVE0 + LEN * tt), f = prof(tt);
+      const belly = fr.p.y + CY * f - HY * f;
+      const r0 = new THREE.Mesh(ICO, rnd() < .5 ? rockM : rock2);
+      r0.position.copy(fr.p).addScaledVector(fr.r, (rnd() - .5) * 1.6).setY(Math.max(.2, belly * .45)); r0.scale.set(1.2 + rnd() * .6, Math.max(.8, belly * .55), 1 + rnd() * .5); r0.rotation.set(rnd(), rnd() * 3, 0); r0.castShadow = !low; fish.add(r0);
     }
-    // 入口：大鯉魚的嘴巴（橘紅色唇＋眼睛＋鬍鬚），火車從嘴巴鑽進去
-    const e = sample(CAVE0 - .2), eu = new THREE.Vector3().crossVectors(e.t, e.r), eq = new THREE.Quaternion().setFromRotationMatrix(basis(e.t, e.r));
-    const head = new THREE.Group(); head.position.copy(e.p).addScaledVector(eu, .9); head.quaternion.copy(eq); head.rotateY(Math.PI); cave.add(head);   // 臉朝向開過來的火車
-    const orange = new THREE.MeshStandardMaterial({ color: '#ff6a2a', roughness: .6, flatShading: true }), white = new THREE.MeshStandardMaterial({ color: '#fff7ee', roughness: .6, flatShading: true });
-    const lip = new THREE.Mesh(new THREE.TorusGeometry(1.75, .42, 8, 20), orange); head.add(lip);
-    const crown = new THREE.Mesh(new THREE.SphereGeometry(2.4, 14, 10, 0, TAU, 0, Math.PI / 2), white); crown.position.set(0, .6, -.7); crown.scale.set(1, .9, .6); head.add(crown);
-    const spot = new THREE.Mesh(new THREE.SphereGeometry(1.1, 10, 8), orange); spot.position.set(-.7, 2.2, -.3); spot.scale.set(1, .45, .7); head.add(spot);
-    for (const sd of [-1, 1]) {
-      const eye = new THREE.Mesh(new THREE.SphereGeometry(.42, 12, 8), white); eye.position.set(sd * 1.5, 2.05, .2); head.add(eye);
-      const pup = new THREE.Mesh(new THREE.SphereGeometry(.24, 10, 8), new THREE.MeshStandardMaterial({ color: '#111' })); pup.position.set(sd * 1.55, 2.08, .52); head.add(pup);
-      const wh = new THREE.Mesh(new THREE.CylinderGeometry(.06, .03, 2.2, 5), orange); wh.position.set(sd * 2.1, -.9, .5); wh.rotation.set(.5, 0, sd * .9); head.add(wh);
-    }
-    if (low) head.traverse((o) => { if (o.isMesh) o.castShadow = false; });
+    for (const tt of [.3, .7]) { const fr = frame(CAVE0 + LEN * tt), f = prof(tt), belly = fr.p.y + CY * f - HY * f;
+      const col = new THREE.Mesh(new THREE.CylinderGeometry(.35, .5, belly + .3, 8), rock2); col.position.copy(fr.p).setY((belly - .3) / 2); col.castShadow = !low; fish.add(col); }
   }
+  const fishWave = (t) => { for (const w of fishWaving) { w.m.quaternion.copy(w.base); if (w.axis === 'x') w.m.rotateX(Math.sin(t * w.sp + w.ph) * w.amp); else w.m.rotateY(Math.sin(t * w.sp + w.ph) * w.amp); } };
   const inCave = (s0) => s0 > CAVE0 && s0 < CAVE1;
 
   // ------------------------------------------------ 📸 俯衝照：大俯衝最陡的地方旁邊有一台照相機，車子衝下來時喀擦一張
@@ -267,6 +336,7 @@ export function createCoaster(W, opts) {
   }
   placeCars();
   function update() {
+    fishWave(performance.now() / 1000);
     lastS = cur.s;
     cur = timeline(now() / 1000);
     placeCars();
