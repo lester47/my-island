@@ -712,3 +712,10 @@ html[data-theme="deep"] .job-msg { background: #23402a; color: #bff0c6; } html[d
 
 /* 🎢 雲霄飛車：下車按鈕 */
 .walk-bike.coa { background: #c23a1c; }
+
+/* 📸 雲霄飛車俯衝照 */
+.coa-photo { display: block; width: 100%; height: auto; border-radius: 12px; box-shadow: var(--shadow); margin: 0 0 12px; }
+.cam-flash { position: fixed; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 60; }
+.cam-flash.go { animation: camFlash .5s ease-out; }
+@keyframes camFlash { 0% { opacity: .85; } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .cam-flash.go { animation: none; } }
