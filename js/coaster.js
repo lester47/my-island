@@ -3,8 +3,8 @@
 // 大俯衝、海面波浪段，再依序飛過循環挖寶島、手作體驗二島、美食補給島、手作體驗一島，回到車站。
 // 時程用「網路時間」排班（所有裝置看到同一班車）：停站 25 秒 → 跑一圈 → 回站。
 import * as THREE from 'three';
-import { TAU, clamp } from './kit.js?v=20261124y';
-import { H } from './world.js?v=20261124y';
+import { TAU, clamp } from './kit.js?v=20261124z';
+import { H } from './world.js?v=20261124z';
 
 export const COASTER_CAP = 8;                 // 4 節車廂 × 每節 2 人
 const DOCK = 25;                              // 停站秒數
@@ -525,7 +525,7 @@ export function createCoaster(W, opts) {
 
   // ------------------------------------------------ 列車：4 節彩色車廂，第一節是鯉魚頭
   const carCols = ['#e4532c', '#f0b429', '#2f7fd1', '#3e9b4f'];
-  const cars = [];
+  const cars = [], carBeams = [], CAR_BEAM = low ? 5 : 7;
   for (let k = 0; k < CARS; k++) {
     const g = new THREE.Group(); root.add(g);
     const bm = new THREE.MeshStandardMaterial({ color: carCols[k], roughness: .5, metalness: .15, flatShading: true });
@@ -549,6 +549,16 @@ export function createCoaster(W, opts) {
     if (k === 0) {
       const hl = new THREE.Mesh(new THREE.SphereGeometry(.12, 10, 8), night(new THREE.MeshStandardMaterial({ color: '#fffbe6' }), 3.5, '#fff3b0')); hl.position.set(0, .3, 1.5); g.add(hl);
       g.traverse((o) => { if (o.isMesh && o.material && o.material.color && o.material.color.getHexString() === 'ffffff' && !NIGHT.find((n) => n.m === o.material)) night(o.material, .5, '#ffe6d0'); });
+    }
+    // 🔦 車廂裡往外打的投射光：每節車廂四個角落各一道光柱，往外上方斜斜射出、左右掃動、顏色慢慢換
+    const cabin = new THREE.Mesh(new THREE.BoxGeometry(.84, .04, 1.2), night(new THREE.MeshStandardMaterial({ color: '#fff6dc' }), 2.6, '#ffe8b0')); cabin.position.y = .345; g.add(cabin);   // 車廂地板發亮
+    for (const [x, z, ph] of [[-.38, .52, 0], [.38, .52, 1.7], [-.38, -.48, 3.1], [.38, -.48, 4.6]]) {
+      const pv = new THREE.Group(); pv.position.set(x, .42, z); g.add(pv);
+      const lamp = new THREE.Mesh(new THREE.CylinderGeometry(.06, .08, .1, 8), night(new THREE.MeshStandardMaterial({ color: '#ffffff' }), 4, '#ffffff')); pv.add(lamp);
+      const geo = new THREE.CylinderGeometry(.75, .05, CAR_BEAM, 14, 1, true); geo.translate(0, CAR_BEAM / 2, 0);
+      const beam = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: carCols[k], transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false }));
+      beam.visible = false; beam.renderOrder = 3; pv.add(beam);
+      carBeams.push({ pv, beam, sx: Math.sign(x), sz: Math.sign(z), ph: ph + k * .9 });
     }
     cars.push(g);
   }
@@ -577,11 +587,17 @@ export function createCoaster(W, opts) {
       nightN = n;
       for (const e of NIGHT) e.m.emissiveIntensity = (e.min || 0) + (e.max - (e.min || 0)) * n;
       for (const b of beams) b.m.visible = n > .05;
+      for (const b of carBeams) b.beam.visible = n > .05;
       chase.visible = n > .12;
     }
     if (n > .05) {
       const tt = performance.now() / 1000;
       for (const b of beams) { b.m.material.opacity = .22 * n; b.m.material.color.setHSL(((tt * .05 + b.ph * .1) % 1), .9, .62); }
+      for (const b of carBeams) {   // 往外、往上斜射，左右掃動
+        const sw = Math.sin(tt * 1.3 + b.ph);
+        b.pv.rotation.set(b.sz * (.35 + .25 * Math.sin(tt * .9 + b.ph * 2)), 0, -b.sx * (.55 + .3 * sw));
+        b.beam.material.opacity = .2 * n; b.beam.material.color.setHSL(((tt * .12 + b.ph * .13) % 1), .95, .6);
+      }
       if (fishSkin) { washC.setHSL((tt * .05) % 1, .9, .62); fishSkin.emissive.copy(WHITE_C).lerp(washC, .45); }   // 魚身跟著投射燈的顏色慢慢變
       if (chase.visible && tt - chaseT > .08) {
         chaseT = tt;

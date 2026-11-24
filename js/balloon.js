@@ -1,17 +1,34 @@
-// 彩虹熱氣球：停在服務台北側廣場的起降場，像鯉魚號一樣可以搭乘——
+// 彩虹熱氣球：停在服務台島西南邊海上的圓形起降坪（木棧道走過去，像直升機停機坪），像鯉魚號一樣可以搭乘——
 // 停靠時從籃子前面的門走進去，時間到就升空，繞五座島飛一圈再降落回起降場。
 // 時程用「網路時間」排班（所有裝置看到的熱氣球都在同一個位置），一起搭的人會在同一個籃子裡。
 import * as THREE from 'three';
-import { TAU, clamp, batchStatic } from './kit.js?v=20261124y';
-import { H } from './world.js?v=20261124y';
+import { TAU, clamp, batchStatic } from './kit.js?v=20261124z';
+import { H } from './world.js?v=20261124z';
 
 export const BALLOON_CAP = 4;                    // 籃子最多 4 位登入者
 const DOCK = 30, ASC = 10, DESC = 12, ALT = 13, SPEED = 3.2;   // 停靠秒數、升空、降落、飛行高度、巡航速度
+const PAD_R = 2.7, WK_W = 1.8;                 // 停機坪半徑、木棧道寬
 const IN = .6, FLOOR = .1, HALF = .82;           // 籃子內可走範圍（半寬）、地板高度、籃子外框半寬
 
 export function createBalloon(W, opts) {
   const { scene } = W, now = opts.now || (() => Date.now());
-  const pad = new THREE.Vector3(opts.pad.x, H, opts.pad.z), top = pad.clone().setY(H + ALT);
+  // 起降坪位置：opts.pier = { island, angle(度) } → 從島邊往外拉一條棧道到海上的圓坪；沒有 pier 就用 opts.pad 放在島上
+  let pad, pier = null, dir = new THREE.Vector3(0, 0, 1);
+  if (opts.pier) {
+    const I = W.islands[opts.pier.island || 'center'], ang = opts.pier.angle * Math.PI / 180, edge = I.top(ang);
+    dir = new THREE.Vector3(Math.cos(ang), 0, Math.sin(ang));
+    const a = I.pos.clone().addScaledVector(dir, edge - 1.1).setY(H);
+    pad = I.pos.clone().addScaledVector(dir, edge + (opts.pier.out ?? 2.2) + PAD_R + .55).setY(H);
+    pier = { a, len: a.distanceTo(pad) - PAD_R - .3 };
+    // 漫遊時可以走：圓坪＋棧道
+    const PRw = PAD_R + .45, L = pier.len + .4;
+    W.surfaces.push((x, z) => {
+      if (Math.hypot(x - pad.x, z - pad.z) < PRw) return H;
+      const dx = x - a.x, dz = z - a.z, u = dx * dir.x + dz * dir.z, v = -dx * dir.z + dz * dir.x;
+      return u > -.2 && u < L && Math.abs(v) < WK_W / 2 - .12 ? H : null;
+    });
+  } else pad = new THREE.Vector3(opts.pad.x, H, opts.pad.z);
+  const top = pad.clone().setY(H + ALT);
 
   // ------------------------------------------------ 航線：從起降場上空往外飛到湖面上，繞五座島一圈，再回到起降場上空
   const a0 = Math.atan2(pad.z, pad.x), RAD = 23;
@@ -26,6 +43,7 @@ export function createBalloon(W, opts) {
   const m = (c, o = {}) => new THREE.MeshStandardMaterial({ color: c, roughness: .8, flatShading: true, ...o });
   const box = (p, mat, w, h, d, x, y, z) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); o.position.set(x, y, z); o.castShadow = true; o.receiveShadow = true; p.add(o); return o; };
   const g = new THREE.Group(); g.position.copy(pad); scene.add(g);
+  const YAW = opts.pier ? Math.atan2(-dir.x, -dir.z) : 0; g.rotation.y = YAW;   // 籃子的門（+z）朝著棧道
   const wick = m('#b8803f'), trim = m('#6b4423'), rope = m('#5a3a1a');
   // 籃子：地板＋四面矮牆（前面 +z 留一個門），牆頂到腰，站在裡面往下看得到島
   box(g, trim, HALF * 2, .12, HALF * 2, 0, .04, 0);
@@ -56,21 +74,66 @@ export function createBalloon(W, opts) {
   }
   const skirt = new THREE.Mesh(new THREE.CylinderGeometry(1.15, .5, .7, 12, 1, true), m('#ffd23a', { side: THREE.DoubleSide })); skirt.position.y = 2.45 - 5.0 + 0.05; env.add(skirt);
   box(env, m('#ffffff'), .5, .14, .5, 0, 2.62, 0);   // 頂部的白色排氣蓋
-  // 起降場：圓形木台＋外圈黃色描邊＋燈號（綠：可以上；黃：快出發；紅：飛行中）
+  // 起降坪：從島邊拉出一條木棧道，盡頭是一個圓形平台（像直升機停機坪）：
+  //   深色圓坪＋黃色外圈＋白色內圈＋中間一顆大大的熱氣球記號，邊緣一圈小燈，平台四周有欄杆（棧道那邊留開口）
   const padG = new THREE.Group(); padG.position.copy(pad); scene.add(padG);
-  const ringM = new THREE.Mesh(new THREE.CylinderGeometry(1.75, 1.8, .05, 24), m('#e3a33b')); ringM.position.y = .02; ringM.receiveShadow = true; padG.add(ringM);
-  const disc = new THREE.Mesh(new THREE.CylinderGeometry(1.55, 1.55, .06, 24), m('#efe6cf')); disc.position.y = .035; disc.receiveShadow = true; padG.add(disc);
-  for (let i = 0; i < 4; i++) { const a = i / 4 * TAU + TAU / 8; box(padG, m('#c9b48a'), .5, .02, .08, Math.cos(a) * 1.2, .07, Math.sin(a) * 1.2).rotation.y = -a; }
-  const post = new THREE.Mesh(new THREE.CylinderGeometry(.05, .06, 1.3, 6), trim); post.position.set(1.55, .65, 1.25); post.castShadow = true; padG.add(post);
+  const wood = m('#a07448'), woodD = m('#6e4b2c');
+  if (pier) {
+    const PR = PAD_R + .55;
+    const deck = new THREE.Mesh(new THREE.CylinderGeometry(PR, PR, .3, 40), wood); deck.position.y = -.15; deck.receiveShadow = true; deck.castShadow = true; padG.add(deck);
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(PR, .07, 6, 48), woodD); rim.rotation.x = Math.PI / 2; rim.position.y = -.02; padG.add(rim);
+    for (let i = 0; i < 8; i++) { const a = i / 8 * TAU; const c = new THREE.Mesh(new THREE.CylinderGeometry(.13, .15, 3, 7), woodD); c.position.set(Math.cos(a) * (PR - .35), -1.6, Math.sin(a) * (PR - .35)); padG.add(c); }
+    // 欄杆：圓坪外圈，朝島的方向留 2 公尺開口
+    const back = Math.atan2(-dir.z, -dir.x), rail = m('#f2efe6');
+    for (let i = 0; i < 28; i++) {
+      const a = i / 28 * TAU, da = Math.atan2(Math.sin(a - back), Math.cos(a - back)); if (Math.abs(da) < .42) continue;
+      const c = new THREE.Mesh(new THREE.CylinderGeometry(.04, .04, .7, 5), rail); c.position.set(Math.cos(a) * (PR - .08), .35, Math.sin(a) * (PR - .08)); padG.add(c);
+      const a2 = a + TAU / 28, da2 = Math.atan2(Math.sin(a2 - back), Math.cos(a2 - back)); if (Math.abs(da2) < .42) continue;
+      const seg = new THREE.Mesh(new THREE.BoxGeometry(.05, .05, 2 * (PR - .08) * Math.sin(TAU / 56) + .02), rail); const am = a + TAU / 56;
+      seg.position.set(Math.cos(am) * (PR - .08) * Math.cos(TAU / 56), .7, Math.sin(am) * (PR - .08) * Math.cos(TAU / 56)); seg.rotation.y = -am; padG.add(seg);
+    }
+    // 木棧道：從島邊（踩在島上 1 公尺）到圓坪
+    const L = pier.len, wk = new THREE.Group(); wk.position.copy(pier.a); wk.rotation.y = Math.atan2(dir.x, dir.z); scene.add(wk);
+    const plank = new THREE.Mesh(new THREE.BoxGeometry(WK_W, .2, L), wood); plank.position.set(0, -.1, L / 2); plank.receiveShadow = true; plank.castShadow = true; wk.add(plank);
+    for (let k = 0; k < Math.floor(L / .5); k++) box(wk, woodD, WK_W + .02, .02, .05, 0, .005, k * .5 + .25);
+    for (let k = 1; k < L / 1.6; k++) for (const sx of [-1, 1]) { const c = new THREE.Mesh(new THREE.CylinderGeometry(.09, .1, 3, 6), woodD); c.position.set(sx * (WK_W / 2 - .1), -1.5, k * 1.6); wk.add(c); }
+    for (const sx of [-1, 1]) { box(wk, rail, .06, .06, L - 1.2, sx * (WK_W / 2 - .05), .7, (L - 1.2) / 2 + 1.2); for (let z = 1.2; z <= L + .01; z += .9) box(wk, rail, .05, .7, .05, sx * (WK_W / 2 - .05), .35, z); }
+    batchStatic(wk, []);
+  }
+  // 停機坪的地面圖案（canvas）
+  const padTex = (() => {
+    const c = document.createElement('canvas'); c.width = c.height = 512; const x = c.getContext('2d'), C2 = 256;
+    x.fillStyle = '#3d4a55'; x.beginPath(); x.arc(C2, C2, 256, 0, TAU); x.fill();
+    x.strokeStyle = '#ffcc33'; x.lineWidth = 26; x.beginPath(); x.arc(C2, C2, 236, 0, TAU); x.stroke();
+    x.setLineDash([30, 22]); x.strokeStyle = '#ffffff'; x.lineWidth = 8; x.beginPath(); x.arc(C2, C2, 205, 0, TAU); x.stroke(); x.setLineDash([]);
+    x.strokeStyle = '#ffffff'; x.lineWidth = 16; x.beginPath(); x.arc(C2, C2, 165, 0, TAU); x.stroke();
+    // 中間的熱氣球記號：球皮＋繩子＋籃子
+    x.fillStyle = '#ffffff'; x.beginPath(); x.ellipse(C2, C2 - 28, 74, 84, 0, 0, TAU); x.fill();
+    x.beginPath(); x.moveTo(C2 - 62, C2 + 10); x.lineTo(C2 - 26, C2 + 80); x.lineTo(C2 + 26, C2 + 80); x.lineTo(C2 + 62, C2 + 10); x.fill();
+    x.fillRect(C2 - 26, C2 + 92, 52, 38);
+    x.strokeStyle = '#ffffff'; x.lineWidth = 6; x.beginPath(); x.moveTo(C2 - 24, C2 + 80); x.lineTo(C2 - 22, C2 + 94); x.moveTo(C2 + 24, C2 + 80); x.lineTo(C2 + 22, C2 + 94); x.stroke();
+    x.fillStyle = '#ff5a6e'; x.beginPath(); x.ellipse(C2, C2 - 28, 22, 84, 0, 0, TAU); x.fill();
+    const t = new THREE.CanvasTexture(c); t.anisotropy = 4; t.colorSpace = THREE.SRGBColorSpace; return t;
+  })();
+  const disc = new THREE.Mesh(new THREE.CircleGeometry(PAD_R, 48), new THREE.MeshStandardMaterial({ map: padTex, roughness: .85 }));
+  disc.rotation.x = -Math.PI / 2; disc.rotation.z = Math.atan2(dir.x, dir.z) + Math.PI; disc.position.y = .03; disc.receiveShadow = true; padG.add(disc);
+  // 邊緣一圈小燈（晚上會亮，main 每一格依天黑程度調亮度）
+  const edgeLampM = new THREE.MeshStandardMaterial({ color: '#fff3c4', emissive: '#ffcc33', emissiveIntensity: .2 });
+  const edgeL = new THREE.InstancedMesh(new THREE.SphereGeometry(.07, 8, 6), edgeLampM, 20);
+  { const M = new THREE.Matrix4(); for (let i = 0; i < 20; i++) { const a = i / 20 * TAU; edgeL.setMatrixAt(i, M.makeTranslation(Math.cos(a) * (PAD_R + .12), .07, Math.sin(a) * (PAD_R + .12))); } }
+  padG.add(edgeL);
+  // 燈號柱：放在棧道口右手邊
+  const sideV = new THREE.Vector3(dir.z, 0, -dir.x), postP = dir.clone().multiplyScalar(-(PAD_R - .1)).addScaledVector(sideV, 1.0);
+  const post = new THREE.Mesh(new THREE.CylinderGeometry(.05, .06, 1.3, 6), trim); post.position.set(postP.x, .65, postP.z); post.castShadow = true; padG.add(post);
   const lampMat = new THREE.MeshStandardMaterial({ color: '#4caf50', emissive: '#2e9e3a', emissiveIntensity: 1.2 });
-  const lamp = new THREE.Mesh(new THREE.SphereGeometry(.14, 10, 8), lampMat); lamp.position.set(1.55, 1.38, 1.25); padG.add(lamp);
+  const lamp = new THREE.Mesh(new THREE.SphereGeometry(.14, 10, 8), lampMat); lamp.position.set(postP.x, 1.38, postP.z); padG.add(lamp);
   // 籃子的門：停靠時往外打開，起飛前關上（鉸鏈在門口左邊）
   const door = new THREE.Group(); door.position.set(-doorW / 2, 0, HALF); g.add(door);
   box(door, wick, doorW - .04, WH - .04, WT, doorW / 2, wy, 0);
   box(door, trim, doorW - .04, .07, .12, doorW / 2, .1 + WH - .02, 0);
   box(door, trim, .07, WH - .1, .1, doorW - .08, wy, .02);   // 門把那一側的框
   const DOOR_OPEN = -1.75; door.rotation.y = DOOR_OPEN;
-  batchStatic(g, [flame, env, door]); batchStatic(door, []); batchStatic(env, []); batchStatic(padG, [lamp]);
+  batchStatic(g, [flame, env, door]); batchStatic(door, []); batchStatic(env, []); batchStatic(padG, [lamp, edgeL]);
   if (opts.low) for (const c of env.children) c.castShadow = false;
 
   // ------------------------------------------------ 時程
@@ -106,7 +169,7 @@ export function createBalloon(W, opts) {
   }
 
   // ------------------------------------------------ 給漫遊用：籃子地板、是否在籃子裡
-  function floorAt(x, z, p = g.position) { return Math.abs(x - p.x) < IN && Math.abs(z - p.z) < IN ? p.y + FLOOR : null; }
+  function floorAt(x, z, p = g.position) { return Math.hypot(x - p.x, z - p.z) < IN * 1.1 ? p.y + FLOOR : null; }
   function inBasket(v, p = g.position) { const f = floorAt(v.x, v.z, p); return f != null && Math.abs(v.y - f) < .9; }
   const docked = () => cur.phase === 'dock';
   const doorOpen = () => cur.phase === 'dock' && cur.left > 2;   // 門開著才能進出籃子
@@ -126,9 +189,10 @@ export function createBalloon(W, opts) {
     g, pad, floorAt, inBasket, riderSpot, docked, cap: BALLOON_CAP, door, doorOpen,
     anchor: () => g.position,
     // 站進籃子：面向外側（湖和群島那一邊）
-    boardSpot: () => ({ pos: new THREE.Vector3(g.position.x, g.position.y + FLOOR, g.position.z - .1), yaw: Math.PI }),
+    boardSpot: () => ({ pos: new THREE.Vector3(g.position.x + dir.x * .1, g.position.y + FLOOR, g.position.z + dir.z * .1), yaw: Math.atan2(dir.x, dir.z) }),
     // 下了熱氣球（或飛行中離開漫遊）放回起降場門口
-    landSpot: () => ({ x: pad.x, y: H, z: pad.z + 2.1 }),
+    landSpot: () => ({ x: pad.x - dir.x * 2.1, y: H, z: pad.z - dir.z * 2.1 }),
+    dir, edgeLampM,
     avoid: [pad, pad.clone().add(new THREE.Vector3(1.6, 0, 0)), pad.clone().add(new THREE.Vector3(-1.6, 0, 0)), pad.clone().add(new THREE.Vector3(0, 0, 1.6)), pad.clone().add(new THREE.Vector3(0, 0, -1.6))],
     status: () => ({ phase: cur.phase, docked: docked(), left: Math.ceil(cur.left), eta: Math.ceil(cur.eta), cycle: Math.round(CYCLE) }),
     update,
