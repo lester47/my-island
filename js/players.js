@@ -1,8 +1,9 @@
 // 登入者：自己的人物＋頭上名牌；之後接上連線服務時，其他人也用同一套顯示（upsert / remove）
 import * as THREE from 'three';
-import { rng } from './kit.js?v=20261124k';
-import { makePerson } from './life.js?v=20261124k';
-import { ROLES, HATS } from './roles.js?v=20261124k';
+import { rng } from './kit.js?v=20261124l';
+import { makePerson } from './life.js?v=20261124l';
+import { ROLES, HATS } from './roles.js?v=20261124l';
+import { makeBike, poseRider, BIKE_LIFT } from './bike.js?v=20261124l';
 const SPAWN = { x: 0, z: 7.4, yaw: Math.PI };
 
 const seedOf = (s) => { let h = 2166136261; for (const c of String(s)) h = Math.imul(h ^ c.codePointAt(0), 16777619); return h >>> 0; };
@@ -11,7 +12,7 @@ const escH = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '
 // 登入者上衣胸前的小鯉魚 Logo（和網站左上角同一張圖）
 let LOGO_MAT = null;
 function withLogo(P) {
-  if (!LOGO_MAT) { const tx = new THREE.TextureLoader().load('assets/brand/koi-logo.png?v=20261124k'); tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 4; LOGO_MAT = new THREE.MeshStandardMaterial({ map: tx, transparent: true, alphaTest: .4, roughness: .8, polygonOffset: true, polygonOffsetFactor: -2 }); }
+  if (!LOGO_MAT) { const tx = new THREE.TextureLoader().load('assets/brand/koi-logo.png?v=20261124l'); tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 4; LOGO_MAT = new THREE.MeshStandardMaterial({ map: tx, transparent: true, alphaTest: .4, roughness: .8, polygonOffset: true, polygonOffsetFactor: -2 }); }
   const m = new THREE.Mesh(new THREE.PlaneGeometry(.17, .17), LOGO_MAT);
   m.position.set(0, .76, .232); m.rotation.x = -.1;          // 上衣是上窄下寬的圓柱，貼片稍微往後仰才貼合
   P.g.add(m); P.logo = m; return P;
@@ -59,6 +60,15 @@ export function createPlayers(W, H) {
     p.tag.innerHTML = `<span class="r">${R.icon} ${R.label}</span><b>${escH(info.name)}</b>${p.id === meId ? '<i>我</i>' : ''}${p.badge ? `<em class="bd">${escH(p.badge)}</em>` : ''}`;
   }
   function remove(id) { const p = all.get(id); if (!p) return; scene.remove(p.P.g); p.tag.remove(); all.delete(id); }
+  // 🚲 騎腳踏車：車子掛在人物身上（換衣服重建人物時重新掛上）
+  function setRide(id, color) {
+    const p = all.get(id); if (!p) return;
+    const want = color || null;
+    if ((p.ride && p.ride.color) === want && (!p.ride || p.ride.B.g.parent === p.P.g)) return;
+    if (p.ride) { p.ride.B.g.parent && p.ride.B.g.parent.remove(p.ride.B.g); p.ride = null; }
+    if (want) { const B = makeBike(want); B.g.position.y = -BIKE_LIFT; p.P.g.add(B.g); p.ride = { color: want, B }; }
+  }
+  const riding = (id) => { const p = all.get(id); return !!(p && p.ride); };
 
   // 自己
   function setMe(profile) {
@@ -130,7 +140,14 @@ export function createPlayers(W, H) {
       p.P.g.position.copy(p.pos); if (crouch) p.P.g.position.y = gy; if (sit) p.P.g.position.y -= SIT_DROP; p.P.g.rotation.y = duckSit ? W.duck.yaw() : p.yaw;   // 坐在鴨子船上：面向船頭
       if (p.baseS == null) p.baseS = p.P.g.scale.y;
       p.P.g.scale.y += ((crouch ? p.baseS * .66 : p.baseS) - p.P.g.scale.y) * Math.min(1, dt * 12);   // 蹲下：身體縮矮
-      pose(p.P, t + p.phase, p.moving > 0 && !sit, sit, duckSit && W.duck.pedaling());
+      if (p.ride && p.ride.B.g.parent !== p.P.g) { const c = p.ride.color; p.ride = null; setRide(p.id, c); }
+      if (p.ride) {
+        // 騎車：人物抬高到車座，邊騎邊踩；車輪和踏板跟著速度轉
+        const B = p.ride.B, roll = p.moving > 0 ? 1 : 0;
+        B.spin += dt * 9 * roll; for (const w of B.wheels) w.rotation.x = B.spin * 1.6; B.crank.rotation.x = B.spin;
+        p.P.g.position.y += BIKE_LIFT * p.P.g.scale.x;
+        poseRider(p.P, B, t, roll);
+      } else pose(p.P, t + p.phase, p.moving > 0 && !sit, sit, duckSit && W.duck.pedaling());
       if (crouch) for (const l of p.P.legs) l.rotation.x = -.9;
       // 名牌：投影到畫面上，在頭頂上方
       _v.set(p.pos.x, p.pos.y + 1.02, p.pos.z).project(camera);
@@ -156,5 +173,5 @@ export function createPlayers(W, H) {
   function inDuckCount() { let n = 0; for (const p of all.values()) if (p.id !== meId && W.duck && (W.duck.riderSpot(p.target, p.id) || W.duck.inBoat(p.pos))) n++; return n; }
   function inBalloonCount() { let n = 0; for (const p of all.values()) if (p.id !== meId && W.balloon && (W.balloon.riderSpot(p.target, p.id) || W.balloon.inBasket(p.pos))) n++; return n; }
   function onBoatCount() { let n = 0; for (const p of all.values()) if (p.id !== meId && onBoat(p.pos)) n++; return n; }
-  return { setMe, me, upsert, remove, update, myPos, spawnFor, onBoatCount, inBalloonCount, inDuckCount, setBadge, hideTag, posOf, count: () => all.size, layer };
+  return { setMe, me, upsert, remove, setRide, riding, update, myPos, spawnFor, onBoatCount, inBalloonCount, inDuckCount, setBadge, hideTag, posOf, count: () => all.size, layer };
 }
