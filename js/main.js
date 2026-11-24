@@ -1,9 +1,9 @@
 // 115 鯉魚市集｜介面與流程
 import * as THREE from 'three';
-import { ROLES, OUTFITS, HATS } from './roles.js?v=20261124a';
-import { createMeowBox } from './meow.js?v=20261124a';
-import { REACTIONS, REACTION_IDS, playReaction } from './cats.js?v=20261124a';
-import { createCatNet, SEATS, REST, CALL, pad } from './catnet.js?v=20261124a';
+import { ROLES, OUTFITS, HATS } from './roles.js?v=20261124b';
+import { createMeowBox } from './meow.js?v=20261124b';
+import { REACTIONS, REACTION_IDS, playReaction } from './cats.js?v=20261124b';
+import { createCatNet, SEATS, REST, CALL, pad } from './catnet.js?v=20261124b';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -20,7 +20,7 @@ const pad2 = (n) => String(n).padStart(2, '0');
 const fmtH = (h) => { h = ((h % 24) + 24) % 24; return `${pad2(Math.floor(h))}:${pad2(Math.floor((h % 1) * 60))}`; };
 
 // 介面 Logo：低多邊形鯉魚（橘紅魚背、米白魚腹、魚頭朝右），首頁、怎麼逛、集章完成共用這一張
-const LOGO_SRC = 'assets/brand/koi-logo.png?v=20261124a';
+const LOGO_SRC = 'assets/brand/koi-logo.png?v=20261124b';
 const MASCOT = `<img src="${LOGO_SRC}" alt="115 鯉魚市集 Logo：低多邊形小鯉魚" decoding="async">`;
 
 let C = null;            // content.json
@@ -1015,6 +1015,7 @@ function openBubble(o) {
   if (o.agent) o.agent.talking = true; if (o.animal) o.animal.talking = true;
   if (o.cat) { o.cat.talking = true; S.bubble.msg = o.cat.state === 'sleep' ? `${o.cat.data.name}睡得正香……輕輕摸摸看？` : o.cat.data.lines[Math.floor(Math.random() * o.cat.data.lines.length)]; focusCat(o.cat); }
   $('#labels').classList.add('dim');
+  $('#bubble').classList.toggle('catfixed', !!o.cat); if (o.cat) $('#bubble').style.transform = '';   // 擼貓說明固定在畫面上，不跟著貓晃
   renderBubble(); $('#bubble').hidden = false;
   $('#bubble').querySelector('button')?.focus({ preventScroll: true });
 }
@@ -1054,7 +1055,7 @@ function closeBubble() {
   S.bubble = null; $('#bubble').hidden = true; $('#labels').classList.remove('dim');
 }
 function placeBubble() {
-  if (!S.bubble) return;
+  if (!S.bubble || S.bubble.o.cat) return;
   const p = headOf(S.bubble.o).project(W.camera), el = $('#bubble');
   const x = (p.x + 1) / 2 * innerWidth, y = (1 - p.y) / 2 * innerHeight;
   const w = el.offsetWidth, half = w / 2;
@@ -1174,7 +1175,7 @@ function openCats() {
 function focusCat(c) {
   if (!CAM || S.walking) return;
   if (S.tour) endTour(false);
-  const p = c.M.g.position, t = p.clone().setY(p.y + .55 * (c.data.scale || 1) + (isMobile() ? 2.3 : 1.8));   // 鏡頭看貓的上方，讓貓落在畫面下半部、不被對話框擋住
+  const p = c.M.g.position, t = p.clone().setY(p.y + .55 * (c.data.scale || 1) + (isMobile() ? 2.4 : .7));   // 鏡頭看貓的上方，讓貓落在畫面下半部、不被對話框擋住
   const dir = W.camera.position.clone().sub(t); dir.y = 0; if (dir.lengthSq() < .01) dir.set(0, 0, 1); dir.normalize();
   const dist = isMobile() ? 8.5 : 7.5, el = .5;
   const pos = t.clone().addScaledVector(dir, dist * Math.cos(el)); pos.y = t.y + dist * Math.sin(el);
@@ -1624,7 +1625,7 @@ function balloonPopped() {
 }
 function startNet() {
   const M = C.multiplayer; if (!M || !M.enabled || !M.firebase || !PL) return;
-  import('./net.js?v=20261124a').then(({ createNet }) => {
+  import('./net.js?v=20261124b').then(({ createNet }) => {
     NET = createNet(M.firebase, {
       myPos: () => PL.myPos(), upsert: (id, info, pos) => PL.upsert(id, info, pos), remove: (id) => PL.remove(id),
       onCount: (c) => { COUNT = c; const el = $('#onlineChip'); el.hidden = false; $('#onlineCount').textContent = c.players; el.setAttribute('aria-label', `市集島上 ${c.players} 人，開著網站 ${c.viewers} 人，點一下看各身分人數`); },
@@ -1632,7 +1633,7 @@ function startNet() {
     });
     NET.setMe(meProfile());
     CR.attach(NET, meProfile);   // 擼貓號碼牌改用多人連線
-    import('./hidemp.js?v=20261124a').then(({ createHideMP }) => {
+    import('./hidemp.js?v=20261124b').then(({ createHideMP }) => {
       HM = createHideMP(NET, {
         toast, profile: meProfile, enterWalk: () => { if (!S.walking) enterWalk(); },
         walkPos: () => (S.walking ? CAM.walk.pos : null), posOf: (id) => PL.posOf(id),
@@ -1762,13 +1763,13 @@ async function boot() {
   if (Q.has('nogl') || !webglOK()) { textOnly(Q.has('nogl') ? '已切換為文字清單版' : '這台裝置無法顯示 3D 畫面'); applyTheme(); updateClock(); setInterval(updateClock, 10000); window.__ready = true; return; }
   let mods;
   try {
-    mods = await Promise.all([import('./world.js?v=20261124a'), import('./life.js?v=20261124a'), import('./cam.js?v=20261124a'), import('./players.js?v=20261124a'), import('./signs.js?v=20261124a'), import('./festival.js?v=20261124a'), import('./fauna.js?v=20261124a'), import('./interact.js?v=20261124a'), import('./games.js?v=20261124a')]);
+    mods = await Promise.all([import('./world.js?v=20261124b'), import('./life.js?v=20261124b'), import('./cam.js?v=20261124b'), import('./players.js?v=20261124b'), import('./signs.js?v=20261124b'), import('./festival.js?v=20261124b'), import('./fauna.js?v=20261124b'), import('./interact.js?v=20261124b'), import('./games.js?v=20261124b')]);
     const [{ createWorld, H: GROUND_H }, { createLife, makePerson }, { createCam }, { createPlayers }, { createSigns }, { createFestival }, { createFauna }, { createInteract }, { createGames, FISH }] = mods;
     const mobile = isLite();   // 手機和平板都用輕量版場景
     W = createWorld($('#gl'), { quality: S.quality, mobile });
     W.renderer.setPixelRatio(Math.min(devicePixelRatio, S.quality === 'low' ? 1 : (mobile ? 1.5 : 2)));
     L = createLife(W, C, { halfPeople: mobile || S.quality === 'low', quality: S.quality });
-    try { const { createCats } = await import('./cats.js?v=20261124a'); K = createCats(W, C, { reduced: () => S.reduced }); } catch (e) { console.warn('島上的貓載入失敗', e); K = null; }
+    try { const { createCats } = await import('./cats.js?v=20261124b'); K = createCats(W, C, { reduced: () => S.reduced }); } catch (e) { console.warn('島上的貓載入失敗', e); K = null; }
     CAM = createCam(W, $('#gl'), { onZoom: showZoom, onIntro: (k) => { L.setDeck(k < .3 ? 1 : Math.max(0, 1 - (k - .3) / .25)); if (k > .55) $('.intro-title').classList.add('show'); } });
     CAM.S.reduced = S.reduced; CAM.S.mobile = isMobile();
     PL = createPlayers(W, GROUND_H); renderMe(); startNet();
@@ -1777,13 +1778,13 @@ async function boot() {
     W.canLeave = () => { const s = L.carp.status(); if (s.docked && s.gang) return true; if (performance.now() - lastBlockToast > 3000) { lastBlockToast = performance.now(); toast('⛔ 航行中請待在船上，靠港放下跳板後再下船'); } return false; };
     // 彩虹熱氣球：起降場在服務台北側廣場；用網路時間排班，大家看到同一顆
     try {
-      const { createBalloon } = await import('./balloon.js?v=20261124a');
+      const { createBalloon } = await import('./balloon.js?v=20261124b');
       BAL = createBalloon(W, { pad: { x: 1, z: -5 }, now: () => (NET ? NET.now() : Date.now()), low: mobile || S.quality === 'low' });
       W.balloon = BAL; W.gates = [balloonGate];
     } catch (e) { console.warn('熱氣球載入失敗', e); BAL = null; }
-    KIT = await import('./kit.js?v=20261124a');
-    SG = createSigns(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261124a')).rng, low: mobile || S.quality === 'low' });
-    FX = createFestival(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261124a')).rng, low: mobile || S.quality === 'low', avoid: [...(BAL ? BAL.avoid : []), ...SG.signs.map((s) => s.g.position), ...Object.values(W.islands).flatMap((I) => (I.trees || []).filter((tr) => tr.visible).map((tr) => tr.position.clone().add(I.pos)))], carp: L.carp });
+    KIT = await import('./kit.js?v=20261124b');
+    SG = createSigns(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261124b')).rng, low: mobile || S.quality === 'low' });
+    FX = createFestival(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261124b')).rng, low: mobile || S.quality === 'low', avoid: [...(BAL ? BAL.avoid : []), ...SG.signs.map((s) => s.g.position), ...Object.values(W.islands).flatMap((I) => (I.trees || []).filter((tr) => tr.visible).map((tr) => tr.position.clone().add(I.pos)))], carp: L.carp });
     // 貓住在自己島上最空曠的地方，不被攤位和裝飾擋住
     if (K) K.setHomes((id) => {
       const I = W.islands[id]; if (!I || !I.walk) return null;
@@ -1797,7 +1798,7 @@ async function boot() {
       }
       return best;
     });
-    FA = createFauna(W, { H: GROUND_H, rng: (await import('./kit.js?v=20261124a')).rng });
+    FA = createFauna(W, { H: GROUND_H, rng: (await import('./kit.js?v=20261124b')).rng });
     IA = createInteract(W, C, GROUND_H, {
       toast, carp: L.carp,
       toastIf: (m) => { if (!S.intro) toast(m); },

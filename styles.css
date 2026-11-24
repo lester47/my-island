@@ -569,3 +569,8 @@ html[data-theme="deep"] .ticket { background: #4a3d1c; color: #ffe3a0; }
 @media (prefers-reduced-motion: reduce) { .ticket.ring, .bubble .acts button.ring, .bubble .seats .mine.call { animation: none; } }
 @media (max-width: 760px) { .ticket { right: 10px; bottom: 136px; } }
 @media (max-width: 480px) { #catBtn b { display: none; } .hud-right { gap: 4px; } .hud-right .hchip#catBtn { min-width: 38px; padding: 0 6px; } .ticket { bottom: 150px; font-size: 13px; } }
+
+/* 擼貓說明：固定在畫面上（電腦右側、手機上方），不跟著貓上下晃 */
+.bubble.catfixed { position: fixed; left: auto; right: 18px; top: 96px; width: 320px; max-height: calc(100vh - 210px); overflow: auto; transform: none !important; z-index: 23; }
+.bubble.catfixed::after { display: none; }
+@media (max-width: 760px) { .bubble.catfixed { left: 8px; right: 8px; top: 64px; width: auto; max-width: none; max-height: 52vh; } }
