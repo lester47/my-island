@@ -1,5 +1,5 @@
 // 💼 打工：做完一輪拿線上鯉魚幣。每份工作有冷卻時間，同一份工作同時最多 3 人（多人連線時）。
-// 📦 送貨員、🏖️ 沙灘清潔員、🙋 攤位小幫手、♻️ 回收分類員、🐱 貓咪照顧員、🧭 導覽小志工
+// 📦 送貨員、🏖️ 沙灘清潔員、🙋 攤位小幫手、♻️ 回收分類員、🐱 貓咪照顧員、🧭 導覽小志工、👶 托嬰小幫手
 import * as THREE from 'three';
 import { onDisconnect } from '../vendor/firebase/firebase-database.js';
 
@@ -13,6 +13,25 @@ const RECYCLE_ITEMS = [
   ['玻璃瓶', 'glass', '玻璃瓶放玻璃類。'], ['果醬玻璃罐', 'glass', '洗乾淨的玻璃罐放玻璃類。'],
   ['用過的衛生紙', 'trash', '衛生紙髒了不能回收，是一般垃圾。'], ['破掉的陶瓷碗', 'trash', '陶瓷不是玻璃，不能回收，是一般垃圾。'],
 ];
+// 👶 托嬰小幫手
+const BABY_NAMES = ['小湯圓', '小布丁', '小饅頭', '小豆豆', '小米粒', '小芒果', '小麻糬', '小橘子'];
+const DIAPER = [
+  ['wash', '🧼 先洗手', '照顧寶寶前，第一件事是把手洗乾淨。'],
+  ['open', '🧷 打開髒尿布', '手洗好了，接著打開髒尿布。'],
+  ['wipe', '🧻 濕紙巾擦屁屁', '從前面往後面擦，擦乾淨才不會紅屁屁。'],
+  ['new', '🩲 穿上新尿布', '屁屁乾淨了，換上新尿布，鬆緊剛好。'],
+  ['bin', '🗑️ 髒尿布包好丟掉', '最後把髒尿布捲起來包好丟掉，再洗一次手。'],
+];
+const NEEDS = [
+  ['milk', '🍼 餵奶', '肚子餓了，嘴巴一直找奶瓶'],
+  ['sleep', '🎵 唱搖籃曲', '揉眼睛、打哈欠，想睡覺了'],
+  ['toy', '🧸 拿玩具', '無聊了，伸手想要玩東西'],
+  ['hug', '🤗 抱一抱', '張開雙手，想要人抱抱'],
+  ['burp', '👋 輕拍背', '剛喝完奶，肚子脹脹的'],
+];
+const BABY_MIN = 10;        // 陪伴幾分鐘
+const NEED_WAIT = 40;       // 寶寶哭了幾秒內要照顧
+const MISS_MAX = 3;         // 沒照顧到幾次，家長就提早回來
 
 export function createJobs(api) {
   // api: { C, W, K, wallet, toast, esc, openIsland, startTour, flyTo, catFace, catPurr, islandName, H }
@@ -47,7 +66,7 @@ export function createJobs(api) {
   function start(id) {
     const s = status(id); if (!s.ok) { toast('💼 ' + s.why); return false; }
     active = { id, t0: Date.now() }; claim(id);
-    ({ courier: startCourier, beach: startBeach, helper: startHelper, recycle: startRecycle, catcare: startCatcare, guide: startGuide })[id]();
+    ({ courier: startCourier, beach: startBeach, helper: startHelper, recycle: startRecycle, catcare: startCatcare, guide: startGuide, babysit: startBabysit })[id]();
     return true;
   }
   function finish() {
@@ -62,7 +81,8 @@ export function createJobs(api) {
     if (!active) return;
     release(active.id);
     if (active.trash) for (const t of active.trash) W.scene.remove(t.g);
-    active = null; bar.hidden = true; if (dlg.open) dlg.close();
+    if (active.stop) active.stop();
+    active = null; bar.hidden = true; bar.classList.remove('cry'); if (dlg.open) dlg.close();
   }
   function showBar(title, line, btns = []) {
     bar.hidden = false;
@@ -185,6 +205,91 @@ export function createJobs(api) {
   function onTourEnd(natural) {
     if (!active || active.id !== 'guide') return;
     if (natural) finish(); else quit('導覽中途結束了，這次打工沒有完成');
+  }
+
+  // ---------------- 👶 托嬰小幫手：訪客家長把小寶寶托給服務台。先照順序換尿布，再陪伴 10 分鐘（網頁在背景時暫停計時）
+  function babyMesh() {
+    const g = new THREE.Group(), m = (c) => new THREE.MeshStandardMaterial({ color: c, roughness: .8, flatShading: true });
+    const box = (c, x, y, z, sx, sy, sz) => { const o = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), m(c)); o.position.set(x, y, z); o.castShadow = true; g.add(o); return o; };
+    box('#f4d7a8', 0, .3, 0, .9, .08, .55);                                       // 床底
+    for (const x of [-.45, .45]) box('#e8b46a', x, .38, 0, .05, .5, .6);           // 床頭床尾
+    for (const z of [-.28, .28]) for (let i = -3; i <= 3; i++) box('#f6e3c1', i * .12, .45, z, .03, .3, .03);   // 欄杆
+    box('#ffd6e0', 0, .37, 0, .8, .05, .5);                                       // 小被子
+    const baby = new THREE.Group(); baby.position.set(0, .45, 0); g.add(baby);
+    const body = new THREE.Mesh(new THREE.SphereGeometry(.13, 10, 8), m('#bfe3ff')); body.scale.set(1.3, .8, 1); baby.add(body);
+    const head = new THREE.Mesh(new THREE.SphereGeometry(.1, 10, 8), m('#ffd9b8')); head.position.set(-.2, .04, 0); baby.add(head);
+    const hair = new THREE.Mesh(new THREE.SphereGeometry(.04, 8, 6), m('#6b4a2b')); hair.position.set(-.22, .14, 0); baby.add(hair);
+    const hit = new THREE.Mesh(new THREE.BoxGeometry(1.1, .9, .8), new THREE.MeshBasicMaterial({ visible: false })); hit.position.y = .4; g.add(hit);
+    return { g, baby };
+  }
+  function startBabysit() {
+    const name = BABY_NAMES[Math.floor(Math.random() * BABY_NAMES.length)];
+    Object.assign(active, { baby: name, step: 0, inDlg: true, left: BABY_MIN * 60, need: null, needT: 0, nextNeed: 25, missed: 0, cared: 0 });
+    const P = api.agencyPos ? api.agencyPos() : null;
+    if (P) {
+      const B = babyMesh(); const d = new THREE.Vector3(P.x, 0, P.z).normalize();
+      B.g.position.set(P.x + d.z * 1.3, P.y, P.z - d.x * 1.3); B.g.rotation.y = Math.atan2(d.x, d.z);
+      W.scene.add(B.g); active.crib = B; active.cribPos = B.g.position.clone();
+      api.flyTo(B.g.position);
+    }
+    diaperDlg();
+  }
+  function diaperDlg(msg, bad) {
+    const done = DIAPER.slice(0, active.step), opts = shuffle(DIAPER.slice(active.step));
+    showDlg(`<p class="job-h">👶 托嬰小幫手　換尿布 ${active.step}/${DIAPER.length}</p>
+      ${active.step === 0 && !msg ? `<p class="job-msg">有位訪客家長要去逛攤位，把小寶寶「<b>${esc(active.baby)}</b>」托給服務台 ${BABY_MIN} 分鐘。寶寶的尿布濕了，先幫他換尿布！</p>` : ''}
+      ${msg ? `<p class="job-msg ${bad ? 'bad' : ''}">${esc(msg)}</p>` : ''}
+      ${done.length ? `<ol class="baby-done">${done.map((d) => `<li>${d[1]} ✓</li>`).join('')}</ol>` : ''}
+      <p class="job-q">下一步要做什麼？</p><div class="job-opts">${opts.map(([k, t]) => `<button type="button" class="btn ghost" data-q="${k}">${t}</button>`).join('')}</div>
+      <p class="foot">換尿布要照順序。選錯沒關係，會告訴你提示。</p>`, (k) => {
+      const want = DIAPER[active.step];
+      if (k !== want[0]) { diaperDlg(`還不是這一步喔：${DIAPER[active.step][2].split('，')[0]}…想想看要先做什麼？`, true); return; }
+      active.step++;
+      if (active.step >= DIAPER.length) { active.inDlg = false; dlg.close(); babyWatch(); return; }
+      diaperDlg(`✅ ${want[2]}`);
+    });
+  }
+  function babyWatch() {
+    toast(`👶 尿布換好了！接下來陪 ${active.baby} ${BABY_MIN} 分鐘，寶寶哭了要選對照顧方法`);
+    active.onBtn = (k) => {
+      if (k === 'look') { if (active.cribPos) api.flyTo(active.cribPos); return; }
+      if (!active.need) { toast(`😊 ${active.baby}現在很好，不用打擾他`); return; }
+      if (k !== active.need[0]) { toast(`🤔 好像不是這個…再看看：${active.baby}${active.need[2]}`); return; }
+      active.cared++; toast(`💕 ${active.need[1].slice(2)}之後，${active.baby}笑了！`);
+      active.need = null; active.nextNeed = 45 + Math.floor(Math.random() * 40); babyBar();
+    };
+    babyBar();
+    const iv = setInterval(babyTick, 1000), cb = active.crib;
+    active.stop = () => { clearInterval(iv); if (cb) W.scene.remove(cb.g); };
+  }
+  function babyTick() {
+    if (!active || active.id !== 'babysit' || active.inDlg) return;
+    if (document.hidden) { babyTime(true); return; }
+    active.left--;
+    if (active.crib) { const b = active.crib.baby, t = Date.now() / 1000; b.rotation.z = active.need ? Math.sin(t * 14) * .12 : Math.sin(t * 1.5) * .04; }
+    if (active.left <= 0) { const n = active.baby, c = active.cared; active.done = true; finish(); toast(`👨‍👩‍👧 家長回來接 ${n} 了，謝謝你照顧了 ${c} 次！`); return; }
+    if (active.need) {
+      if (Date.now() - active.needT > NEED_WAIT * 1000) {
+        active.missed++; active.need = null; active.nextNeed = 30;
+        if (active.missed >= MISS_MAX) { quit(`😭 ${active.baby}哭了好久，家長提早回來接走了。這次打工沒有完成`); return; }
+        toast(`😢 ${active.baby}哭了一陣子沒人理（${active.missed}/${MISS_MAX}），要多注意喔`); babyBar(); return;
+      }
+    } else if (--active.nextNeed <= 0) {
+      active.need = NEEDS[Math.floor(Math.random() * NEEDS.length)]; active.needT = Date.now(); babyBar(); return;
+    }
+    babyTime(false);
+  }
+  const mmss = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  function babyTime(paused) {
+    const t = bar.querySelector('.jt'); if (!t) return;
+    const w = active.need ? Math.max(0, NEED_WAIT - Math.floor((Date.now() - active.needT) / 1000)) : 0;
+    t.textContent = `👶 托嬰小幫手　陪伴剩 ${mmss(active.left)}${paused ? '（暫停中）' : ''}`;
+    const m = bar.querySelector('.jm'); if (m && active.need) m.textContent = `😢 ${active.baby}${active.need[2]}！選對的照顧方法（還有 ${w} 秒）`;
+  }
+  function babyBar() {
+    showBar(`👶 托嬰小幫手　陪伴剩 ${mmss(active.left)}`, active.need ? `😢 ${active.baby}${active.need[2]}！選對的照顧方法（還有 ${NEED_WAIT} 秒）` : `😊 ${active.baby}在嬰兒床裡玩。寶寶哭了會出現提示，選對照顧方法；網頁關到背景時會暫停計時。`,
+      [...NEEDS.map(([k, t]) => [k, t]), ['look', '👀 看寶寶']]);
+    bar.classList.toggle('cry', !!active.need);
   }
 
   return { JOBS, status, start, quit, pick, onStall, onTourEnd, attach, get active() { return active && active.id; } };

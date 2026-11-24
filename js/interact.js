@@ -207,7 +207,7 @@ export function createInteract(W, content, H, api) {
     const pole = add(root, G.cyl, '#d8d2c4', entry.x, .8 + 1.4, entry.z, .06, 2.8, .06);
     const flag = new THREE.Group(); flag.position.set(entry.x, .8 + .3, entry.z); root.add(flag);
     add(flag, G.box, '#e8473f', .32, 0, 0, .6, .36, .02); add(flag, G.box, '#ffffff', .32, 0, .012, .36, .1, .01);
-    { const tx = new THREE.TextureLoader().load('assets/brand/koi-logo.png?v=20261124i'); tx.colorSpace = THREE.SRGBColorSpace; const lm = new THREE.MeshStandardMaterial({ map: tx, transparent: true, alphaTest: .4, polygonOffset: true, polygonOffsetFactor: -2 }); for (const sd of [1, -1]) { const L = new THREE.Mesh(new THREE.PlaneGeometry(.3, .3), lm); L.position.set(.32, 0, sd * .022); if (sd < 0) L.rotation.y = Math.PI; flag.add(L); } }   // 碼頭旗子上的鯉魚 Logo
+    { const tx = new THREE.TextureLoader().load('assets/brand/koi-logo.png?v=20261124j'); tx.colorSpace = THREE.SRGBColorSpace; const lm = new THREE.MeshStandardMaterial({ map: tx, transparent: true, alphaTest: .4, polygonOffset: true, polygonOffsetFactor: -2 }); for (const sd of [1, -1]) { const L = new THREE.Mesh(new THREE.PlaneGeometry(.3, .3), lm); L.position.set(.32, 0, sd * .022); if (sd < 0) L.rotation.y = Math.PI; flag.add(L); } }   // 碼頭旗子上的鯉魚 Logo
     const lampMat = new THREE.MeshStandardMaterial({ color: '#444', emissive: '#000000', roughness: .4 });
     const lampPos = P.E.clone().addScaledVector(P.d, P.P1 - .2).addScaledVector(P.s, P.PW + .1);
     add(root, G.cyl, '#5a3a1a', lampPos.x, .8 + .45, lampPos.z, .08, .9, .08);
