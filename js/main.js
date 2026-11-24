@@ -1,11 +1,11 @@
 // 115 鯉魚市集｜介面與流程
 import * as THREE from 'three';
-import { ROLES, OUTFITS, HATS } from './roles.js?v=20261124x';
-import { createMeowBox } from './meow.js?v=20261124x';
-import { REACTIONS, REACTION_IDS, playReaction } from './cats.js?v=20261124x';
-import { createCatNet, SEATS, REST, CALL, pad } from './catnet.js?v=20261124x';
-import { createWallet } from './wallet.js?v=20261124x';
-import { createJobs } from './jobs.js?v=20261124x';
+import { ROLES, OUTFITS, HATS } from './roles.js?v=20261124y';
+import { createMeowBox } from './meow.js?v=20261124y';
+import { REACTIONS, REACTION_IDS, playReaction } from './cats.js?v=20261124y';
+import { createCatNet, SEATS, REST, CALL, pad } from './catnet.js?v=20261124y';
+import { createWallet } from './wallet.js?v=20261124y';
+import { createJobs } from './jobs.js?v=20261124y';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -22,7 +22,7 @@ const pad2 = (n) => String(n).padStart(2, '0');
 const fmtH = (h) => { h = ((h % 24) + 24) % 24; return `${pad2(Math.floor(h))}:${pad2(Math.floor((h % 1) * 60))}`; };
 
 // 介面 Logo：低多邊形鯉魚（橘紅魚背、米白魚腹、魚頭朝右），首頁、怎麼逛、集章完成共用這一張
-const LOGO_SRC = 'assets/brand/koi-logo.png?v=20261124x';
+const LOGO_SRC = 'assets/brand/koi-logo.png?v=20261124y';
 const MASCOT = `<img src="${LOGO_SRC}" alt="115 鯉魚市集 Logo：低多邊形小鯉魚" decoding="async">`;
 
 let C = null;            // content.json
@@ -1342,7 +1342,7 @@ function phoneDb() {
 }
 async function startPhone() {
   if (PH) return;
-  try { PHM = await import('./phone.js?v=20261124x'); } catch (e) { console.warn('遊戲電話載入失敗', e); return; }
+  try { PHM = await import('./phone.js?v=20261124y'); } catch (e) { console.warn('遊戲電話載入失敗', e); return; }
   const db = phoneDb(); if (!db) return;
   PH = PHM.createPhone(db, {
     name: () => FAKE_AS || (meProfile() || {}).name || '', where: whereAmI, toast,
@@ -2462,7 +2462,7 @@ function balloonPopped() {
 }
 function startNet() {
   const M = C.multiplayer; if (!M || !M.enabled || !M.firebase || !PL) return;
-  import('./net.js?v=20261124x').then(({ createNet }) => {
+  import('./net.js?v=20261124y').then(({ createNet }) => {
     NET = createNet(M.firebase, {
       myPos: () => PL.myPos(), upsert: (id, info, pos) => { ONLINE.set(id, String(info.name || '').slice(0, 16)); PL.upsert(id, info, pos); }, remove: (id) => { ONLINE.delete(id); PL.remove(id); },
       onCount: (c) => { COUNT = c; const el = $('#onlineChip'); el.hidden = false; $('#onlineCount').textContent = c.players; el.setAttribute('aria-label', `市集島上 ${c.players} 人，開著網站 ${c.viewers} 人，點一下看各身分人數`); },
@@ -2478,7 +2478,7 @@ function startNet() {
     if (JOBS) JOBS.attach(NET);
     watchLamps();
     startPhone();
-    import('./hidemp.js?v=20261124x').then(({ createHideMP }) => {
+    import('./hidemp.js?v=20261124y').then(({ createHideMP }) => {
       HM = createHideMP(NET, {
         toast, profile: meProfile, enterWalk: () => { if (!S.walking) enterWalk(); },
         walkPos: () => (S.walking ? CAM.walk.pos : null), posOf: (id) => PL.posOf(id),
@@ -2614,14 +2614,14 @@ async function boot() {
   if (Q.has('nogl') || !webglOK()) { textOnly(Q.has('nogl') ? '已切換為文字清單版' : '這台裝置無法顯示 3D 畫面'); applyTheme(); updateClock(); setInterval(updateClock, 10000); window.__ready = true; return; }
   let mods;
   try {
-    mods = await Promise.all([import('./world.js?v=20261124x'), import('./life.js?v=20261124x'), import('./cam.js?v=20261124x'), import('./players.js?v=20261124x'), import('./signs.js?v=20261124x'), import('./festival.js?v=20261124x'), import('./fauna.js?v=20261124x'), import('./interact.js?v=20261124x'), import('./games.js?v=20261124x')]);
+    mods = await Promise.all([import('./world.js?v=20261124y'), import('./life.js?v=20261124y'), import('./cam.js?v=20261124y'), import('./players.js?v=20261124y'), import('./signs.js?v=20261124y'), import('./festival.js?v=20261124y'), import('./fauna.js?v=20261124y'), import('./interact.js?v=20261124y'), import('./games.js?v=20261124y')]);
     const [{ createWorld, H: GROUND_H }, { createLife, makePerson }, { createCam }, { createPlayers }, { createSigns }, { createFestival }, { createFauna }, { createInteract }, { createGames, FISH }] = mods;
     GH = GROUND_H;
     const mobile = isLite();   // 手機和平板都用輕量版場景
     W = createWorld($('#gl'), { quality: S.quality, mobile });
     W.renderer.setPixelRatio(Math.min(devicePixelRatio, S.quality === 'low' ? 1 : (mobile ? 1.5 : 2)));
     L = createLife(W, C, { halfPeople: mobile || S.quality === 'low', quality: S.quality });
-    try { const { createCats } = await import('./cats.js?v=20261124x'); K = createCats(W, C, { reduced: () => S.reduced }); } catch (e) { console.warn('島上的貓載入失敗', e); K = null; }
+    try { const { createCats } = await import('./cats.js?v=20261124y'); K = createCats(W, C, { reduced: () => S.reduced }); } catch (e) { console.warn('島上的貓載入失敗', e); K = null; }
     CAM = createCam(W, $('#gl'), { onZoom: showZoom, onIntro: (k) => { L.setDeck(k < .3 ? 1 : Math.max(0, 1 - (k - .3) / .25)); if (k > .55) $('.intro-title').classList.add('show'); } });
     CAM.S.reduced = S.reduced; CAM.S.mobile = isMobile();
     PL = createPlayers(W, GROUND_H); renderMe(); startNet();
@@ -2630,30 +2630,30 @@ async function boot() {
     W.canLeave = () => { const s = L.carp.status(); if (s.docked && s.gang) return true; if (performance.now() - lastBlockToast > 3000) { lastBlockToast = performance.now(); toast('⛔ 航行中請待在船上，靠港放下跳板後再下船'); } return false; };
     // 彩虹熱氣球：起降場在服務台北側廣場；用網路時間排班，大家看到同一顆
     try {
-      const { createBalloon } = await import('./balloon.js?v=20261124x');
+      const { createBalloon } = await import('./balloon.js?v=20261124y');
       BAL = createBalloon(W, { pad: { x: 1, z: -5 }, now: () => (NET ? NET.now() : Date.now()), low: mobile || S.quality === 'low' });
       W.balloon = BAL; W.gates = [balloonGate];
     } catch (e) { console.warn('熱氣球載入失敗', e); BAL = null; }
     // 🦆 鴨子船：停在益智島南側的棧道；一樣用網路時間排班
     try {
-      const { createDuckBoat } = await import('./duckboat.js?v=20261124x');
+      const { createDuckBoat } = await import('./duckboat.js?v=20261124y');
       DUCK = createDuckBoat(W, { island: 'puzzle', now: () => (NET ? NET.now() : Date.now()), low: mobile || S.quality === 'low' });
       W.duck = DUCK; W.gates = [...(W.gates || []), duckGate];
     } catch (e) { console.warn('鴨子船載入失敗', e); DUCK = null; }
     // 🎢 雲霄飛車：軌道支柱的位置先保留（裝飾不會擺在那裡）
     try {
-      const { createCoaster } = await import('./coaster.js?v=20261124x');
+      const { createCoaster } = await import('./coaster.js?v=20261124y');
       COA = createCoaster(W, { now: () => (NET ? NET.now() : Date.now()), low: mobile || S.quality === 'low' });
       W.coaster = COA; W.coasterMe = () => (S.coaster ? COA.seatPose(S.coaster.seat) : null);
     } catch (e) { console.warn('雲霄飛車載入失敗', e); COA = null; }
     // 🏛️ 市長任務：路燈候選位置先保留（裝飾不會擺在那裡）
-    try { const { createMayor } = await import('./mayor.js?v=20261124x'); MY = createMayor(W, { low: mobile || S.quality === 'low' }); } catch (e) { console.warn('市長任務載入失敗', e); MY = null; }
-    KIT = await import('./kit.js?v=20261124x');
-    SG = createSigns(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261124x')).rng, low: mobile || S.quality === 'low' });
-    FX = createFestival(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261124x')).rng, low: mobile || S.quality === 'low', avoid: [...(BAL ? BAL.avoid : []), ...(DUCK ? DUCK.avoid : []), ...(MY ? MY.avoid : []), ...(COA ? COA.avoid : []), ...SG.signs.map((s) => s.g.position), ...Object.values(W.islands).flatMap((I) => (I.trees || []).filter((tr) => tr.visible).map((tr) => tr.position.clone().add(I.pos)))], carp: L.carp });
+    try { const { createMayor } = await import('./mayor.js?v=20261124y'); MY = createMayor(W, { low: mobile || S.quality === 'low' }); } catch (e) { console.warn('市長任務載入失敗', e); MY = null; }
+    KIT = await import('./kit.js?v=20261124y');
+    SG = createSigns(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261124y')).rng, low: mobile || S.quality === 'low' });
+    FX = createFestival(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261124y')).rng, low: mobile || S.quality === 'low', avoid: [...(BAL ? BAL.avoid : []), ...(DUCK ? DUCK.avoid : []), ...(MY ? MY.avoid : []), ...(COA ? COA.avoid : []), ...SG.signs.map((s) => s.g.position), ...Object.values(W.islands).flatMap((I) => (I.trees || []).filter((tr) => tr.visible).map((tr) => tr.position.clone().add(I.pos)))], carp: L.carp });
     // 🚲 借車點與環島自行車道（車架放在服務台島的空地；車道沿著原本的石板環路）
     try {
-      BIKE_MOD = await import('./bike.js?v=20261124x');
+      BIKE_MOD = await import('./bike.js?v=20261124y');
       const rs = FX.freeSpot('center', 1.3, 1.7);
       BK = BIKE_MOD.createBikes(W, { spot: rs ? { x: rs.x, z: rs.z, face: rs.face } : null, islandName: (id) => (islandById(id) || {}).name || id, low: mobile || S.quality === 'low' });
       W.gates = [...(W.gates || []), bikeGate];
@@ -2661,7 +2661,7 @@ async function boot() {
     if (MY) { const ms = FX.freeSpot('center', .9, 1.2); MY.placeBoard(ms ? { x: ms.x, z: ms.z, face: ms.face } : null); MY.setLamps(lampState()); }
     // 👕 服飾店（服務台島的小攤子）
     try {
-      STY = await import('./style.js?v=20261124x');
+      STY = await import('./style.js?v=20261124y');
       const ss = FX.freeSpot('center', 1.1, 1.5);
       SHOP = STY.createShop(W, { spot: ss ? { x: ss.x, z: ss.z, face: ss.face } : null, low: mobile || S.quality === 'low' });
       applyLook();
@@ -2679,7 +2679,7 @@ async function boot() {
       }
       return best;
     });
-    FA = createFauna(W, { H: GROUND_H, rng: (await import('./kit.js?v=20261124x')).rng });
+    FA = createFauna(W, { H: GROUND_H, rng: (await import('./kit.js?v=20261124y')).rng });
     IA = createInteract(W, C, GROUND_H, {
       toast, carp: L.carp,
       toastIf: (m) => { if (!S.intro) toast(m); },
@@ -2770,7 +2770,7 @@ async function boot() {
     if (BAL) BAL.update(t, dt, moving);
     if (DUCK) DUCK.update(t, dt, moving);
     if (MY) MY.update(t, dt, W.state.n);
-    if (COA) { COA.update(); coasterTick(); }
+    if (COA) { COA.update(W.state.n); coasterTick(); }   // 帶入天黑程度：晚上雲霄飛車和鯉魚山會亮
     CAM.update(dt);
     rideTick();                 // 人跟著船／熱氣球移動之後再判斷有沒有在上面
     W.update(t, moving);
