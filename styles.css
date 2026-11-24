@@ -508,3 +508,64 @@ select.pp-in { width: auto; max-width: 160px; }
 .game-wrap iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: #fff8ec; }
 .game-load { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; font-size: 18px; color: #7a4a22; background: #fff8ec; pointer-events: none; }
 .game-load[hidden] { display: none; }
+
+/* ---------------------------------------------------------------- 島上的貓 */
+.catface { flex: none; display: block; }
+.bubble .catwho { display: flex; align-items: center; gap: 8px; }
+.bubble .mood { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin: -2px 0 10px; font-size: 13px; font-weight: 700; color: var(--muted); }
+.bubble .mood .hearts { color: #e2456e; font-size: 16px; letter-spacing: 1px; min-height: 1.2em; }
+.bubble .mood .moodtip { color: #b8520f; }
+html[data-theme="deep"] .bubble .mood .moodtip { color: #ffb070; }
+html[data-theme="deep"] .bubble .mood .hearts { color: #ff86a6; }
+.catrow { display: flex; align-items: center; gap: 10px; }
+.catrow > div { flex: 1; line-height: 1.5; }
+.catrow small { color: var(--muted); }
+.catrow .btn { flex: none; width: auto; margin: 0; padding: 0 14px; }
+.catline { display: flex; align-items: center; gap: 8px; margin: 8px 0 0; padding: 6px 8px; border-radius: 12px; background: var(--surface2); line-height: 1.5; }
+.catline span { flex: 1; }
+.catline button { flex: none; min-height: 40px; border: 2px solid var(--line); background: var(--surface); border-radius: 10px; font-weight: 700; padding: 0 10px; }
+.catgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
+.catcard { border: 3px solid var(--line); border-radius: 18px; padding: 12px; text-align: center; background: var(--surface); display: flex; flex-direction: column; align-items: center; }
+.catcard.got { border-color: var(--c); }
+.catcard h3 { margin: 6px 0 2px; font-size: 17px; }
+.catcard .ok { font-size: 12px; color: var(--c); }
+.catcard p { margin: 2px 0; line-height: 1.5; font-size: 14px; }
+.catcard .cc-meta { color: var(--muted); font-size: 13px; font-weight: 700; }
+.catcard .btn { margin-top: auto; padding-top: 0; }
+.catcard p:last-of-type { margin-bottom: 10px; }
+.reacts { display: flex; flex-wrap: wrap; gap: 6px; }
+.reacts span { padding: 4px 10px; border-radius: 999px; background: var(--surface2); border: 2px solid var(--line); font-size: 13px; font-weight: 700; }
+.catparade { display: flex; justify-content: center; flex-wrap: wrap; gap: 4px; }
+.catparade .catface { animation: catHop 1s ease-in-out infinite; }
+.catparade .catface:nth-child(2) { animation-delay: .15s; } .catparade .catface:nth-child(3) { animation-delay: .3s; }
+.catparade .catface:nth-child(4) { animation-delay: .45s; } .catparade .catface:nth-child(5) { animation-delay: .6s; } .catparade .catface:nth-child(6) { animation-delay: .75s; }
+@keyframes catHop { 0%, 100% { transform: translateY(0); } 40% { transform: translateY(-10px) rotate(-6deg); } }
+@media (prefers-reduced-motion: reduce) { .catparade .catface { animation: none; } }
+@media (max-width: 760px) { .catgrid { grid-template-columns: repeat(2, 1fr); gap: 8px; } .catcard { padding: 8px; } }
+.bubble .seats { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin: -4px 0 10px; font-size: 13px; }
+.bubble .seats .lbl { font-weight: 900; color: var(--muted); margin-right: 2px; }
+.bubble .seats .seat { padding: 3px 9px; border-radius: 999px; border: 2px dashed var(--line); color: var(--muted); font-weight: 700; }
+.bubble .seats .seat.on { border-style: solid; border-color: var(--primary); color: var(--ink); background: var(--surface2); }
+.bubble .seats .me { box-shadow: 0 0 0 2px #ffcf4d; }
+.bubble .seats .queue { flex-basis: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.bubble .seats .qp { padding: 2px 8px; border-radius: 999px; background: var(--surface2); font-weight: 700; }
+.bubble .seats .arr { color: var(--muted); }
+.bubble .seats .turn { flex-basis: 100%; color: #b8520f; font-weight: 700; }
+html[data-theme="deep"] .bubble .seats .turn { color: #ffb070; }
+.bubble .seats { flex-direction: column; align-items: stretch; }
+.bubble .seats .board, .bubble .seats .queue { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.bubble .seats b { font-variant-numeric: tabular-nums; }
+.bubble .seats .mine { padding: 5px 9px; border-radius: 10px; background: #fff4d6; color: #6b4a00; font-weight: 700; }
+.bubble .seats .mine b { font-size: 16px; }
+.bubble .seats .mine.call { background: #ffe1e8; color: #9b1d3d; animation: ticketRing 1s ease-in-out infinite; }
+html[data-theme="deep"] .bubble .seats .mine { background: #4a3d1c; color: #ffe3a0; }
+html[data-theme="deep"] .bubble .seats .mine.call { background: #5a2333; color: #ffd0dc; }
+.bubble .acts button.ring { animation: ticketRing 1s ease-in-out infinite; }
+.ticket { position: fixed; z-index: 21; right: 18px; bottom: 82px; min-height: 44px; max-width: calc(100vw - 36px); padding: 0 14px; border: 0; border-radius: 14px; background: #fff4d6; color: #5c3f00; font-weight: 900; font-size: 14px; box-shadow: var(--shadow); border: 2px dashed #e0b84a; }
+.ticket.called { background: #ffe1e8; color: #9b1d3d; border-color: #e2456e; }
+.ticket.ring { animation: ticketRing .5s ease-in-out 4; }
+html[data-theme="deep"] .ticket { background: #4a3d1c; color: #ffe3a0; }
+@keyframes ticketRing { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-3deg) scale(1.03); } 75% { transform: rotate(3deg) scale(1.03); } }
+@media (prefers-reduced-motion: reduce) { .ticket.ring, .bubble .acts button.ring, .bubble .seats .mine.call { animation: none; } }
+@media (max-width: 760px) { .ticket { right: 10px; bottom: 136px; } }
+@media (max-width: 480px) { #catBtn b { display: none; } .hud-right { gap: 4px; } .hud-right .hchip#catBtn { min-width: 38px; padding: 0 6px; } .ticket { bottom: 150px; font-size: 13px; } }
