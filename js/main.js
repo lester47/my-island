@@ -1,11 +1,11 @@
 // 115 鯉魚市集｜介面與流程
 import * as THREE from 'three';
-import { ROLES, OUTFITS, HATS } from './roles.js?v=20261124c';
-import { createMeowBox } from './meow.js?v=20261124c';
-import { REACTIONS, REACTION_IDS, playReaction } from './cats.js?v=20261124c';
-import { createCatNet, SEATS, REST, CALL, pad } from './catnet.js?v=20261124c';
-import { createWallet } from './wallet.js?v=20261124c';
-import { createJobs } from './jobs.js?v=20261124c';
+import { ROLES, OUTFITS, HATS } from './roles.js?v=20261124d';
+import { createMeowBox } from './meow.js?v=20261124d';
+import { REACTIONS, REACTION_IDS, playReaction } from './cats.js?v=20261124d';
+import { createCatNet, SEATS, REST, CALL, pad } from './catnet.js?v=20261124d';
+import { createWallet } from './wallet.js?v=20261124d';
+import { createJobs } from './jobs.js?v=20261124d';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -22,7 +22,7 @@ const pad2 = (n) => String(n).padStart(2, '0');
 const fmtH = (h) => { h = ((h % 24) + 24) % 24; return `${pad2(Math.floor(h))}:${pad2(Math.floor((h % 1) * 60))}`; };
 
 // 介面 Logo：低多邊形鯉魚（橘紅魚背、米白魚腹、魚頭朝右），首頁、怎麼逛、集章完成共用這一張
-const LOGO_SRC = 'assets/brand/koi-logo.png?v=20261124c';
+const LOGO_SRC = 'assets/brand/koi-logo.png?v=20261124d';
 const MASCOT = `<img src="${LOGO_SRC}" alt="115 鯉魚市集 Logo：低多邊形小鯉魚" decoding="async">`;
 
 let C = null;            // content.json
@@ -1392,6 +1392,23 @@ function walletChanged(why) {
 }
 function fmtT(t) { const d = new Date(t); return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`; }
 function openWallet() { renderWallet(); openDlg('#walletDlg'); }
+// 「加入市集」視窗裡的老師入口：還沒登入就帶去錢包的老師登入；已登入就顯示身分
+function meTeacherLine() {
+  const em = NET && NET.teacher && NET.teacher.email();
+  if (em && WAL && WAL.admin) return `<p class="me-tch">🧑‍🏫 已用 ${esc(em)} 登入，可以選「老師」</p>`;
+  if (em) return `<p class="me-tch">已用 ${esc(em)} 登入，但不在教師名冊上</p>`;
+  return `<p class="me-tch">我是老師 → <button type="button" class="linkish" id="meTeacher">🧑‍🏫 老師登入</button></p>`;
+}
+function goTeacherLogin() {
+  if ($('#meDlg').open) $('#meDlg').close();
+  if (!WAL) { toast('老師登入需要連上線'); return; }
+  openWallet();
+  const box = $('#walletBody .tch-box'); if (!box) return;
+  if (box.tagName === 'DETAILS') box.open = true;
+  box.scrollIntoView({ block: 'center' });
+  setTimeout(() => $('#tchEmail')?.focus(), 200);
+}
+document.addEventListener('click', (e) => { if (e.target.closest('#meTeacher')) { e.preventDefault(); goTeacherLogin(); } });
 function renderWallet() {
   const E = ECO(), w = WAL.state(), P = E.prices;
   const mode = WAL.mode === 'school' ? '' : `<p class="wl-trial">🧪 體驗錢包：還沒連上線（或老師還沒開放），錢只存在這台裝置。</p>`;
@@ -1616,7 +1633,7 @@ function openMe() {
     <label for="meNick" class="pp-lab">暱稱（最多 10 個字）</label>
     <input id="meNick" class="pp-in" type="text" maxlength="12" autocomplete="nickname" placeholder="例如：小鯉魚" value="${esc(p.name || (pass ? pass.name : ''))}" required>
     <p class="pp-err" id="meErr" role="alert" hidden></p>
-    <fieldset class="me-set"><legend class="pp-lab">身分</legend><div class="me-roles">${Object.entries(ROLES).filter(([k]) => k !== 'teacher' || (WAL && WAL.admin)).map(([k, r]) => `<label class="me-role" style="--rc:${r.color}"><input type="radio" name="role" value="${k}" ${k === role ? 'checked' : ''}><span>${r.icon} ${r.label}</span></label>`).join('')}</div></fieldset>
+    <fieldset class="me-set"><legend class="pp-lab">身分</legend><div class="me-roles">${Object.entries(ROLES).filter(([k]) => k !== 'teacher' || (WAL && WAL.admin)).map(([k, r]) => `<label class="me-role" style="--rc:${r.color}"><input type="radio" name="role" value="${k}" ${k === role ? 'checked' : ''}><span>${r.icon} ${r.label}</span></label>`).join('')}</div>${meTeacherLine()}</fieldset>
     <fieldset class="me-set"><legend class="pp-lab">衣服顏色</legend><div class="me-colors">${OUTFITS.map((c, i) => `<label class="me-color" style="--c:${c}"><input type="radio" name="shirt" value="${c}" ${c === shirt ? 'checked' : ''} aria-label="顏色 ${i + 1}"><span></span></label>`).join('')}</div></fieldset>
     <fieldset class="me-set"><legend class="pp-lab">帽子（每頂都有小鯉魚 Logo）</legend><div class="me-roles me-hats">${Object.entries(HATS).map(([k, h]) => `<label class="me-role" style="--rc:#e8762b"><input type="radio" name="hat" value="${k}" ${k === (p.hat || 'none') ? 'checked' : ''}><span>${h.icon} ${h.label}</span></label>`).join('')}</div></fieldset>
     <div class="chal-btns"><button type="submit" class="btn">${p.name ? '儲存' : '加入市集'}</button>${p.name ? '<button type="button" class="btn ghost" id="meLeave">離開市集</button>' : ''}</div>
@@ -1768,18 +1785,18 @@ function balloonPopped() {
 }
 function startNet() {
   const M = C.multiplayer; if (!M || !M.enabled || !M.firebase || !PL) return;
-  import('./net.js?v=20261124c').then(({ createNet }) => {
+  import('./net.js?v=20261124d').then(({ createNet }) => {
     NET = createNet(M.firebase, {
       myPos: () => PL.myPos(), upsert: (id, info, pos) => { ONLINE.set(id, String(info.name || '').slice(0, 16)); PL.upsert(id, info, pos); }, remove: (id) => { ONLINE.delete(id); PL.remove(id); },
       onCount: (c) => { COUNT = c; const el = $('#onlineChip'); el.hidden = false; $('#onlineCount').textContent = c.players; el.setAttribute('aria-label', `市集島上 ${c.players} 人，開著網站 ${c.viewers} 人，點一下看各身分人數`); },
-      onTeacher: (k, code) => { if (k === 'in') { toast('🧑‍🏫 老師登入成功，重新整理中…'); setTimeout(() => location.reload(), 700); } else toast(`老師登入失敗（${code || '連結過期或已用過'}），請重新寄一次`); },
+      onTeacher: (k, code) => { if (k === 'in') { toast('🧑‍🏫 老師登入成功，重新整理中…'); setTimeout(() => location.reload(), 700); } else if (!(NET && NET.teacher && NET.teacher.email())) toast(code === 'auth/invalid-action-code' || code === 'auth/expired-action-code' ? '這個登入連結已經用過或過期了，請在 🪙 錢包的「老師登入」重新寄一次' : `老師登入沒有成功（${code || '未知原因'}），請重新寄一次`); },
       onStatus: (s, msg) => { $('#onlineChip').classList.toggle('off', s !== 'online'); if (s === 'error') console.warn('連線錯誤', msg); },
     });
     NET.setMe(meProfile());
     CR.attach(NET, meProfile);   // 擼貓號碼牌改用多人連線
     if (WAL) WAL.attach(NET, meProfile);   // 線上鯉魚幣錢包
     if (JOBS) JOBS.attach(NET);
-    import('./hidemp.js?v=20261124c').then(({ createHideMP }) => {
+    import('./hidemp.js?v=20261124d').then(({ createHideMP }) => {
       HM = createHideMP(NET, {
         toast, profile: meProfile, enterWalk: () => { if (!S.walking) enterWalk(); },
         walkPos: () => (S.walking ? CAM.walk.pos : null), posOf: (id) => PL.posOf(id),
@@ -1910,13 +1927,13 @@ async function boot() {
   if (Q.has('nogl') || !webglOK()) { textOnly(Q.has('nogl') ? '已切換為文字清單版' : '這台裝置無法顯示 3D 畫面'); applyTheme(); updateClock(); setInterval(updateClock, 10000); window.__ready = true; return; }
   let mods;
   try {
-    mods = await Promise.all([import('./world.js?v=20261124c'), import('./life.js?v=20261124c'), import('./cam.js?v=20261124c'), import('./players.js?v=20261124c'), import('./signs.js?v=20261124c'), import('./festival.js?v=20261124c'), import('./fauna.js?v=20261124c'), import('./interact.js?v=20261124c'), import('./games.js?v=20261124c')]);
+    mods = await Promise.all([import('./world.js?v=20261124d'), import('./life.js?v=20261124d'), import('./cam.js?v=20261124d'), import('./players.js?v=20261124d'), import('./signs.js?v=20261124d'), import('./festival.js?v=20261124d'), import('./fauna.js?v=20261124d'), import('./interact.js?v=20261124d'), import('./games.js?v=20261124d')]);
     const [{ createWorld, H: GROUND_H }, { createLife, makePerson }, { createCam }, { createPlayers }, { createSigns }, { createFestival }, { createFauna }, { createInteract }, { createGames, FISH }] = mods;
     const mobile = isLite();   // 手機和平板都用輕量版場景
     W = createWorld($('#gl'), { quality: S.quality, mobile });
     W.renderer.setPixelRatio(Math.min(devicePixelRatio, S.quality === 'low' ? 1 : (mobile ? 1.5 : 2)));
     L = createLife(W, C, { halfPeople: mobile || S.quality === 'low', quality: S.quality });
-    try { const { createCats } = await import('./cats.js?v=20261124c'); K = createCats(W, C, { reduced: () => S.reduced }); } catch (e) { console.warn('島上的貓載入失敗', e); K = null; }
+    try { const { createCats } = await import('./cats.js?v=20261124d'); K = createCats(W, C, { reduced: () => S.reduced }); } catch (e) { console.warn('島上的貓載入失敗', e); K = null; }
     CAM = createCam(W, $('#gl'), { onZoom: showZoom, onIntro: (k) => { L.setDeck(k < .3 ? 1 : Math.max(0, 1 - (k - .3) / .25)); if (k > .55) $('.intro-title').classList.add('show'); } });
     CAM.S.reduced = S.reduced; CAM.S.mobile = isMobile();
     PL = createPlayers(W, GROUND_H); renderMe(); startNet();
@@ -1925,13 +1942,13 @@ async function boot() {
     W.canLeave = () => { const s = L.carp.status(); if (s.docked && s.gang) return true; if (performance.now() - lastBlockToast > 3000) { lastBlockToast = performance.now(); toast('⛔ 航行中請待在船上，靠港放下跳板後再下船'); } return false; };
     // 彩虹熱氣球：起降場在服務台北側廣場；用網路時間排班，大家看到同一顆
     try {
-      const { createBalloon } = await import('./balloon.js?v=20261124c');
+      const { createBalloon } = await import('./balloon.js?v=20261124d');
       BAL = createBalloon(W, { pad: { x: 1, z: -5 }, now: () => (NET ? NET.now() : Date.now()), low: mobile || S.quality === 'low' });
       W.balloon = BAL; W.gates = [balloonGate];
     } catch (e) { console.warn('熱氣球載入失敗', e); BAL = null; }
-    KIT = await import('./kit.js?v=20261124c');
-    SG = createSigns(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261124c')).rng, low: mobile || S.quality === 'low' });
-    FX = createFestival(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261124c')).rng, low: mobile || S.quality === 'low', avoid: [...(BAL ? BAL.avoid : []), ...SG.signs.map((s) => s.g.position), ...Object.values(W.islands).flatMap((I) => (I.trees || []).filter((tr) => tr.visible).map((tr) => tr.position.clone().add(I.pos)))], carp: L.carp });
+    KIT = await import('./kit.js?v=20261124d');
+    SG = createSigns(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261124d')).rng, low: mobile || S.quality === 'low' });
+    FX = createFestival(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261124d')).rng, low: mobile || S.quality === 'low', avoid: [...(BAL ? BAL.avoid : []), ...SG.signs.map((s) => s.g.position), ...Object.values(W.islands).flatMap((I) => (I.trees || []).filter((tr) => tr.visible).map((tr) => tr.position.clone().add(I.pos)))], carp: L.carp });
     // 貓住在自己島上最空曠的地方，不被攤位和裝飾擋住
     if (K) K.setHomes((id) => {
       const I = W.islands[id]; if (!I || !I.walk) return null;
@@ -1945,7 +1962,7 @@ async function boot() {
       }
       return best;
     });
-    FA = createFauna(W, { H: GROUND_H, rng: (await import('./kit.js?v=20261124c')).rng });
+    FA = createFauna(W, { H: GROUND_H, rng: (await import('./kit.js?v=20261124d')).rng });
     IA = createInteract(W, C, GROUND_H, {
       toast, carp: L.carp,
       toastIf: (m) => { if (!S.intro) toast(m); },
