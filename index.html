@@ -69,6 +69,7 @@
 <!-- 角落：時鐘、背包、集章 -->
 <div class="hud hud-left">
   <button type="button" class="hchip plan" id="planBtn" aria-label="我的必逛清單與鯉魚幣預算" aria-haspopup="dialog"><span aria-hidden="true">⭐</span><span class="tx">必逛</span><b id="planCount">0</b></button>
+  <button type="button" class="hchip coin" id="coinBtn" hidden aria-label="我的線上鯉魚幣錢包與打工" aria-haspopup="dialog"><span aria-hidden="true">🪙</span><b id="coinCount">0</b></button>
   <button type="button" class="clock" id="clock" aria-label="目前時間與天色，點一下切換晝夜"><span class="now" id="clockNow">--:--</span><span class="sky" id="clockSky">白天 12:00</span></button>
 </div>
 <div class="hud hud-right">
@@ -79,6 +80,7 @@
   <button type="button" class="hchip" id="catBtn" aria-label="貓咪圖鑑"><span aria-hidden="true">🐾</span><b id="catCount">0/6</b></button>
 </div>
 <button type="button" class="ticket" id="ticketChip" hidden></button>
+<div class="jobbar" id="jobBar" role="status" aria-live="polite" hidden></div>
 <p class="layout-note">示意配置，非實際場地比例</p>
 <div class="notice-bar" id="noticeBar" role="status" hidden><span aria-hidden="true">📢</span><span class="nt"></span><small class="nw"></small><button type="button" class="nx" aria-label="關閉公告">✕</button></div>
 <section class="fish-ui" id="fishUI" hidden aria-live="polite"><p class="ft"></p><div class="fbtns"><button type="button" class="fb">🎣 拋竿</button><button type="button" class="fx fl">📖 圖鑑 0/6</button><button type="button" class="fx frules">📜 規則</button></div></section>
@@ -179,6 +181,22 @@
 <dialog id="gameDlg" class="game-dlg" aria-labelledby="gameTitle">
   <div class="game-bar"><h2 id="gameTitle">🎮 攤位小遊戲</h2><button type="button" class="btn" id="gameBack">✕ 回市集</button></div>
   <div class="game-wrap"><iframe id="gameFrame" title="攤位線上小遊戲" allow="autoplay; accelerometer; gyroscope" src="about:blank"></iframe><p class="game-load" id="gameLoad">遊戲載入中…</p></div>
+</dialog>
+<dialog id="walletDlg" class="dlg wide" aria-labelledby="walletTitle">
+  <div class="dlg-hd"><h2 id="walletTitle">🪙 我的線上鯉魚幣</h2><button type="button" class="x" data-close aria-label="關閉">✕</button></div>
+  <div id="walletBody"></div>
+</dialog>
+<dialog id="jobDlg" class="dlg" aria-labelledby="jobTitle">
+  <div class="dlg-hd"><h2 id="jobTitle">💼 打工中</h2><button type="button" class="x" data-close aria-label="關閉">✕</button></div>
+  <div id="jobBody"></div>
+</dialog>
+<dialog id="treatDlg" class="dlg" aria-labelledby="treatTitle">
+  <div class="dlg-hd"><h2 id="treatTitle">🎟️ 收到請客券</h2></div>
+  <div id="treatBody"></div>
+</dialog>
+<dialog id="adminDlg" class="dlg wide" aria-labelledby="adminTitle">
+  <div class="dlg-hd"><h2 id="adminTitle">🧑‍🏫 老師後台</h2><button type="button" class="x" data-close aria-label="關閉">✕</button></div>
+  <div id="adminBody"></div>
 </dialog>
 <dialog id="catDlg" class="dlg wide" aria-labelledby="catTitle">
   <div class="dlg-hd"><h2 id="catTitle">🐾 貓咪圖鑑</h2><button type="button" class="x" data-close aria-label="關閉">✕</button></div>
