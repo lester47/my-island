@@ -1,8 +1,8 @@
 // 登入者：自己的人物＋頭上名牌；之後接上連線服務時，其他人也用同一套顯示（upsert / remove）
 import * as THREE from 'three';
-import { rng } from './kit.js?v=20261124j';
-import { makePerson } from './life.js?v=20261124j';
-import { ROLES, HATS } from './roles.js?v=20261124j';
+import { rng } from './kit.js?v=20261124k';
+import { makePerson } from './life.js?v=20261124k';
+import { ROLES, HATS } from './roles.js?v=20261124k';
 const SPAWN = { x: 0, z: 7.4, yaw: Math.PI };
 
 const seedOf = (s) => { let h = 2166136261; for (const c of String(s)) h = Math.imul(h ^ c.codePointAt(0), 16777619); return h >>> 0; };
@@ -11,7 +11,7 @@ const escH = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '
 // 登入者上衣胸前的小鯉魚 Logo（和網站左上角同一張圖）
 let LOGO_MAT = null;
 function withLogo(P) {
-  if (!LOGO_MAT) { const tx = new THREE.TextureLoader().load('assets/brand/koi-logo.png?v=20261124j'); tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 4; LOGO_MAT = new THREE.MeshStandardMaterial({ map: tx, transparent: true, alphaTest: .4, roughness: .8, polygonOffset: true, polygonOffsetFactor: -2 }); }
+  if (!LOGO_MAT) { const tx = new THREE.TextureLoader().load('assets/brand/koi-logo.png?v=20261124k'); tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 4; LOGO_MAT = new THREE.MeshStandardMaterial({ map: tx, transparent: true, alphaTest: .4, roughness: .8, polygonOffset: true, polygonOffsetFactor: -2 }); }
   const m = new THREE.Mesh(new THREE.PlaneGeometry(.17, .17), LOGO_MAT);
   m.position.set(0, .76, .232); m.rotation.x = -.1;          // 上衣是上窄下寬的圓柱，貼片稍微往後仰才貼合
   P.g.add(m); P.logo = m; return P;
@@ -80,9 +80,11 @@ export function createPlayers(W, H) {
   const _v = new THREE.Vector3();
   // 姿勢：走路擺手腳；坐著（在鯉魚號上）時腿往前伸、身體放低，跟船上的小朋友一樣
   const SIT_DROP = .2;
-  function pose(P, t, walking, sitting) {
+  function pose(P, t, walking, sitting, pedal) {
     if (sitting) {
-      for (const l of P.legs) l.rotation.x = -Math.PI / 2 + .25;
+      // 鴨子船：腳一前一後輪流踩踏板
+      if (pedal) { const s = Math.sin(t * 7); P.legs[0].rotation.x = -Math.PI / 2 + .45 + s * .35; P.legs[1].rotation.x = -Math.PI / 2 + .45 - s * .35; }
+      else for (const l of P.legs) l.rotation.x = -Math.PI / 2 + .25;
       P.arms[0].rotation.set(0, 0, -.15); P.arms[1].rotation.set(0, 0, .15);
       return;
     }
@@ -112,22 +114,23 @@ export function createPlayers(W, H) {
       }
       // 其他登入者若位置在水面上（不是陸地、橋、碼頭，也不在鯉魚號上），先不顯示——舊版網頁可能還在送海上的位置
       // 其他登入者在飛行中的熱氣球籃子裡：排進籃子（網路位置有延遲，不然會飄在籃子外）
-      const rs = p.id !== meId && W.balloon ? W.balloon.riderSpot(p.target, p.id) : null;
+      const rs = p.id !== meId ? (W.balloon && W.balloon.riderSpot(p.target, p.id)) || (W.duck && W.duck.riderSpot(p.target, p.id)) || null : null;
       if (rs) p.pos.copy(rs);
       // 其他人在熱氣球籃子裡：站著不動（位置變動是熱氣球在飛，不是在走路）
-      if (p.id !== meId && W.balloon && (rs || W.balloon.inBasket(p.pos))) p.moving = 0;
+      if (p.id !== meId && ((W.balloon && (rs || W.balloon.inBasket(p.pos))) || (W.duck && W.duck.inBoat(p.pos)))) p.moving = 0;
       const offLand = p.id !== meId && !rs && W.ground(p.pos.x, p.pos.z) == null && !onBoat(p.pos);
       const tagOff = hiddenTags.has(p.id);
       // 躲貓貓進行中：從鳥瞰（空中）看不到參加者，不然鬼切到鳥瞰就能把大家看光光；要找人只能在地面漫遊
       const hide = (p.id === meId && walking && firstPerson) || offLand || (tagOff && !walking);
       p.P.g.visible = !hide;
       // 在船上：自己沒按方向鍵就坐好；其他人在船上一律坐著（位置變動是船在動）
-      const sit = onBoat(p.pos) && (p.id === meId ? !(p.moving > 0) : true);
+      const inDuck = !!(W.duck && W.duck.inBoat(p.pos)), duckSit = inDuck && (p.id === meId ? !(p.moving > 0) : true);
+      const sit = (onBoat(p.pos) && (p.id === meId ? !(p.moving > 0) : true)) || duckSit;
       const gy = W.ground(p.pos.x, p.pos.z), crouch = !sit && gy != null && p.pos.y < gy - .15;
-      p.P.g.position.copy(p.pos); if (crouch) p.P.g.position.y = gy; if (sit) p.P.g.position.y -= SIT_DROP; p.P.g.rotation.y = p.yaw;
+      p.P.g.position.copy(p.pos); if (crouch) p.P.g.position.y = gy; if (sit) p.P.g.position.y -= SIT_DROP; p.P.g.rotation.y = duckSit ? W.duck.yaw() : p.yaw;   // 坐在鴨子船上：面向船頭
       if (p.baseS == null) p.baseS = p.P.g.scale.y;
       p.P.g.scale.y += ((crouch ? p.baseS * .66 : p.baseS) - p.P.g.scale.y) * Math.min(1, dt * 12);   // 蹲下：身體縮矮
-      pose(p.P, t + p.phase, p.moving > 0 && !sit, sit);
+      pose(p.P, t + p.phase, p.moving > 0 && !sit, sit, duckSit && W.duck.pedaling());
       if (crouch) for (const l of p.P.legs) l.rotation.x = -.9;
       // 名牌：投影到畫面上，在頭頂上方
       _v.set(p.pos.x, p.pos.y + 1.02, p.pos.z).project(camera);
@@ -150,7 +153,8 @@ export function createPlayers(W, H) {
   const hiddenTags = new Set();
   function hideTag(id, on) { if (on) hiddenTags.add(id); else hiddenTags.delete(id); }
   function posOf(id) { const p = all.get(id); return p ? p.pos : null; }
+  function inDuckCount() { let n = 0; for (const p of all.values()) if (p.id !== meId && W.duck && (W.duck.riderSpot(p.target, p.id) || W.duck.inBoat(p.pos))) n++; return n; }
   function inBalloonCount() { let n = 0; for (const p of all.values()) if (p.id !== meId && W.balloon && (W.balloon.riderSpot(p.target, p.id) || W.balloon.inBasket(p.pos))) n++; return n; }
   function onBoatCount() { let n = 0; for (const p of all.values()) if (p.id !== meId && onBoat(p.pos)) n++; return n; }
-  return { setMe, me, upsert, remove, update, myPos, spawnFor, onBoatCount, inBalloonCount, setBadge, hideTag, posOf, count: () => all.size, layer };
+  return { setMe, me, upsert, remove, update, myPos, spawnFor, onBoatCount, inBalloonCount, inDuckCount, setBadge, hideTag, posOf, count: () => all.size, layer };
 }
