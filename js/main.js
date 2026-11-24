@@ -1,11 +1,11 @@
 // 115 鯉魚市集｜介面與流程
 import * as THREE from 'three';
-import { ROLES, OUTFITS, HATS } from './roles.js?v=20261124h';
-import { createMeowBox } from './meow.js?v=20261124h';
-import { REACTIONS, REACTION_IDS, playReaction } from './cats.js?v=20261124h';
-import { createCatNet, SEATS, REST, CALL, pad } from './catnet.js?v=20261124h';
-import { createWallet } from './wallet.js?v=20261124h';
-import { createJobs } from './jobs.js?v=20261124h';
+import { ROLES, OUTFITS, HATS } from './roles.js?v=20261124i';
+import { createMeowBox } from './meow.js?v=20261124i';
+import { REACTIONS, REACTION_IDS, playReaction } from './cats.js?v=20261124i';
+import { createCatNet, SEATS, REST, CALL, pad } from './catnet.js?v=20261124i';
+import { createWallet } from './wallet.js?v=20261124i';
+import { createJobs } from './jobs.js?v=20261124i';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -22,7 +22,7 @@ const pad2 = (n) => String(n).padStart(2, '0');
 const fmtH = (h) => { h = ((h % 24) + 24) % 24; return `${pad2(Math.floor(h))}:${pad2(Math.floor((h % 1) * 60))}`; };
 
 // 介面 Logo：低多邊形鯉魚（橘紅魚背、米白魚腹、魚頭朝右），首頁、怎麼逛、集章完成共用這一張
-const LOGO_SRC = 'assets/brand/koi-logo.png?v=20261124h';
+const LOGO_SRC = 'assets/brand/koi-logo.png?v=20261124i';
 const MASCOT = `<img src="${LOGO_SRC}" alt="115 鯉魚市集 Logo：低多邊形小鯉魚" decoding="async">`;
 
 let C = null;            // content.json
@@ -1465,7 +1465,7 @@ function renderWallet() {
     <div class="wl-top"><div class="wl-bal"><span aria-hidden="true">🪙</span><b>${w.bal}</b><small>枚${esc(coinName())}</small></div>
       <div class="wl-meta">今天打工 ${w.earned}／${E.dailyJob}　錢包上限 ${E.cap}<br><small>每天固定發 ${E.start} 枚，當天結束歸零，隔天重新發。${WAL.frozen ? '<b class="why">錢包被老師暫停中</b>' : ''}</small></div></div>
     <p class="foot" style="margin:6px 0 10px">${esc(E.note)}</p>
-    <h3 class="wl-h">💼 打工賺鯉魚幣</h3><ul class="wl-jobs">${jobs}</ul>
+    <h3 class="wl-h">💼 打工賺鯉魚幣</h3><p class="foot" style="margin:0 0 6px">完整打工清單和規則在 <button type="button" class="linkish" id="wlAgency">🏢 服務台・打工仲介</button></p><ul class="wl-jobs">${jobs}</ul>
     <h3 class="wl-h">🧾 價目表</h3><ul class="wl-price">${prices.map(([ic, n, p, lim]) => `<li><span aria-hidden="true">${ic}</span>${esc(n)}<b>${p} 枚</b><small>${esc(lim)}</small></li>`).join('')}<li><span aria-hidden="true">🆓</span>逛島、看攤位、集章、跟居民交換<b>免費</b><small>永遠免費</small></li></ul>
     <h3 class="wl-h">🎟️ 請客券</h3>${treatWhy ? `<p class="foot">${esc(treatWhy)}</p>` : people.length ? `<form id="treatForm" class="wl-treat"><label>請誰？<select id="treatTo">${people.map(([id, n]) => `<option value="${esc(id)}">${esc(n)}</option>`).join('')}</select></label><label>幾枚？<select id="treatAmt">${[5, 10, 15].filter((a) => a <= E.treatMax).map((a) => `<option>${a}</option>`).join('')}</select></label><button type="submit" class="btn">送出請客券</button></form><p class="foot">每天可以請 ${E.treatPerDay} 位同學，最多 ${E.treatMax} 枚。對方要按「收下」才算；對方不想要，錢會退回給你。</p>` : '<p class="foot">現在島上沒有其他有暱稱的人可以請客。</p>'}
     <h3 class="wl-h">📒 今天的紀錄</h3><ul class="wl-log">${(w.log || []).slice(0, 15).map((x) => `<li><small>${fmtT(x.t)}</small> ${esc(x.n)}<b class="${x.a < 0 ? 'neg' : 'pos'}">${x.a > 0 ? '+' : ''}${x.a}</b></li>`).join('') || '<li>還沒有紀錄</li>'}</ul>
@@ -1474,8 +1474,48 @@ function renderWallet() {
   $('#walletBody').querySelectorAll('[data-job]').forEach((b) => (b.onclick = () => { const id = b.dataset.job; if (JOBS.active === id) JOBS.quit(); else if (JOBS.start(id)) $('#walletDlg').close(); renderWallet(); }));
   const tf = $('#treatForm'); if (tf) tf.onsubmit = async (e) => { e.preventDefault(); const to = $('#treatTo').value, a = +$('#treatAmt').value; const why = await WAL.sendTreat(to, ONLINE.get(to) || '同學', a); toast(why ? '🎟️ ' + why : `🎟️ 請客券送出去了：${a} 枚給 ${ONLINE.get(to)}`); renderWallet(); };
   $('#wlHelp').onclick = () => { if (WAL.report('有人逼我請客或給錢')) toast('已經告訴老師了，老師會來幫你 💪'); else toast('現在沒有連上線，請直接找老師'); };
+  $('#wlAgency').onclick = () => goAgency();
   if ($('#wlAdmin')) $('#wlAdmin').onclick = () => { $('#walletDlg').close(); openAdmin(); };
   bindTeacherBox();
+}
+// 💼 服務台・打工仲介：列出所有打工、在哪裡、做什麼、賺多少、做完休息多久，可以直接接工作
+function agencyHTML() {
+  const E = ECO(), w = WAL ? WAL.state() : { earned: 0 }, left = Math.max(0, E.dailyJob - (w.earned || 0));
+  const all = E.jobs.reduce((a, j) => a + j.pay, 0);
+  const rows = E.jobs.map((j, i) => {
+    const s = JOBS ? JOBS.status(j.id) : { ok: false, why: '打工需要 3D 畫面' };
+    const tag = s.doing ? '<span class="ag-tag doing">做這份中</span>' : s.ok ? '<span class="ag-tag ok">可以接</span>' : `<span class="ag-tag no">${esc(s.why)}</span>`;
+    return `<li class="ag-job"><span class="ag-no">${i + 1}</span><span class="ic" aria-hidden="true">${j.icon}</span>
+      <div class="ag-main"><b>${esc(j.name)}</b><small>📍 ${esc(j.where)}</small><small>${esc(j.desc)}</small>
+        <small class="ag-meta">做完休息 ${Math.round(j.cool / 60)} 分鐘・同時最多 3 人</small>${tag}</div>
+      <div class="ag-side"><span class="ag-pay">+${j.pay}<small>枚</small></span>${JOBS ? `<button type="button" class="btn ${s.ok || s.doing ? '' : 'ghost'}" data-ag="${j.id}" ${s.ok || s.doing ? '' : 'disabled'}>${s.doing ? '放棄' : '接這份'}</button>` : ''}</div></li>`;
+  }).join('');
+  return `<p class="ag-hi">歡迎來到服務台打工仲介！做完工作就能賺${esc(coinName())}，拿去擼貓、坐船、坐熱氣球、玩小遊戲。</p>
+    <div class="ag-sum"><div><b>${w.earned || 0}</b><small>今天已賺</small></div><div><b>${left}</b><small>今天還能賺</small></div><div><b>${E.dailyJob}</b><small>每天上限</small></div></div>
+    <ol class="ag-list">${rows}</ol>
+    <h3 class="wl-h">📋 打工規則</h3>
+    <ol class="ag-rules"><li>一次只能做 1 份工作；做到一半可以按「放棄」，但拿不到錢。</li><li>每份工作做完要休息一下（上面寫的分鐘數）才能再接同一份。</li><li>每天打工最多賺 ${E.dailyJob} 枚（六份全做一輪是 ${all} 枚），錢包最多放 ${E.cap} 枚。</li><li>同一份工作同時最多 3 個人做，滿了就先接別的。</li><li>打工賺的錢跟每天發的錢一樣，當天結束歸零。</li></ol>`;
+}
+function openAgency() {
+  if (S.walking && !exitWalk(true)) return;
+  closePanel(false); closePhotoBar();
+  $('#agencyBody').innerHTML = agencyHTML();
+  $('#agencyBody').querySelectorAll('[data-ag]').forEach((b) => (b.onclick = () => {
+    const id = b.dataset.ag;
+    if (JOBS.active === id) { JOBS.quit(); $('#agencyBody').innerHTML = agencyHTML(); openAgency(); return; }
+    if (JOBS.start(id)) $('#agencyDlg').close(); else openAgency();
+  }));
+  if (!$('#agencyDlg').open) openDlg('#agencyDlg');
+}
+// 鏡頭飛到服務台的打工仲介櫃台，再打開清單
+function goAgency() {
+  const P = IA && IA.agencyPos ? IA.agencyPos() : null;
+  if (!P) { openAgency(); return; }
+  if (S.walking && !exitWalk(true)) return;
+  closePanel(false); closePhotoBar();
+  if ($('#walletDlg').open) $('#walletDlg').close();
+  const t = P.clone().setY(P.y + 1.2), dir = new THREE.Vector3(P.x, 0, P.z); if (dir.lengthSq() < .01) dir.set(0, 0, 1); dir.normalize();
+  CAM.flight({ t, p: t.clone().addScaledVector(dir, 7).setY(P.y + 5) }, 1400, 2, () => openAgency());
 }
 // 收到請客券
 function showTreat(item) {
@@ -1831,7 +1871,7 @@ function balloonPopped() {
 }
 function startNet() {
   const M = C.multiplayer; if (!M || !M.enabled || !M.firebase || !PL) return;
-  import('./net.js?v=20261124h').then(({ createNet }) => {
+  import('./net.js?v=20261124i').then(({ createNet }) => {
     NET = createNet(M.firebase, {
       myPos: () => PL.myPos(), upsert: (id, info, pos) => { ONLINE.set(id, String(info.name || '').slice(0, 16)); PL.upsert(id, info, pos); }, remove: (id) => { ONLINE.delete(id); PL.remove(id); },
       onCount: (c) => { COUNT = c; const el = $('#onlineChip'); el.hidden = false; $('#onlineCount').textContent = c.players; el.setAttribute('aria-label', `市集島上 ${c.players} 人，開著網站 ${c.viewers} 人，點一下看各身分人數`); },
@@ -1842,7 +1882,7 @@ function startNet() {
     CR.attach(NET, meProfile);   // 擼貓號碼牌改用多人連線
     if (WAL) WAL.attach(NET, meProfile);   // 線上鯉魚幣錢包
     if (JOBS) JOBS.attach(NET);
-    import('./hidemp.js?v=20261124h').then(({ createHideMP }) => {
+    import('./hidemp.js?v=20261124i').then(({ createHideMP }) => {
       HM = createHideMP(NET, {
         toast, profile: meProfile, enterWalk: () => { if (!S.walking) enterWalk(); },
         walkPos: () => (S.walking ? CAM.walk.pos : null), posOf: (id) => PL.posOf(id),
@@ -1974,13 +2014,13 @@ async function boot() {
   if (Q.has('nogl') || !webglOK()) { textOnly(Q.has('nogl') ? '已切換為文字清單版' : '這台裝置無法顯示 3D 畫面'); applyTheme(); updateClock(); setInterval(updateClock, 10000); window.__ready = true; return; }
   let mods;
   try {
-    mods = await Promise.all([import('./world.js?v=20261124h'), import('./life.js?v=20261124h'), import('./cam.js?v=20261124h'), import('./players.js?v=20261124h'), import('./signs.js?v=20261124h'), import('./festival.js?v=20261124h'), import('./fauna.js?v=20261124h'), import('./interact.js?v=20261124h'), import('./games.js?v=20261124h')]);
+    mods = await Promise.all([import('./world.js?v=20261124i'), import('./life.js?v=20261124i'), import('./cam.js?v=20261124i'), import('./players.js?v=20261124i'), import('./signs.js?v=20261124i'), import('./festival.js?v=20261124i'), import('./fauna.js?v=20261124i'), import('./interact.js?v=20261124i'), import('./games.js?v=20261124i')]);
     const [{ createWorld, H: GROUND_H }, { createLife, makePerson }, { createCam }, { createPlayers }, { createSigns }, { createFestival }, { createFauna }, { createInteract }, { createGames, FISH }] = mods;
     const mobile = isLite();   // 手機和平板都用輕量版場景
     W = createWorld($('#gl'), { quality: S.quality, mobile });
     W.renderer.setPixelRatio(Math.min(devicePixelRatio, S.quality === 'low' ? 1 : (mobile ? 1.5 : 2)));
     L = createLife(W, C, { halfPeople: mobile || S.quality === 'low', quality: S.quality });
-    try { const { createCats } = await import('./cats.js?v=20261124h'); K = createCats(W, C, { reduced: () => S.reduced }); } catch (e) { console.warn('島上的貓載入失敗', e); K = null; }
+    try { const { createCats } = await import('./cats.js?v=20261124i'); K = createCats(W, C, { reduced: () => S.reduced }); } catch (e) { console.warn('島上的貓載入失敗', e); K = null; }
     CAM = createCam(W, $('#gl'), { onZoom: showZoom, onIntro: (k) => { L.setDeck(k < .3 ? 1 : Math.max(0, 1 - (k - .3) / .25)); if (k > .55) $('.intro-title').classList.add('show'); } });
     CAM.S.reduced = S.reduced; CAM.S.mobile = isMobile();
     PL = createPlayers(W, GROUND_H); renderMe(); startNet();
@@ -1989,13 +2029,13 @@ async function boot() {
     W.canLeave = () => { const s = L.carp.status(); if (s.docked && s.gang) return true; if (performance.now() - lastBlockToast > 3000) { lastBlockToast = performance.now(); toast('⛔ 航行中請待在船上，靠港放下跳板後再下船'); } return false; };
     // 彩虹熱氣球：起降場在服務台北側廣場；用網路時間排班，大家看到同一顆
     try {
-      const { createBalloon } = await import('./balloon.js?v=20261124h');
+      const { createBalloon } = await import('./balloon.js?v=20261124i');
       BAL = createBalloon(W, { pad: { x: 1, z: -5 }, now: () => (NET ? NET.now() : Date.now()), low: mobile || S.quality === 'low' });
       W.balloon = BAL; W.gates = [balloonGate];
     } catch (e) { console.warn('熱氣球載入失敗', e); BAL = null; }
-    KIT = await import('./kit.js?v=20261124h');
-    SG = createSigns(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261124h')).rng, low: mobile || S.quality === 'low' });
-    FX = createFestival(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261124h')).rng, low: mobile || S.quality === 'low', avoid: [...(BAL ? BAL.avoid : []), ...SG.signs.map((s) => s.g.position), ...Object.values(W.islands).flatMap((I) => (I.trees || []).filter((tr) => tr.visible).map((tr) => tr.position.clone().add(I.pos)))], carp: L.carp });
+    KIT = await import('./kit.js?v=20261124i');
+    SG = createSigns(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261124i')).rng, low: mobile || S.quality === 'low' });
+    FX = createFestival(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261124i')).rng, low: mobile || S.quality === 'low', avoid: [...(BAL ? BAL.avoid : []), ...SG.signs.map((s) => s.g.position), ...Object.values(W.islands).flatMap((I) => (I.trees || []).filter((tr) => tr.visible).map((tr) => tr.position.clone().add(I.pos)))], carp: L.carp });
     // 貓住在自己島上最空曠的地方，不被攤位和裝飾擋住
     if (K) K.setHomes((id) => {
       const I = W.islands[id]; if (!I || !I.walk) return null;
@@ -2009,7 +2049,7 @@ async function boot() {
       }
       return best;
     });
-    FA = createFauna(W, { H: GROUND_H, rng: (await import('./kit.js?v=20261124h')).rng });
+    FA = createFauna(W, { H: GROUND_H, rng: (await import('./kit.js?v=20261124i')).rng });
     IA = createInteract(W, C, GROUND_H, {
       toast, carp: L.carp,
       toastIf: (m) => { if (!S.intro) toast(m); },
@@ -2017,7 +2057,7 @@ async function boot() {
       openStalls: (id) => openIsland(id),
       openStall: (no) => { const st = stallByNo(no); if (st) { if (S.walking && !exitWalk(true)) return; openIsland(st.island, { no }); } },
       stallPos: (no) => SG.signs.find((s) => s.st.no === no),
-      photoSpot, freeSpot: (id) => FX.freeSpot(id, .7, 1.0),
+      photoSpot, jobAgency: () => openAgency(), freeSpot: (id) => FX.freeSpot(id, .7, 1.0),
     });
     FISHES = FISH;
     GM = createGames(W, C, GROUND_H, {

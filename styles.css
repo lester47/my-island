@@ -654,3 +654,27 @@ html[data-theme="deep"] .job-msg { background: #23402a; color: #bff0c6; } html[d
 .photobar .share { background: #e7f6ec; color: #1d6b3a; }
 .photobar .x { min-width: 40px; padding: 0; background: #f1f1f1; color: #555; }
 @media (max-width: 480px) { .photobar { bottom: 192px; gap: 3px; padding: 5px; flex-wrap: nowrap; } .photobar button { padding: 0 7px; font-size: 12.5px; min-height: 38px; white-space: nowrap; } .photobar .x { min-width: 32px; } }
+
+/* 🏢 服務台・打工仲介 */
+.ag-hi { margin: 0 0 10px; line-height: 1.7; }
+.ag-sum { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 0 0 12px; }
+.ag-sum div { background: #fff4d6; border-radius: 12px; padding: 8px; text-align: center; }
+.ag-sum b { display: block; font-size: 22px; color: #7a4a00; }
+.ag-sum small { color: #7a6a50; }
+.ag-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.ag-job { display: grid; grid-template-columns: 26px 34px 1fr auto; gap: 8px; align-items: start; background: #f6f9ff; border: 1px solid #dbe7f7; border-radius: 14px; padding: 10px; }
+.ag-no { width: 24px; height: 24px; border-radius: 50%; background: #2f7fd1; color: #fff; font-weight: 900; display: grid; place-items: center; font-size: 13px; }
+.ag-job .ic { font-size: 26px; line-height: 1; }
+.ag-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ag-main small { color: #555; line-height: 1.5; }
+.ag-main .ag-meta { color: #7a6a50; }
+.ag-tag { align-self: flex-start; margin-top: 4px; font-size: 12px; font-weight: 800; padding: 2px 8px; border-radius: 999px; }
+.ag-tag.ok { background: #e2f6e8; color: #1d6b3a; }
+.ag-tag.doing { background: #fff1d0; color: #7a4a00; }
+.ag-tag.no { background: #f1f1f1; color: #666; }
+.ag-side { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.ag-pay { font-size: 22px; font-weight: 900; color: #c47a00; white-space: nowrap; }
+.ag-pay small { font-size: 12px; margin-left: 2px; }
+.ag-side .btn { min-height: 38px; padding: 0 12px; white-space: nowrap; }
+@media (max-width: 480px) { .ag-job { grid-template-columns: 22px 28px 1fr; } .ag-side { grid-column: 2 / -1; flex-direction: row; justify-content: space-between; align-items: center; } }
+.ag-rules { margin: 0; padding-left: 22px; line-height: 1.7; } .ag-rules li::marker { font-weight: 900; color: #2f7fd1; }

@@ -207,7 +207,7 @@ export function createInteract(W, content, H, api) {
     const pole = add(root, G.cyl, '#d8d2c4', entry.x, .8 + 1.4, entry.z, .06, 2.8, .06);
     const flag = new THREE.Group(); flag.position.set(entry.x, .8 + .3, entry.z); root.add(flag);
     add(flag, G.box, '#e8473f', .32, 0, 0, .6, .36, .02); add(flag, G.box, '#ffffff', .32, 0, .012, .36, .1, .01);
-    { const tx = new THREE.TextureLoader().load('assets/brand/koi-logo.png?v=20261124h'); tx.colorSpace = THREE.SRGBColorSpace; const lm = new THREE.MeshStandardMaterial({ map: tx, transparent: true, alphaTest: .4, polygonOffset: true, polygonOffsetFactor: -2 }); for (const sd of [1, -1]) { const L = new THREE.Mesh(new THREE.PlaneGeometry(.3, .3), lm); L.position.set(.32, 0, sd * .022); if (sd < 0) L.rotation.y = Math.PI; flag.add(L); } }   // 碼頭旗子上的鯉魚 Logo
+    { const tx = new THREE.TextureLoader().load('assets/brand/koi-logo.png?v=20261124i'); tx.colorSpace = THREE.SRGBColorSpace; const lm = new THREE.MeshStandardMaterial({ map: tx, transparent: true, alphaTest: .4, polygonOffset: true, polygonOffsetFactor: -2 }); for (const sd of [1, -1]) { const L = new THREE.Mesh(new THREE.PlaneGeometry(.3, .3), lm); L.position.set(.32, 0, sd * .022); if (sd < 0) L.rotation.y = Math.PI; flag.add(L); } }   // 碼頭旗子上的鯉魚 Logo
     const lampMat = new THREE.MeshStandardMaterial({ color: '#444', emissive: '#000000', roughness: .4 });
     const lampPos = P.E.clone().addScaledVector(P.d, P.P1 - .2).addScaledVector(P.s, P.PW + .1);
     add(root, G.cyl, '#5a3a1a', lampPos.x, .8 + .45, lampPos.z, .08, .9, .08);
@@ -250,6 +250,29 @@ export function createInteract(W, content, H, api) {
     });
   }
 
+  // ------------------------------------------------ ⑪ 服務台・打工仲介：小櫃台＋招牌，點一下打開打工清單（工作、地點、薪水、休息時間）
+  let agencyPosV = null;
+  if (C0 && api.jobAgency) {
+    const spot = api.freeSpot ? api.freeSpot('center') : null;
+    const pos = spot ? new THREE.Vector3(spot.x, H, spot.z) : new THREE.Vector3(-2.5, H, 6.2);
+    agencyPosV = pos;
+    const g = new THREE.Group(); g.position.copy(pos); if (spot) g.rotation.y = spot.face; root.add(g);
+    add(g, G.box, '#2f7fd1', 0, .35, 0, 1.1, .7, .5);                 // 櫃台
+    add(g, G.box, '#ffffff', 0, .72, 0, 1.2, .06, .58);               // 桌面
+    add(g, G.box, '#ffd23a', 0, .45, .26, .9, .22, .02);              // 櫃台前的黃色條
+    add(g, G.box, '#c98a4a', -.35, .8, -.05, .18, .1, .14);           // 一疊工作單
+    add(g, G.box, '#ffffff', .3, .78, 0, .3, .02, .22, 0, .2);        // 打工清單
+    add(g, G.cyl, '#6b4a2b', -.62, .9, -.2, .05, 1.8, .05);           // 招牌柱
+    add(g, G.cyl, '#6b4a2b', .62, .9, -.2, .05, 1.8, .05);
+    const tex = textTexture(320, 96, (q) => { q.fillStyle = '#2f7fd1'; q.beginPath(); q.roundRect(4, 4, 312, 88, 20); q.fill(); q.fillStyle = '#fff'; q.font = `900 40px ${FONT}`; q.textAlign = 'center'; q.textBaseline = 'middle'; q.fillText('💼 打工仲介', 160, 52); });
+    tex.paint();
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex.tex })); sp.scale.set(1.5, .45, 1); sp.position.y = 2.0; g.add(sp);
+    const hit = new THREE.Mesh(new THREE.BoxGeometry(1.4, 2.3, .9), new THREE.MeshBasicMaterial({ visible: false })); hit.position.y = 1.1; g.add(hit);
+    picks.push({ obj: hit, act: () => api.jobAgency() });
+    picks.push({ obj: sp, act: () => api.jobAgency() });
+    anim.push((t) => { sp.position.y = 2.0 + Math.sin(t * 2 + 1) * .06; });
+  }
+
   // ------------------------------------------------ 每格更新與點擊
   const ctx = { camera: W.camera, walkPos: null, photoLock: false };
   function update(t, dt, moving, walkPos) {
@@ -262,5 +285,5 @@ export function createInteract(W, content, H, api) {
     if (!hit) return false;
     picks.find((p) => p.obj === hit.object).act(); return true;
   }
-  return { update, pick, photoPos: () => (photoPosV ? photoPosV.clone() : null) };
+  return { update, pick, photoPos: () => (photoPosV ? photoPosV.clone() : null), agencyPos: () => (agencyPosV ? agencyPosV.clone() : null) };
 }
