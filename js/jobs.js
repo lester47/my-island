@@ -25,7 +25,9 @@ export function createJobs(api) {
   // ---------------- 同時最多 3 人（Firebase market/jobs/{工作}/{uid}）
   function attach(net) {
     NET = net; fb = net.fb;
-    fb.onValue(fb.ref(net.db, 'market/jobs'), (s) => { slots = s.val() || {}; }, () => { slots = {}; });
+    let tries = 0;
+    const sub = () => { if (!net.uid()) { setTimeout(sub, 300); return; } fb.onValue(fb.ref(net.db, 'market/jobs'), (s) => { slots = s.val() || {}; }, () => { slots = {}; if (++tries < 3) setTimeout(sub, 3000); }); };
+    sub();
   }
   const busyCount = (id) => { const me = NET && NET.uid(); const tNow = NET ? NET.now() : Date.now(); return Object.entries(slots[id] || {}).filter(([k, v]) => k !== me && v && tNow - (v.t || 0) < 15 * 60e3).length; };
   function claim(id) { if (!NET || !NET.uid()) return; const r = fb.ref(NET.db, `market/jobs/${id}/${NET.uid()}`); onDisconnect(r).remove().then(() => fb.set(r, { t: fb.serverTimestamp() })).catch(() => {}); }
