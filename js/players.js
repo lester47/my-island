@@ -1,9 +1,10 @@
 // 登入者：自己的人物＋頭上名牌；之後接上連線服務時，其他人也用同一套顯示（upsert / remove）
 import * as THREE from 'three';
-import { rng } from './kit.js?v=20261124l';
-import { makePerson } from './life.js?v=20261124l';
-import { ROLES, HATS } from './roles.js?v=20261124l';
-import { makeBike, poseRider, BIKE_LIFT } from './bike.js?v=20261124l';
+import { rng } from './kit.js?v=20261124m';
+import { makePerson } from './life.js?v=20261124m';
+import { ROLES, HATS } from './roles.js?v=20261124m';
+import { makeBike, poseRider, BIKE_LIFT } from './bike.js?v=20261124m';
+import { makeAcc, makePet, stepPet, poseDance, DANCE_SEC } from './style.js?v=20261124m';
 const SPAWN = { x: 0, z: 7.4, yaw: Math.PI };
 
 const seedOf = (s) => { let h = 2166136261; for (const c of String(s)) h = Math.imul(h ^ c.codePointAt(0), 16777619); return h >>> 0; };
@@ -12,7 +13,7 @@ const escH = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '
 // 登入者上衣胸前的小鯉魚 Logo（和網站左上角同一張圖）
 let LOGO_MAT = null;
 function withLogo(P) {
-  if (!LOGO_MAT) { const tx = new THREE.TextureLoader().load('assets/brand/koi-logo.png?v=20261124l'); tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 4; LOGO_MAT = new THREE.MeshStandardMaterial({ map: tx, transparent: true, alphaTest: .4, roughness: .8, polygonOffset: true, polygonOffsetFactor: -2 }); }
+  if (!LOGO_MAT) { const tx = new THREE.TextureLoader().load('assets/brand/koi-logo.png?v=20261124m'); tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 4; LOGO_MAT = new THREE.MeshStandardMaterial({ map: tx, transparent: true, alphaTest: .4, roughness: .8, polygonOffset: true, polygonOffsetFactor: -2 }); }
   const m = new THREE.Mesh(new THREE.PlaneGeometry(.17, .17), LOGO_MAT);
   m.position.set(0, .76, .232); m.rotation.x = -.1;          // 上衣是上窄下寬的圓柱，貼片稍微往後仰才貼合
   P.g.add(m); P.logo = m; return P;
@@ -59,7 +60,22 @@ export function createPlayers(W, H) {
     p.tag.classList.toggle('me', p.id === meId);
     p.tag.innerHTML = `<span class="r">${R.icon} ${R.label}</span><b>${escH(info.name)}</b>${p.id === meId ? '<i>我</i>' : ''}${p.badge ? `<em class="bd">${escH(p.badge)}</em>` : ''}`;
   }
-  function remove(id) { const p = all.get(id); if (!p) return; scene.remove(p.P.g); p.tag.remove(); all.delete(id); }
+  function remove(id) { const p = all.get(id); if (!p) return; scene.remove(p.P.g); if (p.pet) scene.remove(p.pet.g); p.tag.remove(); all.delete(id); }
+  // 👕 配件、🐾 寵物、💃 閃身步（自己和別人都一樣；別人的從 market/fx 來）
+  function setLook(id, look) {
+    const p = all.get(id); if (!p) return;
+    const acc = look.acc || null, pet = look.pet || null;
+    if ((p.acc && p.acc.userData.kind) !== acc || (p.acc && p.acc.parent !== p.P.g)) {
+      if (p.acc && p.acc.parent) p.acc.parent.remove(p.acc); p.acc = null;
+      if (acc) { p.acc = makeAcc(acc); p.P.g.add(p.acc); }
+    }
+    if ((p.pet && p.pet.kind) !== pet) {
+      if (p.pet) scene.remove(p.pet.g); p.pet = null;
+      if (pet) { p.pet = makePet(pet); p.pet.kind = pet; scene.add(p.pet.g); }
+    }
+    if (look.dance && look.dance !== p.danceKey) { p.danceKey = look.dance; p.danceT0 = performance.now(); }
+  }
+  const lookOf = (id) => { const p = all.get(id); return p ? { acc: p.acc ? p.acc.userData.kind : null, pet: p.pet ? p.pet.kind : null } : null; };
   // 🚲 騎腳踏車：車子掛在人物身上（換衣服重建人物時重新掛上）
   function setRide(id, color) {
     const p = all.get(id); if (!p) return;
@@ -141,13 +157,26 @@ export function createPlayers(W, H) {
       if (p.baseS == null) p.baseS = p.P.g.scale.y;
       p.P.g.scale.y += ((crouch ? p.baseS * .66 : p.baseS) - p.P.g.scale.y) * Math.min(1, dt * 12);   // 蹲下：身體縮矮
       if (p.ride && p.ride.B.g.parent !== p.P.g) { const c = p.ride.color; p.ride = null; setRide(p.id, c); }
+      if (p.acc && p.acc.parent !== p.P.g) { const k = p.acc.userData.kind; p.acc = null; setLook(p.id, { acc: k, pet: p.pet ? p.pet.kind : null }); }
+      const danceK = p.danceT0 != null ? (performance.now() - p.danceT0) / 1000 : 99;
       if (p.ride) {
         // 騎車：人物抬高到車座，邊騎邊踩；車輪和踏板跟著速度轉
         const B = p.ride.B, roll = p.moving > 0 ? 1 : 0;
         B.spin += dt * 9 * roll; for (const w of B.wheels) w.rotation.x = B.spin * 1.6; B.crank.rotation.x = B.spin;
         p.P.g.position.y += BIKE_LIFT * p.P.g.scale.x;
         poseRider(p.P, B, t, roll);
+      } else if (danceK < DANCE_SEC && !sit && !(p.moving > 0)) {
+        // 💃 閃身步：腳往外踢、身體左右滑、彈跳
+        const d = poseDance(p.P, danceK), sc = p.P.g.scale.x;
+        p.P.g.position.x += Math.cos(p.yaw) * d.slide * sc; p.P.g.position.z -= Math.sin(p.yaw) * d.slide * sc; p.P.g.position.y += d.bounce; p.P.g.rotation.y += d.twist;
       } else pose(p.P, t + p.phase, p.moving > 0 && !sit, sit, duckSit && W.duck.pedaling());
+      if (p.acc) for (const c of p.acc.children) if (c.userData.cape) c.rotation.x = .12 + (p.moving > 0 || p.ride ? .5 + Math.sin(t * 9) * .12 : Math.sin(t * 1.5) * .04);
+      // 🐾 寵物：主人看得到、在陸地上時跟著走；主人在船上、熱氣球上就先回家（藏起來）
+      if (p.pet) {
+        const away = !p.P.g.visible || sit || (W.balloon && W.balloon.inBasket(p.pos)) || (W.duck && W.duck.inBoat(p.pos));
+        p.pet.g.visible = !away;
+        if (away) p.pet.ready = false; else stepPet(p.pet, p.pos, p.yaw, t, dt, (x, z) => W.ground(x, z));
+      }
       if (crouch) for (const l of p.P.legs) l.rotation.x = -.9;
       // 名牌：投影到畫面上，在頭頂上方
       _v.set(p.pos.x, p.pos.y + 1.02, p.pos.z).project(camera);
@@ -173,5 +202,5 @@ export function createPlayers(W, H) {
   function inDuckCount() { let n = 0; for (const p of all.values()) if (p.id !== meId && W.duck && (W.duck.riderSpot(p.target, p.id) || W.duck.inBoat(p.pos))) n++; return n; }
   function inBalloonCount() { let n = 0; for (const p of all.values()) if (p.id !== meId && W.balloon && (W.balloon.riderSpot(p.target, p.id) || W.balloon.inBasket(p.pos))) n++; return n; }
   function onBoatCount() { let n = 0; for (const p of all.values()) if (p.id !== meId && onBoat(p.pos)) n++; return n; }
-  return { setMe, me, upsert, remove, setRide, riding, update, myPos, spawnFor, onBoatCount, inBalloonCount, inDuckCount, setBadge, hideTag, posOf, count: () => all.size, layer };
+  return { setMe, me, upsert, remove, setRide, riding, setLook, lookOf, update, myPos, spawnFor, onBoatCount, inBalloonCount, inDuckCount, setBadge, hideTag, posOf, count: () => all.size, layer };
 }
