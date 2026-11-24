@@ -102,8 +102,27 @@ export function createMeowBox() {
   const happy = (p = 1) => { meow(p * 1.12, { len: .26, rise: 1.4, fall: 1.05 }); meow(p * 1.2, { len: .34, rise: 1.45, fall: .9, delay: .3 }); };
   const grumble = (p = 1) => meow(p * .68, { len: .5, rise: .96, fall: .66, open: .7, vol: .8 });
 
+  // 🎆 煙火：升空的咻聲、爆開的碰（離越遠越小聲、越晚聽到）、金柳的劈啪聲
+  function noise(c, t, dur, type, f, vol, q = .7) {
+    const s = c.createBufferSource(); s.buffer = noiseBuf;
+    const fl = c.createBiquadFilter(); fl.type = type; fl.frequency.value = f; fl.Q.value = q;
+    const g = c.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + .01); g.gain.exponentialRampToValueAtTime(.0008, t + dur);
+    s.connect(fl); fl.connect(g); g.connect(master); s.start(t, Math.random() * 1.2); s.stop(t + dur + .05);
+  }
+  function whistle(o = {}) {
+    const c = ready(); if (!c) return; const t = c.currentTime + (o.delay || 0), len = o.len ?? 1.1, v = .1 * (o.vol ?? 1);
+    const osc = c.createOscillator(); osc.type = 'sine'; osc.frequency.setValueAtTime(900, t); osc.frequency.exponentialRampToValueAtTime(2300, t + len);
+    const g = c.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + .1); g.gain.linearRampToValueAtTime(0, t + len);
+    osc.connect(g); g.connect(master); osc.start(t); osc.stop(t + len + .05);
+  }
+  function boom(o = {}) {
+    const c = ready(); if (!c) return; const t = c.currentTime + (o.delay || 0), v = o.vol ?? 1;
+    noise(c, t, 1.6, 'lowpass', 160, .9 * v, 1.2); noise(c, t, .35, 'bandpass', 900, .35 * v);
+    if (o.crackle) for (let i = 0; i < 14; i++) noise(c, t + .5 + Math.random() * 1.4, .05, 'highpass', 3000, .12 * v);
+  }
+
   return {
-    meow, purr, chirp, yawn, happy, grumble, chime,
+    meow, purr, chirp, yawn, happy, grumble, chime, whistle, boom,
     unlock() { ensure(); },
     get muted() { return muted; },
     setMuted(v) {

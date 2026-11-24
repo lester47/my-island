@@ -719,3 +719,12 @@ html[data-theme="deep"] .job-msg { background: #23402a; color: #bff0c6; } html[d
 .cam-flash.go { animation: camFlash .5s ease-out; }
 @keyframes camFlash { 0% { opacity: .85; } 100% { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .cam-flash.go { animation: none; } }
+
+/* 🎆 煙火 */
+.fw-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 8px; margin: 10px 0; }
+.fw-grid button { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 4px; border-radius: 14px; border: 2px solid #e7dcc7; background: linear-gradient(180deg, #1d2547, #2e2a5c); color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
+.fw-grid button .ic { font-size: 1.7rem; line-height: 1.1; }
+.fw-grid button small { color: #ffd76a; font-weight: 700; }
+.fw-grid button:hover, .fw-grid button:focus-visible { border-color: #ffcc33; transform: translateY(-1px); }
+.fw-show { width: 100%; margin: 4px 0 8px; background: linear-gradient(90deg, #ff3355, #ff8a1f, #ffd21f, #4dff6a, #22d6ff, #b45cff) !important; color: #1a1a1a !important; text-shadow: 0 1px 0 #fff8; }
+@media (max-width: 760px) { #fwBtn { position: fixed; left: 104px; bottom: calc(134px + env(safe-area-inset-bottom, 0px)); z-index: 15; } }

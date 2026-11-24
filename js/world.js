@@ -1,7 +1,7 @@
 // 3D 世界：天空、海、遠山、島嶼與地標、橋、日夜光影
 import * as THREE from 'three';
-import { TAU, clamp, lerp, smooth, rng, loopNoise, mat, Builder, GEO, glowTexture, C } from './kit.js?v=20261124y';
-import { makeScenery } from './scenery.js?v=20261124y';
+import { TAU, clamp, lerp, smooth, rng, loopNoise, mat, Builder, GEO, glowTexture, C } from './kit.js?v=20261124z';
+import { makeScenery } from './scenery.js?v=20261124z';
 
 export const H = 1.75;               // 島頂草地高度
 const SEG = 72;                      // 海岸線分段（6 的倍數，六角轉角落在頂點上）
@@ -805,14 +805,14 @@ function makeSea(scene, quality) {
 
 // ------------------------------------------------------------------ 時段（白天／黃昏／夜晚）
 const KEYS = [
-  { h: 0,    top: '#0b1736', hor: '#283a63', sun: '#9fb4ff', si: .55, hs: '#5a6d9c', hg: '#1c2433', hi: .55, fog: '#1d2b47', sea: '#1b4466', exp: .95 },
-  { h: 4.6,  top: '#0f1d42', hor: '#33406e', sun: '#9fb4ff', si: .5,  hs: '#5a6d9c', hg: '#1c2433', hi: .55, fog: '#26355a', sea: '#1b4466', exp: .95 },
+  { h: 0,    top: '#0b1736', hor: '#283a63', sun: '#9fb4ff', si: .55, hs: '#5a6d9c', hg: '#3b3226', hi: .72, fog: '#1d2b47', sea: '#1b4466', exp: 1.02 },
+  { h: 4.6,  top: '#0f1d42', hor: '#33406e', sun: '#9fb4ff', si: .5,  hs: '#5a6d9c', hg: '#3b3226', hi: .72, fog: '#26355a', sea: '#1b4466', exp: 1.02 },
   { h: 5.8,  top: '#3b5a96', hor: '#f3a77e', sun: '#ffb27a', si: 1.0, hs: '#c9a7b5', hg: '#5a4a4a', hi: .75, fog: '#e2b39f', sea: '#3a7393', exp: 1.0 },
   { h: 7.5,  top: '#4fb0f0', hor: '#d3edfd', sun: '#fff1d6', si: 2.7, hs: '#e3f2ff', hg: '#cdb991', hi: 1.05, fog: '#cfe8f7', sea: '#3fa6c9', exp: 1.0 },
   { h: 16,   top: '#4aa9ec', hor: '#d9eefc', sun: '#fff0d0', si: 2.5, hs: '#e3f2ff', hg: '#cdb991', hi: 1.0, fog: '#d3e9f6', sea: '#3fa3c6', exp: 1.0 },
   { h: 18.1, top: '#4d65a6', hor: '#ffad6b', sun: '#ffa564', si: 1.7, hs: '#e9c3c8', hg: '#4a5a72', hi: .85, fog: '#e9b49a', sea: '#3f78b0', exp: 1.04 },
-  { h: 19.6, top: '#16234d', hor: '#4a4877', sun: '#9fb4ff', si: .55, hs: '#5b6aa0', hg: '#1c2433', hi: .55, fog: '#2b3858', sea: '#1d4669', exp: .96 },
-  { h: 24,   top: '#0b1736', hor: '#283a63', sun: '#9fb4ff', si: .55, hs: '#5a6d9c', hg: '#1c2433', hi: .55, fog: '#1d2b47', sea: '#1b4466', exp: .95 },
+  { h: 19.6, top: '#16234d', hor: '#4a4877', sun: '#9fb4ff', si: .55, hs: '#5b6aa0', hg: '#3b3226', hi: .72, fog: '#2b3858', sea: '#1d4669', exp: 1.02 },
+  { h: 24,   top: '#0b1736', hor: '#283a63', sun: '#9fb4ff', si: .55, hs: '#5a6d9c', hg: '#3b3226', hi: .72, fog: '#1d2b47', sea: '#1b4466', exp: 1.02 },
 ];
 export function periodOf(h) { return h >= 6 && h < 16 ? 'day' : (h >= 16 && h < 19) || (h >= 5 && h < 6) ? 'dusk' : 'night'; }
 export const PERIOD_NAME = { day: '白天', dusk: '黃昏', night: '夜晚' };
