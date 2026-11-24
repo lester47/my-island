@@ -728,3 +728,26 @@ html[data-theme="deep"] .job-msg { background: #23402a; color: #bff0c6; } html[d
 .fw-grid button:hover, .fw-grid button:focus-visible { border-color: #ffcc33; transform: translateY(-1px); }
 .fw-show { width: 100%; margin: 4px 0 8px; background: linear-gradient(90deg, #ff3355, #ff8a1f, #ffd21f, #4dff6a, #22d6ff, #b45cff) !important; color: #1a1a1a !important; text-shadow: 0 1px 0 #fff8; }
 @media (max-width: 760px) { #fwBtn { position: fixed; left: 104px; bottom: calc(134px + env(safe-area-inset-bottom, 0px)); z-index: 15; } }
+
+/* 🚁 遙控無人機 */
+.drui { position: fixed; inset: 0; z-index: 16; pointer-events: none; }
+.drui > * { pointer-events: auto; }
+.dr-info { position: fixed; top: 84px; left: 50%; transform: translateX(-50%); background: rgba(13, 34, 51, .86); color: #fff; padding: 8px 16px; border-radius: 14px; font-weight: 800; font-size: 15px; white-space: nowrap; box-shadow: var(--shadow); }
+.dr-info .bat { color: #4dff6a; } .dr-info .bat.low { color: #ff5a6e; }
+.dr-hint { position: fixed; top: 128px; left: 50%; transform: translateX(-50%); margin: 0; background: rgba(255,255,255,.88); padding: 4px 12px; border-radius: 10px; font-size: 13px; pointer-events: none; }
+.dr-pad { position: fixed; bottom: 96px; display: grid; gap: 6px; }
+.dr-pad button { width: 58px; height: 58px; border-radius: 16px; border: 0; background: rgba(13, 34, 51, .78); color: #fff; font-size: 22px; font-weight: 900; touch-action: none; user-select: none; -webkit-user-select: none; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; }
+.dr-pad button small { font-size: 11px; }
+.dr-pad button.on { background: #22a6d6; }
+.dr-move { left: 16px; grid-template-columns: repeat(3, 58px); grid-template-rows: repeat(3, 58px); }
+.dr-move [data-dp="f"] { grid-column: 2; grid-row: 1; } .dr-move [data-dp="l"] { grid-column: 1; grid-row: 2; } .dr-move [data-dp="r"] { grid-column: 3; grid-row: 2; } .dr-move [data-dp="b"] { grid-column: 2; grid-row: 3; }
+.dr-alt { right: 16px; grid-template-rows: 58px 58px; }
+.dr-acts { position: fixed; top: 84px; right: 12px; display: flex; flex-direction: column; gap: 6px; }
+.dr-acts button { border: 0; border-radius: 12px; padding: 8px 12px; font: inherit; font-weight: 800; background: #fff; box-shadow: var(--shadow); cursor: pointer; }
+.dr-acts #drLand { background: #e8473f; color: #fff; }
+body.droning .hud, body.droning .tools, body.droning .ticket, body.droning #labels { display: none !important; }
+@media (max-width: 760px) { .dr-hint { display: none; } .dr-info { top: 70px; font-size: 13px; } .dr-acts { top: 120px; } .dr-pad { bottom: 24px; } #drBtn { position: fixed; left: 174px; bottom: calc(134px + env(safe-area-inset-bottom, 0px)); z-index: 15; } }
+.dr-cards { display: grid; gap: 10px; margin: 8px 0; }
+.dr-card { border: 2px solid #e7dcc7; border-radius: 16px; padding: 12px 14px; }
+.dr-card h3 { margin: 0 0 4px; font-size: 1.05rem; }
+.dr-card p { margin: 0 0 8px; line-height: 1.6; }
