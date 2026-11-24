@@ -1,10 +1,10 @@
 // 登入者：自己的人物＋頭上名牌；之後接上連線服務時，其他人也用同一套顯示（upsert / remove）
 import * as THREE from 'three';
-import { rng } from './kit.js?v=20261124p';
-import { makePerson } from './life.js?v=20261124p';
-import { ROLES, HATS } from './roles.js?v=20261124p';
-import { makeBike, poseRider, BIKE_LIFT } from './bike.js?v=20261124p';
-import { makeAcc, makePet, stepPet, poseDance, DANCE_SEC } from './style.js?v=20261124p';
+import { rng } from './kit.js?v=20261124q';
+import { makePerson } from './life.js?v=20261124q';
+import { ROLES, HATS } from './roles.js?v=20261124q';
+import { makeBike, poseRider, BIKE_LIFT } from './bike.js?v=20261124q';
+import { makeAcc, makePet, stepPet, poseDance, DANCE_SEC } from './style.js?v=20261124q';
 const SPAWN = { x: 0, z: 7.4, yaw: Math.PI };
 
 const seedOf = (s) => { let h = 2166136261; for (const c of String(s)) h = Math.imul(h ^ c.codePointAt(0), 16777619); return h >>> 0; };
@@ -13,7 +13,7 @@ const escH = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '
 // 登入者上衣胸前的小鯉魚 Logo（和網站左上角同一張圖）
 let LOGO_MAT = null;
 function withLogo(P) {
-  if (!LOGO_MAT) { const tx = new THREE.TextureLoader().load('assets/brand/koi-logo.png?v=20261124p'); tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 4; LOGO_MAT = new THREE.MeshStandardMaterial({ map: tx, transparent: true, alphaTest: .4, roughness: .8, polygonOffset: true, polygonOffsetFactor: -2 }); }
+  if (!LOGO_MAT) { const tx = new THREE.TextureLoader().load('assets/brand/koi-logo.png?v=20261124q'); tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 4; LOGO_MAT = new THREE.MeshStandardMaterial({ map: tx, transparent: true, alphaTest: .4, roughness: .8, polygonOffset: true, polygonOffsetFactor: -2 }); }
   const m = new THREE.Mesh(new THREE.PlaneGeometry(.17, .17), LOGO_MAT);
   m.position.set(0, .76, .232); m.rotation.x = -.1;          // 上衣是上窄下寬的圓柱，貼片稍微往後仰才貼合
   P.g.add(m); P.logo = m; return P;
@@ -142,24 +142,34 @@ export function createPlayers(W, H) {
       // 其他登入者在飛行中的熱氣球籃子裡：排進籃子（網路位置有延遲，不然會飄在籃子外）
       const rs = p.id !== meId ? (W.balloon && W.balloon.riderSpot(p.target, p.id)) || (W.duck && W.duck.riderSpot(p.target, p.id)) || null : null;
       if (rs) p.pos.copy(rs);
+      // 🎢 坐雲霄飛車：自己由主程式給座位；其他人在列車附近就排進座位（網路位置有延遲）
+      const cs = p.id === meId ? (walking && W.coasterMe ? W.coasterMe() : null) : (W.coaster ? W.coaster.riderSpot(p.target, p.id) : null);
+      if (cs && p.id !== meId) { p.pos.copy(cs.pos); p.moving = 0; }
       // 其他人在熱氣球籃子裡：站著不動（位置變動是熱氣球在飛，不是在走路）
       if (p.id !== meId && ((W.balloon && (rs || W.balloon.inBasket(p.pos))) || (W.duck && W.duck.inBoat(p.pos)))) p.moving = 0;
-      const offLand = p.id !== meId && !rs && W.ground(p.pos.x, p.pos.z) == null && !onBoat(p.pos);
+      const offLand = p.id !== meId && !rs && !cs && W.ground(p.pos.x, p.pos.z) == null && !onBoat(p.pos);
       const tagOff = hiddenTags.has(p.id);
       // 躲貓貓進行中：從鳥瞰（空中）看不到參加者，不然鬼切到鳥瞰就能把大家看光光；要找人只能在地面漫遊
       const hide = (p.id === meId && walking && firstPerson) || offLand || (tagOff && !walking);
       p.P.g.visible = !hide;
       // 在船上：自己沒按方向鍵就坐好；其他人在船上一律坐著（位置變動是船在動）
       const inDuck = !!(W.duck && W.duck.inBoat(p.pos)), duckSit = inDuck && (p.id === meId ? !(p.moving > 0) : true);
-      const sit = (onBoat(p.pos) && (p.id === meId ? !(p.moving > 0) : true)) || duckSit;
-      const gy = W.ground(p.pos.x, p.pos.z), crouch = !sit && gy != null && p.pos.y < gy - .15;
+      const sit = (onBoat(p.pos) && (p.id === meId ? !(p.moving > 0) : true)) || duckSit || !!cs;
+      const gy = cs ? null : W.ground(p.pos.x, p.pos.z), crouch = !sit && gy != null && p.pos.y < gy - .15;
       p.P.g.position.copy(p.pos); if (crouch) p.P.g.position.y = gy; if (sit) p.P.g.position.y -= SIT_DROP; p.P.g.rotation.y = duckSit ? W.duck.yaw() : p.yaw;   // 坐在鴨子船上：面向船頭
+      if (cs) { p.P.g.position.copy(cs.pos); p.P.g.quaternion.copy(cs.q); p.inCoaster = true; }          // 跟著車廂一起上下、轉彎
+      else if (p.inCoaster) { p.inCoaster = false; p.P.g.rotation.set(0, p.yaw, 0); }
       if (p.baseS == null) p.baseS = p.P.g.scale.y;
       p.P.g.scale.y += ((crouch ? p.baseS * .66 : p.baseS) - p.P.g.scale.y) * Math.min(1, dt * 12);   // 蹲下：身體縮矮
       if (p.ride && p.ride.B.g.parent !== p.P.g) { const c = p.ride.color; p.ride = null; setRide(p.id, c); }
       if (p.acc && p.acc.parent !== p.P.g) { const k = p.acc.userData.kind; p.acc = null; setLook(p.id, { acc: k, pet: p.pet ? p.pet.kind : null }); }
       const danceK = p.danceT0 != null ? (performance.now() - p.danceT0) / 1000 : 99;
-      if (p.ride) {
+      if (cs) {
+        // 🎢 坐好、腳往前伸；往下衝的時候雙手舉高
+        for (const l of p.P.legs) l.rotation.x = -Math.PI / 2 + .25;
+        const up = W.coaster && W.coaster.thrill();
+        p.P.arms[0].rotation.set(up ? Math.PI * .95 : -.6, 0, up ? -.25 : -.1); p.P.arms[1].rotation.set(up ? Math.PI * .95 : -.6, 0, up ? .25 : .1);
+      } else if (p.ride) {
         // 騎車：人物抬高到車座，邊騎邊踩；車輪和踏板跟著速度轉
         const B = p.ride.B, roll = p.moving > 0 ? 1 : 0;
         B.spin += dt * 9 * roll; for (const w of B.wheels) w.rotation.x = B.spin * 1.6; B.crank.rotation.x = B.spin;

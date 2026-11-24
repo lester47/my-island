@@ -1,9 +1,9 @@
 // 鏡頭：拖曳旋轉縮放、回到全景、點島飛近（電影史詩運鏡）、開場、導覽、地面漫遊
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { TAU, clamp, lerp, easeInOut, smooth } from './kit.js?v=20261124p';
-import { H } from './world.js?v=20261124p';
-import { SHORE } from './scenery.js?v=20261124p';
+import { TAU, clamp, lerp, easeInOut, smooth } from './kit.js?v=20261124q';
+import { H } from './world.js?v=20261124q';
+import { SHORE } from './scenery.js?v=20261124q';
 
 export function createCam(W, canvas, hooks) {
   const camera = W.camera;
@@ -137,7 +137,7 @@ export function createCam(W, canvas, hooks) {
   function exitWalk(done) { S.mode = 'orbit'; S.follow = null; const h = setHome(false); flight({ t: h.t, p: h.p }, 1400, 0, done); }
   function placeWalk() {
     const lift = walk.jumpY - walk.ck * .42;            // 跳起來往上、蹲下往下
-    const eye = walk.pos.clone().setY(walk.pos.y + 1.05 + lift);
+    const eye = walk.pos.clone().setY(walk.pos.y + 1.05 + lift - (walk.seatDrop || 0));   // 坐著（雲霄飛車）眼睛比較低
     const dir = new THREE.Vector3(Math.sin(walk.yaw) * Math.cos(walk.pitch), Math.sin(walk.pitch), Math.cos(walk.yaw) * Math.cos(walk.pitch));
     if (walk.third) {
       // 第三人稱：鏡頭在自己人物的後上方，看得到自己和頭上的名牌

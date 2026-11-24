@@ -709,3 +709,6 @@ html[data-theme="deep"] .job-msg { background: #23402a; color: #bff0c6; } html[d
 .btn.danger { background: #d23b3b; }
 .ph-dnd { display: flex; gap: 8px; align-items: center; margin-top: 12px; font-weight: 700; }
 @media (max-width: 480px) { .callcard { right: 8px; left: 8px; width: auto; bottom: 190px; } }
+
+/* 🎢 雲霄飛車：下車按鈕 */
+.walk-bike.coa { background: #c23a1c; }
