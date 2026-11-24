@@ -76,6 +76,21 @@ export function createNet(config, hooks) {
     }
   }
 
+  // 人物的小狀態（🚲 騎車、💃 跳舞、🐶 寵物…）：放在另一個路徑 market/fx/{uid}，
+  // 就算 Firebase 規則還沒加上這個路徑，也不會影響人物位置的同步（寫不進去就只有自己看得到）
+  let fxMe = {}, fxRef = null, fxWarned = false;
+  function setFx(patch) {
+    fxMe = { ...fxMe, ...patch };
+    for (const k in fxMe) if (fxMe[k] === '' || fxMe[k] == null) delete fxMe[k];
+    if (!uid) return;
+    fxRef = ref(db, `${ROOT}/fx/${uid}`);
+    const data = Object.keys(fxMe).length ? { ...fxMe, t: serverTimestamp() } : null;
+    const w = data ? onDisconnect(fxRef).remove().then(() => set(fxRef, data)) : remove(fxRef);
+    w.catch((e) => { if (!fxWarned) { fxWarned = true; console.warn('Firebase 規則還沒加上 market/fx：騎車、跳舞、寵物先只有自己看得到', e && e.code); } });
+  }
+  const fxSub = () => { if (!uid) { setTimeout(fxSub, 400); return; } onValue(ref(db, `${ROOT}/fx`), (s) => { const all = s.val() || {}; if (hooks.onFx) hooks.onFx(all, uid); }, () => {}); };
+  fxSub();
+
   const players = ref(db, `${ROOT}/players`);
   const valid = (v) => v && typeof v.name === 'string' && typeof v.x === 'number' && typeof v.z === 'number';
   const put = (s) => {
@@ -102,5 +117,5 @@ export function createNet(config, hooks) {
     hooks.onCount({ players: n, byRole, viewers: Math.max(viewers, n ? 1 : 0) });
   }
   // 給多人小遊戲用：資料庫、自己的 id、伺服器時間
-  return { setMe, tick, db, uid: () => uid, now: () => Date.now() + skew, teacher, fb: { ref, set, update, remove, onValue, serverTimestamp } };
+  return { setMe, setFx, tick, db, uid: () => uid, now: () => Date.now() + skew, teacher, fb: { ref, set, update, remove, onValue, serverTimestamp } };
 }

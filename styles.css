@@ -682,3 +682,8 @@ html[data-theme="deep"] .job-msg { background: #23402a; color: #bff0c6; } html[d
 /* 👶 托嬰小幫手 */
 .jobbar.cry { border-color: #e2456e; animation: ticketRing 1s ease-in-out 3; }
 .baby-done { margin: 0 0 8px; padding-left: 22px; color: #1d6b3a; line-height: 1.6; }
+
+/* 🚲 騎車中：下車還車按鈕 */
+.walk-bike { position: fixed; z-index: 22; top: 184px; right: 20px; min-height: 40px; border: 0; border-radius: 999px; padding: 0 14px; background: #3e9b4f; color: #fff; font-weight: 900; box-shadow: var(--shadow); }
+.walk-bike[hidden] { display: none; }
+@media (max-width: 760px) { .walk-bike { top: 112px; left: 12px; right: auto; font-size: 13px; min-height: 36px; } }
