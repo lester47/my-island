@@ -1,11 +1,11 @@
 // 115 鯉魚市集｜介面與流程
 import * as THREE from 'three';
-import { ROLES, OUTFITS, HATS } from './roles.js?v=20261124n';
-import { createMeowBox } from './meow.js?v=20261124n';
-import { REACTIONS, REACTION_IDS, playReaction } from './cats.js?v=20261124n';
-import { createCatNet, SEATS, REST, CALL, pad } from './catnet.js?v=20261124n';
-import { createWallet } from './wallet.js?v=20261124n';
-import { createJobs } from './jobs.js?v=20261124n';
+import { ROLES, OUTFITS, HATS } from './roles.js?v=20261124p';
+import { createMeowBox } from './meow.js?v=20261124p';
+import { REACTIONS, REACTION_IDS, playReaction } from './cats.js?v=20261124p';
+import { createCatNet, SEATS, REST, CALL, pad } from './catnet.js?v=20261124p';
+import { createWallet } from './wallet.js?v=20261124p';
+import { createJobs } from './jobs.js?v=20261124p';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -22,12 +22,12 @@ const pad2 = (n) => String(n).padStart(2, '0');
 const fmtH = (h) => { h = ((h % 24) + 24) % 24; return `${pad2(Math.floor(h))}:${pad2(Math.floor((h % 1) * 60))}`; };
 
 // 介面 Logo：低多邊形鯉魚（橘紅魚背、米白魚腹、魚頭朝右），首頁、怎麼逛、集章完成共用這一張
-const LOGO_SRC = 'assets/brand/koi-logo.png?v=20261124n';
+const LOGO_SRC = 'assets/brand/koi-logo.png?v=20261124p';
 const MASCOT = `<img src="${LOGO_SRC}" alt="115 鯉魚市集 Logo：低多邊形小鯉魚" decoding="async">`;
 
 let C = null;            // content.json
 let GH = 1.75;   // 島頂草地高度（開機後換成 world.js 的 H）
-let W = null, L = null, CAM = null, BAL = null, DUCK = null, BK = null, SHOP = null, STY = null, MY = null, K = null;   // MY：市長任務（路燈）   // SHOP：服飾店；STY：配件、寵物、舞步   // BK：借車點與自行車道   // K：島上的貓
+let W = null, L = null, CAM = null, BAL = null, DUCK = null, BK = null, SHOP = null, STY = null, MY = null, PH = null, PHM = null, K = null;   // PH：遊戲電話   // MY：市長任務（路燈）   // SHOP：服飾店；STY：配件、寵物、舞步   // BK：借車點與自行車道   // K：島上的貓
 let WAL = null, JOBS = null;   // 線上鯉魚幣錢包、打工
 const SND = createMeowBox();
 const CR = createCatNet({
@@ -1161,6 +1161,84 @@ function buildLamp(sp) {
   } else { const L0 = lampsLocal(); L0[sp.id] = v; store.set('lampsLocal', L0); done(); }
 }
 
+// ------------------------------------------------------------------ 📞 遊戲電話：打給同時在線上的同學，只能用預設短句和表情
+function whereAmI() {
+  const p = S.walking && CAM ? CAM.walk.pos : PL && PL.me() ? PL.me().pos : null;
+  if (!p || !W) return '市集';
+  if (DUCK && DUCK.inBoat(p)) return '鴨子船上'; if (BAL && BAL.inBasket(p)) return '熱氣球上'; if (W.onBoat && W.onBoat(p.x, p.z)) return '鯉魚號上';
+  let best = null, bd = 1e9; for (const id of STAMP_IDS) { const I = W.islands[id], d = Math.hypot(p.x - I.pos.x, p.z - I.pos.z) - I.R; if (d < bd) { bd = d; best = id; } }
+  return best ? (islandById(best) || {}).name || '市集' : '市集';
+}
+const FAKE_AS = /[?&]fakedb\b/.test(location.search) ? new URLSearchParams(location.search).get('as') : null;   // 測試：每個分頁一個身分
+function phoneDb() {
+  if (/[?&]fakedb\b/.test(location.search) && PHM) return PHM.fakeDb(FAKE_AS || (meProfile() || {}).id || `t${Math.random().toString(36).slice(2, 7)}`);
+  if (!NET || !NET.fb) return null;
+  const F = NET.fb, R = (p) => F.ref(NET.db, p);
+  return {
+    uid: () => NET.uid(), now: () => NET.now(),
+    set: (p, v) => F.set(R(p), v), update: (p, v) => F.update(R(p), v), remove: (p) => F.remove(R(p)).catch(() => {}),
+    on: (p, cb) => F.onValue(R(p), (snap) => cb(snap.val()), () => cb(null)),
+    onDisconnectRemove: (p) => { F.onDisconnect(R(p)).remove().catch(() => {}); },
+  };
+}
+async function startPhone() {
+  if (PH) return;
+  try { PHM = await import('./phone.js?v=20261124p'); } catch (e) { console.warn('遊戲電話載入失敗', e); return; }
+  const db = phoneDb(); if (!db) return;
+  PH = PHM.createPhone(db, {
+    name: () => FAKE_AS || (meProfile() || {}).name || '', where: whereAmI, toast,
+    chime: (soft) => { try { if (SND) soft ? SND.chirp && SND.chirp() : SND.chime && SND.chime(); } catch (e) { /* 沒聲音也沒關係 */ } },
+    canUse: () => { if (!meProfile()) { toast('📞 先按「👤 加入」取暱稱，才能打電話'); return false; } return true; },
+    render: renderPhone,
+  });
+  PH.setDnd(store.get('phoneDnd', false));
+  PH.start();
+  $('#phoneBtn').hidden = false;
+}
+function renderPhone(st) {
+  // 通話卡（右下角浮動）：響鈴、通話中
+  const card = $('#callCard'), c = st.call;
+  const key = c ? [c.role, c.st, c.peer, c.heard && c.heard.t, c.said && c.said.t].join('|') : '';
+  if (c && key === card.dataset.key) { const sec = card.querySelector('.cc-sec'); if (sec) sec.textContent = c.left; }
+  else if (!c) { card.hidden = true; card.innerHTML = ''; card.dataset.key = ''; } else {
+    card.hidden = false; card.dataset.key = key;
+    const heard = c.heard ? `<p class="cc-heard"><b>${esc(c.peerName)}：</b>${esc(PH.phrase(c.heard.k, c.heard.where))}</p>` : '';
+    const said = c.said ? `<p class="cc-said"><b>我：</b>${esc(PH.phrase(c.said.k, c.said.where))}</p>` : '';
+    if (c.st === 'ring' && c.role === 'in') card.innerHTML = `<p class="cc-t">📞 <b>${esc(c.peerName)}</b> 打電話給你（<span class="cc-sec">${c.left}</span> 秒）</p><div class="cc-btns"><button type="button" class="btn" data-cc="yes">✅ 接聽</button><button type="button" class="btn ghost" data-cc="no">❌ 拒絕</button></div>`;
+    else if (c.st === 'ring') card.innerHTML = `<p class="cc-t">📞 正在打給 <b>${esc(c.peerName)}</b>…（<span class="cc-sec">${c.left}</span> 秒）</p><div class="cc-btns"><button type="button" class="btn ghost" data-cc="hang">取消</button></div>`;
+    else {
+      const ph = PHM.PHRASES.map((p, i) => `<button type="button" class="cc-ph" data-say="${i}">${esc(PH.phrase(i, '📍這裡'))}</button>`).join('');
+      card.innerHTML = `<p class="cc-t">📞 和 <b>${esc(c.peerName)}</b> 通話中</p>${heard}${said}<div class="cc-phs">${ph}</div><div class="cc-btns"><button type="button" class="btn ghost" data-cc="find">📍 去找他</button><button type="button" class="btn danger" data-cc="hang">掛斷</button></div>`;
+    }
+    card.querySelectorAll('[data-cc]').forEach((b) => (b.onclick = () => {
+      const k = b.dataset.cc;
+      if (k === 'yes') PH.answer(true); else if (k === 'no') PH.answer(false); else if (k === 'hang') PH.hangup();
+      else if (k === 'find') { const p = PL && PL.posOf(c.peer); if (!p) { toast('📞 現在看不到他的人物（他可能還沒加入或在看網站）'); return; } if (S.walking && !exitWalk(true)) return; closePanel(false); const t = p.clone().setY(p.y + 1); CAM.flight({ t, p: t.clone().add(new THREE.Vector3(5, 7, 9)) }, 1400, 2, () => toast(`📍 ${c.peerName} 在這裡`)); }
+    }));
+    card.querySelectorAll('[data-say]').forEach((b) => (b.onclick = () => PH.say(+b.dataset.say)));
+  }
+  if ($('#phoneDlg').open) $('#phoneBody').innerHTML = phoneListHTML(st), bindPhoneList();
+}
+function phoneListHTML(st) {
+  const rows = st.list.length ? st.list.map((p, i) => `<li class="ag-job"><span class="ag-no">${i + 1}</span><span class="ic" aria-hidden="true">🧑</span><div class="ag-main"><b>${esc(p.name)}</b><small>在線上，可以接電話</small></div><div class="ag-side"><button type="button" class="btn" data-dial="${esc(p.id)}" ${st.call ? 'disabled' : ''}>📞 打給他</button></div></li>`).join('') : '<p class="foot">現在沒有其他同學可以接電話。等同學加入市集、打開網站再試試。</p>';
+  return `<ol class="ag-rules"><li>電話只能打給<b>現在在線上、有加入市集</b>的同學。</li><li>接通後只能用<b>預設的短句和表情</b>聊天（例如「來服務台找我！」），不能自己打字。</li><li>不想被打擾就打開下面的「🔕 不接電話」。</li></ol>
+    <ol class="ag-list">${rows}</ol>
+    <label class="ph-dnd"><input type="checkbox" id="phDnd" ${st.dnd ? 'checked' : ''}> 🔕 不接電話（別人在電話簿裡看不到我）</label>`;
+}
+function bindPhoneList() {
+  $('#phoneBody').querySelectorAll('[data-dial]').forEach((b) => (b.onclick = () => { PH.dial(b.dataset.dial); $('#phoneDlg').close(); }));
+  const d = $('#phDnd'); if (d) d.onchange = () => { store.set('phoneDnd', d.checked); PH.setDnd(d.checked); };
+}
+function openPhone() {
+  if (!PH) { toast('📞 電話還沒準備好，等一下再試'); return; }
+  if (!meProfile()) { toast('📞 先按「👤 加入」取暱稱，才能打電話'); return; }
+  PH.refresh();
+  $('#phoneBody').innerHTML = phoneListHTML(PH.state()); bindPhoneList();
+  if (!$('#phoneDlg').open) openDlg('#phoneDlg');
+}
+$('#phoneBtn').addEventListener('click', openPhone);
+setInterval(() => { if (PH && PH.state().call) renderPhone(PH.state()); }, 1000);   // 響鈴倒數
+
 // ------------------------------------------------------------------ 地點清單與搜尋
 let filter = '全部';
 function cardHTML(id) {
@@ -2028,6 +2106,7 @@ function renderMe() {
   if (PL) PL.setMe(p);
   if (NET) NET.setMe(p);
   if (p && STY) applyLook();
+  if (PH) PH.refresh();
   if (S.walking) { $('#walkView').hidden = !p; if (!p) CAM.walk.third = false; syncViewBtn(); }
 }
 function openMe() {
@@ -2190,13 +2269,13 @@ function balloonPopped() {
 }
 function startNet() {
   const M = C.multiplayer; if (!M || !M.enabled || !M.firebase || !PL) return;
-  import('./net.js?v=20261124n').then(({ createNet }) => {
+  import('./net.js?v=20261124p').then(({ createNet }) => {
     NET = createNet(M.firebase, {
       myPos: () => PL.myPos(), upsert: (id, info, pos) => { ONLINE.set(id, String(info.name || '').slice(0, 16)); PL.upsert(id, info, pos); }, remove: (id) => { ONLINE.delete(id); PL.remove(id); },
       onCount: (c) => { COUNT = c; const el = $('#onlineChip'); el.hidden = false; $('#onlineCount').textContent = c.players; el.setAttribute('aria-label', `市集島上 ${c.players} 人，開著網站 ${c.viewers} 人，點一下看各身分人數`); },
       onTeacher: (k, code) => { if (k === 'in') { toast('🧑‍🏫 老師登入成功，重新整理中…'); setTimeout(() => location.reload(), 700); } else if (!(NET && NET.teacher && NET.teacher.email())) toast(code === 'auth/invalid-action-code' || code === 'auth/expired-action-code' ? '這個登入連結已經用過或過期了，請在 🪙 錢包的「老師登入」重新寄一次' : `老師登入沒有成功（${code || '未知原因'}），請重新寄一次`); },
       onFx: (all, myUid) => applyFx(all, myUid),
-      onStatus: (s, msg) => { $('#onlineChip').classList.toggle('off', s !== 'online'); if (s === 'error') console.warn('連線錯誤', msg); },
+      onStatus: (s, msg) => { if (s === 'online' && PH) PH.refresh(); $('#onlineChip').classList.toggle('off', s !== 'online'); if (s === 'error') console.warn('連線錯誤', msg); },
     });
     NET.setMe(meProfile());
     if (S.bike) NET.setFx({ ride: S.bike });
@@ -2205,7 +2284,8 @@ function startNet() {
     if (WAL) WAL.attach(NET, meProfile);   // 線上鯉魚幣錢包
     if (JOBS) JOBS.attach(NET);
     watchLamps();
-    import('./hidemp.js?v=20261124n').then(({ createHideMP }) => {
+    startPhone();
+    import('./hidemp.js?v=20261124p').then(({ createHideMP }) => {
       HM = createHideMP(NET, {
         toast, profile: meProfile, enterWalk: () => { if (!S.walking) enterWalk(); },
         walkPos: () => (S.walking ? CAM.walk.pos : null), posOf: (id) => PL.posOf(id),
@@ -2326,6 +2406,7 @@ function webglOK() { try { const c = document.createElement('canvas'); return !!
 
 // ------------------------------------------------------------------ 啟動
 async function boot() {
+  if (/[?&]fakedb\b/.test(location.search)) setTimeout(() => startPhone(), 1500);   // 測試：兩個分頁用假資料庫互打電話
   if (/[?&]debug\b/.test(location.search)) window.__dbg = { get W() { return W; }, get CAM() { return CAM; }, get PL() { return PL; }, S, get BK() { return BK; } };   // 測試用（網址加 ?debug 才有）
   bindPhotoBar();
   $('#brandMascot').innerHTML = MASCOT;
@@ -2340,14 +2421,14 @@ async function boot() {
   if (Q.has('nogl') || !webglOK()) { textOnly(Q.has('nogl') ? '已切換為文字清單版' : '這台裝置無法顯示 3D 畫面'); applyTheme(); updateClock(); setInterval(updateClock, 10000); window.__ready = true; return; }
   let mods;
   try {
-    mods = await Promise.all([import('./world.js?v=20261124n'), import('./life.js?v=20261124n'), import('./cam.js?v=20261124n'), import('./players.js?v=20261124n'), import('./signs.js?v=20261124n'), import('./festival.js?v=20261124n'), import('./fauna.js?v=20261124n'), import('./interact.js?v=20261124n'), import('./games.js?v=20261124n')]);
+    mods = await Promise.all([import('./world.js?v=20261124p'), import('./life.js?v=20261124p'), import('./cam.js?v=20261124p'), import('./players.js?v=20261124p'), import('./signs.js?v=20261124p'), import('./festival.js?v=20261124p'), import('./fauna.js?v=20261124p'), import('./interact.js?v=20261124p'), import('./games.js?v=20261124p')]);
     const [{ createWorld, H: GROUND_H }, { createLife, makePerson }, { createCam }, { createPlayers }, { createSigns }, { createFestival }, { createFauna }, { createInteract }, { createGames, FISH }] = mods;
     GH = GROUND_H;
     const mobile = isLite();   // 手機和平板都用輕量版場景
     W = createWorld($('#gl'), { quality: S.quality, mobile });
     W.renderer.setPixelRatio(Math.min(devicePixelRatio, S.quality === 'low' ? 1 : (mobile ? 1.5 : 2)));
     L = createLife(W, C, { halfPeople: mobile || S.quality === 'low', quality: S.quality });
-    try { const { createCats } = await import('./cats.js?v=20261124n'); K = createCats(W, C, { reduced: () => S.reduced }); } catch (e) { console.warn('島上的貓載入失敗', e); K = null; }
+    try { const { createCats } = await import('./cats.js?v=20261124p'); K = createCats(W, C, { reduced: () => S.reduced }); } catch (e) { console.warn('島上的貓載入失敗', e); K = null; }
     CAM = createCam(W, $('#gl'), { onZoom: showZoom, onIntro: (k) => { L.setDeck(k < .3 ? 1 : Math.max(0, 1 - (k - .3) / .25)); if (k > .55) $('.intro-title').classList.add('show'); } });
     CAM.S.reduced = S.reduced; CAM.S.mobile = isMobile();
     PL = createPlayers(W, GROUND_H); renderMe(); startNet();
@@ -2356,24 +2437,24 @@ async function boot() {
     W.canLeave = () => { const s = L.carp.status(); if (s.docked && s.gang) return true; if (performance.now() - lastBlockToast > 3000) { lastBlockToast = performance.now(); toast('⛔ 航行中請待在船上，靠港放下跳板後再下船'); } return false; };
     // 彩虹熱氣球：起降場在服務台北側廣場；用網路時間排班，大家看到同一顆
     try {
-      const { createBalloon } = await import('./balloon.js?v=20261124n');
+      const { createBalloon } = await import('./balloon.js?v=20261124p');
       BAL = createBalloon(W, { pad: { x: 1, z: -5 }, now: () => (NET ? NET.now() : Date.now()), low: mobile || S.quality === 'low' });
       W.balloon = BAL; W.gates = [balloonGate];
     } catch (e) { console.warn('熱氣球載入失敗', e); BAL = null; }
     // 🦆 鴨子船：停在益智島南側的棧道；一樣用網路時間排班
     try {
-      const { createDuckBoat } = await import('./duckboat.js?v=20261124n');
+      const { createDuckBoat } = await import('./duckboat.js?v=20261124p');
       DUCK = createDuckBoat(W, { island: 'puzzle', now: () => (NET ? NET.now() : Date.now()), low: mobile || S.quality === 'low' });
       W.duck = DUCK; W.gates = [...(W.gates || []), duckGate];
     } catch (e) { console.warn('鴨子船載入失敗', e); DUCK = null; }
     // 🏛️ 市長任務：路燈候選位置先保留（裝飾不會擺在那裡）
-    try { const { createMayor } = await import('./mayor.js?v=20261124n'); MY = createMayor(W, { low: mobile || S.quality === 'low' }); } catch (e) { console.warn('市長任務載入失敗', e); MY = null; }
-    KIT = await import('./kit.js?v=20261124n');
-    SG = createSigns(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261124n')).rng, low: mobile || S.quality === 'low' });
-    FX = createFestival(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261124n')).rng, low: mobile || S.quality === 'low', avoid: [...(BAL ? BAL.avoid : []), ...(DUCK ? DUCK.avoid : []), ...(MY ? MY.avoid : []), ...SG.signs.map((s) => s.g.position), ...Object.values(W.islands).flatMap((I) => (I.trees || []).filter((tr) => tr.visible).map((tr) => tr.position.clone().add(I.pos)))], carp: L.carp });
+    try { const { createMayor } = await import('./mayor.js?v=20261124p'); MY = createMayor(W, { low: mobile || S.quality === 'low' }); } catch (e) { console.warn('市長任務載入失敗', e); MY = null; }
+    KIT = await import('./kit.js?v=20261124p');
+    SG = createSigns(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261124p')).rng, low: mobile || S.quality === 'low' });
+    FX = createFestival(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261124p')).rng, low: mobile || S.quality === 'low', avoid: [...(BAL ? BAL.avoid : []), ...(DUCK ? DUCK.avoid : []), ...(MY ? MY.avoid : []), ...SG.signs.map((s) => s.g.position), ...Object.values(W.islands).flatMap((I) => (I.trees || []).filter((tr) => tr.visible).map((tr) => tr.position.clone().add(I.pos)))], carp: L.carp });
     // 🚲 借車點與環島自行車道（車架放在服務台島的空地；車道沿著原本的石板環路）
     try {
-      BIKE_MOD = await import('./bike.js?v=20261124n');
+      BIKE_MOD = await import('./bike.js?v=20261124p');
       const rs = FX.freeSpot('center', 1.3, 1.7);
       BK = BIKE_MOD.createBikes(W, { spot: rs ? { x: rs.x, z: rs.z, face: rs.face } : null, islandName: (id) => (islandById(id) || {}).name || id, low: mobile || S.quality === 'low' });
       W.gates = [...(W.gates || []), bikeGate];
@@ -2381,7 +2462,7 @@ async function boot() {
     if (MY) { const ms = FX.freeSpot('center', .9, 1.2); MY.placeBoard(ms ? { x: ms.x, z: ms.z, face: ms.face } : null); MY.setLamps(lampState()); }
     // 👕 服飾店（服務台島的小攤子）
     try {
-      STY = await import('./style.js?v=20261124n');
+      STY = await import('./style.js?v=20261124p');
       const ss = FX.freeSpot('center', 1.1, 1.5);
       SHOP = STY.createShop(W, { spot: ss ? { x: ss.x, z: ss.z, face: ss.face } : null, low: mobile || S.quality === 'low' });
       applyLook();
@@ -2399,7 +2480,7 @@ async function boot() {
       }
       return best;
     });
-    FA = createFauna(W, { H: GROUND_H, rng: (await import('./kit.js?v=20261124n')).rng });
+    FA = createFauna(W, { H: GROUND_H, rng: (await import('./kit.js?v=20261124p')).rng });
     IA = createInteract(W, C, GROUND_H, {
       toast, carp: L.carp,
       toastIf: (m) => { if (!S.intro) toast(m); },

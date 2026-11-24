@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261124n">
+<link rel="stylesheet" href="styles.css?v=20261124p">
 <script type="importmap">{"imports":{"three":"./vendor/three/three.module.js","three/addons/":"./vendor/three/addons/"}}</script>
 </head>
 <body>
@@ -77,6 +77,7 @@
   <button type="button" class="hchip me" id="meBtn" aria-label="用暱稱加入市集" aria-haspopup="dialog"><span aria-hidden="true">👤</span><b id="meName">加入</b></button>
   <button type="button" class="hchip" id="bagBtn" aria-label="背包"><span aria-hidden="true">🎒</span><b id="bagCount">0</b></button>
   <button type="button" class="hchip" id="stampBtn" aria-label="集章進度"><span aria-hidden="true">🏮</span><b id="stampCount">0/6</b></button>
+  <button type="button" class="hchip" id="phoneBtn" aria-label="遊戲電話" hidden><span aria-hidden="true">📞</span></button>
   <button type="button" class="hchip" id="catBtn" aria-label="貓咪圖鑑"><span aria-hidden="true">🐾</span><b id="catCount">0/6</b></button>
 </div>
 <button type="button" class="ticket" id="ticketChip" hidden></button>
@@ -195,6 +196,11 @@
   <div class="dlg-hd"><h2 id="walletTitle">🪙 我的線上鯉魚幣</h2><button type="button" class="x" data-close aria-label="關閉">✕</button></div>
   <div id="walletBody"></div>
 </dialog>
+<dialog id="phoneDlg" class="dlg" aria-labelledby="phoneTitle">
+  <div class="dlg-hd"><h2 id="phoneTitle">📞 遊戲電話</h2><button type="button" class="x" data-close aria-label="關閉">✕</button></div>
+  <div id="phoneBody"></div>
+</dialog>
+<section class="callcard" id="callCard" hidden aria-live="polite"></section>
 <dialog id="mayorDlg" class="dlg" aria-labelledby="mayorTitle">
   <div class="dlg-hd"><h2 id="mayorTitle">🏛️ 市長任務：幫市集加路燈</h2><button type="button" class="x" data-close aria-label="關閉">✕</button></div>
   <div id="mayorBody"></div>
@@ -230,6 +236,6 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <noscript><p class="noscript">這個網站需要開啟 JavaScript。</p></noscript>
-<script type="module" src="js/main.js?v=20261124n"></script>
+<script type="module" src="js/main.js?v=20261124p"></script>
 </body>
 </html>

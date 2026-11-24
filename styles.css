@@ -696,3 +696,16 @@ html[data-theme="deep"] .job-msg { background: #23402a; color: #bff0c6; } html[d
 .btn.sm { min-height: 28px; padding: 0 8px; font-size: 12px; }
 @media (max-width: 480px) { .mayor-list { grid-template-columns: 1fr; } }
 .mayorbar .x { white-space: nowrap; }
+
+/* 📞 遊戲電話 */
+.callcard { position: fixed; z-index: 40; right: 16px; bottom: 96px; width: min(360px, calc(100vw - 32px)); max-height: min(60vh, 460px); overflow: auto; background: var(--surface); border: 3px solid #3e9b4f; border-radius: 18px; box-shadow: var(--shadow); padding: 12px 14px; }
+.callcard[hidden] { display: none; }
+.callcard .cc-t { margin: 0 0 8px; font-size: 15px; }
+.callcard .cc-heard { margin: 0 0 6px; background: #e7f6ec; border-radius: 12px; padding: 6px 10px; }
+.callcard .cc-said { margin: 0 0 8px; background: #eef3fb; border-radius: 12px; padding: 6px 10px; text-align: right; }
+.callcard .cc-phs { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 8px; }
+.callcard .cc-ph { min-height: 36px; border: 2px solid var(--line); background: var(--surface2); border-radius: 999px; padding: 0 10px; font-weight: 700; font-size: 13px; }
+.callcard .cc-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn.danger { background: #d23b3b; }
+.ph-dnd { display: flex; gap: 8px; align-items: center; margin-top: 12px; font-weight: 700; }
+@media (max-width: 480px) { .callcard { right: 8px; left: 8px; width: auto; bottom: 190px; } }
