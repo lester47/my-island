@@ -1,9 +1,9 @@
 // 鏡頭：拖曳旋轉縮放、回到全景、點島飛近（電影史詩運鏡）、開場、導覽、地面漫遊
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { TAU, clamp, lerp, easeInOut, smooth } from './kit.js?v=20261124g';
-import { H } from './world.js?v=20261124g';
-import { SHORE } from './scenery.js?v=20261124g';
+import { TAU, clamp, lerp, easeInOut, smooth } from './kit.js?v=20261124h';
+import { H } from './world.js?v=20261124h';
+import { SHORE } from './scenery.js?v=20261124h';
 
 export function createCam(W, canvas, hooks) {
   const camera = W.camera;
