@@ -117,5 +117,5 @@ export function createNet(config, hooks) {
     hooks.onCount({ players: n, byRole, viewers: Math.max(viewers, n ? 1 : 0) });
   }
   // 給多人小遊戲用：資料庫、自己的 id、伺服器時間
-  return { setMe, setFx, tick, db, uid: () => uid, now: () => Date.now() + skew, teacher, fb: { ref, set, update, remove, onValue, serverTimestamp } };
+  return { setMe, setFx, tick, db, uid: () => uid, now: () => Date.now() + skew, teacher, fb: { ref, set, update, remove, onValue, onDisconnect, serverTimestamp } };
 }
