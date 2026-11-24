@@ -3,8 +3,8 @@
 // 大俯衝、海面波浪段，再依序飛過循環挖寶島、手作體驗二島、美食補給島、手作體驗一島，回到車站。
 // 時程用「網路時間」排班（所有裝置看到同一班車）：停站 25 秒 → 跑一圈 → 回站。
 import * as THREE from 'three';
-import { TAU, clamp } from './kit.js?v=20261124w';
-import { H } from './world.js?v=20261124w';
+import { TAU, clamp } from './kit.js?v=20261124x';
+import { H } from './world.js?v=20261124x';
 
 export const COASTER_CAP = 8;                 // 4 節車廂 × 每節 2 人
 const DOCK = 25;                              // 停站秒數
@@ -297,47 +297,132 @@ export function createCoaster(W, opts) {
   const roofM = new THREE.MeshStandardMaterial({ color: '#2f7fd1', roughness: .7 });
   for (const z of [-5.5, 5.5]) for (const x of [inX * (PW + .5), -inX * .95]) { const p = new THREE.Mesh(new THREE.CylinderGeometry(.07, .07, 2.6, 8), postM); p.position.set(x, H + 1.3, z); st.add(p); }
   box(roofM, PW + 2.2, .12, PLEN - 1, inX * (PW / 2 - .1), H + 2.65, 0);
-  // ---- 🐟 鯉魚造型的站名招牌：屋頂上一條大鯉魚，身上寫站名「鯉躍龍門站」（兩面都看得到）
+  // ---- 🐟 站名招牌（照設計圖）：圓角膠囊形的厚招牌（米白底、橘紅色發光邊框、角落藍色浪花）＋下方橘金色副標牌，
+  //      招牌上方一條躍出水面的 3D 鯉魚和水花；底下是圓角底座、兩根短柱和一圈暖色小燈。兩面都看得到。
   const STATION_NAME = opts.stationName || '鯉躍龍門站';
+  const SUBTITLE = opts.stationSub || '鯉魚雲霄飛車';
   const FONT = "'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', sans-serif";
-  const signTex = (() => {
-    const c = document.createElement('canvas'); c.width = 1024; c.height = 400; const x = c.getContext('2d'); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
-    const paint = () => {
-      x.clearRect(0, 0, 1024, 400);
-      // 尾鰭（右邊）
-      x.fillStyle = '#ff6a2a'; x.beginPath(); x.moveTo(820, 200); x.quadraticCurveTo(900, 90, 1010, 40); x.quadraticCurveTo(950, 200, 1010, 360); x.quadraticCurveTo(900, 310, 820, 200); x.fill();
-      x.strokeStyle = '#fff3e6'; x.lineWidth = 6; for (const k of [0, 1, 2]) { x.beginPath(); x.moveTo(840, 200); x.lineTo(990, 70 + k * 130); x.stroke(); }
-      // 背鰭、胸鰭
-      x.fillStyle = '#ff8a4a'; x.beginPath(); x.moveTo(380, 70); x.quadraticCurveTo(520, -10, 660, 75); x.lineTo(380, 75); x.fill();
-      x.beginPath(); x.moveTo(300, 300); x.quadraticCurveTo(330, 390, 410, 380); x.lineTo(380, 300); x.fill();
-      // 魚身：白底，外框
-      x.fillStyle = '#fffaf3'; x.strokeStyle = '#c23a1c'; x.lineWidth = 10;
-      x.beginPath(); x.moveTo(60, 200); x.bezierCurveTo(90, 60, 360, 40, 560, 70); x.bezierCurveTo(720, 95, 800, 160, 840, 200); x.bezierCurveTo(800, 240, 720, 305, 560, 330); x.bezierCurveTo(360, 360, 90, 340, 60, 200); x.closePath(); x.fill(); x.stroke();
-      // 魚鱗（淡淡的弧線）＋紅斑
-      x.save(); x.clip();
-      x.strokeStyle = 'rgba(194,58,28,.18)'; x.lineWidth = 3;
-      for (let yy = 60; yy < 360; yy += 34) for (let xx = 230 + ((yy / 34) % 2) * 22; xx < 840; xx += 44) { x.beginPath(); x.arc(xx, yy, 22, Math.PI * .6, Math.PI * 1.4); x.stroke(); }
-      x.fillStyle = '#e8401c'; for (const [cx, cy, rx, ry] of [[200, 95, 80, 45], [700, 120, 90, 50], [560, 300, 70, 35]]) { x.beginPath(); x.ellipse(cx, cy, rx, ry, .2, 0, Math.PI * 2); x.fill(); }
-      x.restore();
-      // 嘴巴、眼睛、鬍鬚
-      x.fillStyle = '#ff6a2a'; x.beginPath(); x.ellipse(62, 205, 18, 26, 0, 0, Math.PI * 2); x.fill();
-      x.strokeStyle = '#ff6a2a'; x.lineWidth = 6; x.beginPath(); x.moveTo(75, 230); x.quadraticCurveTo(70, 290, 30, 310); x.stroke(); x.beginPath(); x.moveTo(85, 175); x.quadraticCurveTo(60, 130, 25, 120); x.stroke();
-      x.fillStyle = '#fff'; x.beginPath(); x.arc(140, 165, 30, 0, Math.PI * 2); x.fill(); x.strokeStyle = '#111'; x.lineWidth = 5; x.stroke();
-      x.fillStyle = '#111'; x.beginPath(); x.arc(146, 168, 16, 0, Math.PI * 2); x.fill(); x.fillStyle = '#fff'; x.beginPath(); x.arc(152, 160, 6, 0, Math.PI * 2); x.fill();
-      // 站名
-      x.textAlign = 'center'; x.textBaseline = 'middle';
-      x.font = `900 108px ${FONT}`; x.lineWidth = 16; x.strokeStyle = '#7a1c08'; x.strokeText(STATION_NAME, 470, 190); x.fillStyle = '#ffd23a'; x.fillText(STATION_NAME, 470, 190);
-      x.font = `800 40px ${FONT}`; x.fillStyle = '#7a1c08'; x.fillText('🎢 鯉魚雲霄飛車', 470, 278);
-      t.needsUpdate = true;
-    };
-    paint(); if (document.fonts && document.fonts.ready) document.fonts.ready.then(paint); return t;
-  })();
-  {
-    const sm = new THREE.MeshStandardMaterial({ map: signTex, transparent: true, alphaTest: .4, roughness: .6, side: THREE.FrontSide });
-    const cx = inX * (PW / 2 - .1);
-    for (const ry of [Math.PI / 2, -Math.PI / 2]) { const pl = new THREE.Mesh(new THREE.PlaneGeometry(5.2, 2.03), sm); pl.position.set(cx + (ry > 0 ? .03 : -.03), H + 3.85, 0); pl.rotation.y = ry; st.add(pl); }
-    for (const z of [-1.6, 1.6]) { const p = new THREE.Mesh(new THREE.CylinderGeometry(.06, .06, 1.2, 6), postM); p.position.set(cx, H + 3.15, z); st.add(p); }
+  const canvasTex = (w, h, draw) => { const c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d'); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; const paint = () => { x.clearRect(0, 0, w, h); draw(x, w, h); t.needsUpdate = true; }; paint(); if (document.fonts && document.fonts.ready) document.fonts.ready.then(paint); return t; };
+  const rrect = (x, X, Y, W, Hh, R) => { x.beginPath(); x.roundRect(X, Y, W, Hh, R); };
+  const waves = (x, cx, cy, flip) => {                     // 藍色浪花（角落）
+    x.save(); x.translate(cx, cy); x.scale(flip ? -1 : 1, 1);
+    const g = x.createLinearGradient(0, -60, 0, 60); g.addColorStop(0, '#7cc8f0'); g.addColorStop(1, '#2f7fd1'); x.fillStyle = g;
+    x.beginPath(); x.moveTo(-10, 70); x.bezierCurveTo(-20, 0, 40, -60, 110, -40); x.bezierCurveTo(60, -40, 40, 0, 80, 20); x.bezierCurveTo(110, 40, 150, 20, 170, 0); x.bezierCurveTo(170, 50, 120, 80, 60, 80); x.closePath(); x.fill();
+    x.fillStyle = '#ffffff'; x.beginPath(); x.moveTo(100, -38); x.bezierCurveTo(70, -30, 60, -5, 78, 12); x.bezierCurveTo(60, -10, 75, -32, 100, -38); x.fill();
+    x.restore();
+  };
+  const faceTex = canvasTex(1400, 560, (x, w, h) => {
+    rrect(x, 30, 30, w - 60, h - 60, 250); x.fillStyle = '#e8501c'; x.fill();                       // 橘紅色外框
+    const g = x.createLinearGradient(0, 70, 0, h - 70); g.addColorStop(0, '#fffaf0'); g.addColorStop(1, '#f6e6cc');
+    rrect(x, 70, 70, w - 140, h - 140, 210); x.fillStyle = g; x.fill();                                 // 米白色底
+    rrect(x, 88, 88, w - 176, h - 176, 194); x.strokeStyle = '#f2a25c'; x.lineWidth = 6; x.stroke();     // 內側細線
+    waves(x, 90, h - 120, false); waves(x, w - 90, h - 120, true);
+    x.textAlign = 'center'; x.textBaseline = 'middle'; x.font = `900 210px ${FONT}`;
+    x.fillStyle = 'rgba(120,60,20,.18)'; x.fillText(STATION_NAME, w / 2 + 6, h / 2 - 22);           // 淡淡的陰影
+    x.fillStyle = '#4a2410'; x.fillText(STATION_NAME, w / 2, h / 2 - 28);
+  });
+  const subTex = canvasTex(800, 180, (x, w, h) => {
+    rrect(x, 8, 8, w - 16, h - 16, 80); const g = x.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#ffb347'); g.addColorStop(1, '#f08a1c'); x.fillStyle = g; x.fill();
+    x.strokeStyle = '#ffe08a'; x.lineWidth = 8; x.stroke();
+    rrect(x, 30, 30, w - 60, h - 60, 60); x.fillStyle = '#fff3dc'; x.fill();
+    for (const cx of [70, w - 70]) { x.fillStyle = '#e0a020'; x.beginPath(); x.arc(cx, h / 2, 14, 0, Math.PI * 2); x.fill(); }
+    x.fillStyle = '#4a2410'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.font = `900 84px ${FONT}`; x.fillText(SUBTITLE, w / 2, h / 2 + 4);
+  });
+  const sign = new THREE.Group(); st.add(sign);
+  const SCX = inX * (PW / 2 - .1);
+  sign.position.set(SCX, H + 2.72, 0); sign.rotation.y = Math.PI / 2;                                  // 招牌面向海（+x），背面面向島
+  const SW = 5.4, SHh = 2.16, SR = 1.0, DEP = .32;
+  const pill = (w, h, r) => { const sh = new THREE.Shape(); sh.moveTo(-w / 2 + r, -h / 2); sh.lineTo(w / 2 - r, -h / 2); sh.absarc(w / 2 - r, -h / 2 + r, r, -Math.PI / 2, 0); sh.lineTo(w / 2, h / 2 - r); sh.absarc(w / 2 - r, h / 2 - r, r, 0, Math.PI / 2); sh.lineTo(-w / 2 + r, h / 2); sh.absarc(-w / 2 + r, h / 2 - r, r, Math.PI / 2, Math.PI); sh.lineTo(-w / 2, -h / 2 + r); sh.absarc(-w / 2 + r, -h / 2 + r, r, Math.PI, Math.PI * 1.5); return sh; };
+  const glowM = new THREE.MeshStandardMaterial({ color: '#ff7a2a', emissive: '#ff6a1a', emissiveIntensity: .9, roughness: .4 });
+  const frameM = new THREE.MeshStandardMaterial({ color: '#e8501c', roughness: .45, metalness: .1 });
+  const creamM = new THREE.MeshStandardMaterial({ color: '#f6e6cc', roughness: .6 });
+  { // 厚厚的招牌本體（側邊是橘紅色，外圈一條發光的邊）
+    const body = new THREE.Mesh(new THREE.ExtrudeGeometry(pill(SW, SHh, SR), { depth: DEP, bevelEnabled: true, bevelThickness: .06, bevelSize: .06, bevelSegments: 3, curveSegments: 18 }), frameM);
+    body.position.set(0, 1.25, -DEP / 2); body.castShadow = !low; sign.add(body);
+    const rim = new THREE.Mesh(new THREE.ExtrudeGeometry(pill(SW + .16, SHh + .16, SR + .08), { depth: .08, bevelEnabled: false, curveSegments: 18 }), glowM); rim.position.set(0, 1.25, -.04); sign.add(rim);
+    for (const sd of [1, -1]) {                                                                         // 正面、背面的圖
+      const f = new THREE.Mesh(new THREE.PlaneGeometry(SW, SW * 560 / 1400), new THREE.MeshStandardMaterial({ map: faceTex, transparent: true, alphaTest: .3, roughness: .55 }));
+      f.position.set(0, 1.25, sd * (DEP / 2 + .065)); if (sd < 0) f.rotation.y = Math.PI; sign.add(f);
+      // 副標牌：下方中間凸出來一塊
+      const pb = new THREE.Mesh(new THREE.ExtrudeGeometry(pill(2.5, .58, .29), { depth: .1, bevelEnabled: true, bevelThickness: .03, bevelSize: .03, bevelSegments: 2, curveSegments: 12 }), new THREE.MeshStandardMaterial({ color: '#f08a1c', roughness: .4, metalness: .2 }));
+      pb.position.set(0, .3, sd * (DEP / 2 + .06) - (sd < 0 ? .1 : 0)); sign.add(pb);
+      const sp = new THREE.Mesh(new THREE.PlaneGeometry(2.5, 2.5 * 180 / 800), new THREE.MeshStandardMaterial({ map: subTex, transparent: true, alphaTest: .3, roughness: .5 }));
+      sp.position.set(0, .3, sd * (DEP / 2 + .2)); if (sd < 0) sp.rotation.y = Math.PI; sign.add(sp);
+    }
+    // 底座：圓角平台＋兩根短柱＋一圈暖色小燈
+    const base = new THREE.Mesh(new THREE.ExtrudeGeometry(pill(SW + .4, 1.1, .5), { depth: .14, bevelEnabled: true, bevelThickness: .03, bevelSize: .03, curveSegments: 12 }), creamM);
+    base.rotation.x = -Math.PI / 2; base.position.set(0, .02, .55); sign.add(base);
+    const rimB = new THREE.Mesh(new THREE.ExtrudeGeometry(pill(SW + .48, 1.18, .54), { depth: .05, bevelEnabled: false, curveSegments: 12 }), glowM); rimB.rotation.x = -Math.PI / 2; rimB.position.set(0, .03, .59); sign.add(rimB);
+    for (const x0 of [-1.7, 1.7]) { const p = new THREE.Mesh(new THREE.CylinderGeometry(.16, .2, .3, 14), creamM); p.position.set(x0, .3, 0); sign.add(p); }
+    const bulbM = new THREE.MeshStandardMaterial({ color: '#fff4c8', emissive: '#ffc44a', emissiveIntensity: 2.4 });
+    for (let k = 0; k < 7; k++) for (const sd of [1, -1]) { const b0 = new THREE.Mesh(new THREE.SphereGeometry(.06, 8, 6), bulbM); b0.position.set(-SW / 2 + .5 + k * (SW - 1) / 6, .19, sd * .5); sign.add(b0); }
   }
+  // ---- 躍出水面的 3D 鯉魚（招牌上方）：橘紅色魚鱗、白斑、大眼睛、張開的嘴、鬍鬚、大大的扇形尾鰭，四周有水花
+  const KOI_Y = 2.3;                                                     // 魚肚子壓在招牌上緣（招牌頂端約 2.33）
+  const leapKoi = new THREE.Group(); leapKoi.position.set(-.1, KOI_Y, 0); leapKoi.scale.setScalar(1.12); sign.add(leapKoi);   // 鯉魚和招牌連在一起：從招牌上緣的浪花躍出來
+  {
+    // 魚身：沿著一條拱起來的弧線，一圈一圈做出來（頭在左上、尾巴在右邊往上翹）
+    const spine = new THREE.CatmullRomCurve3([new THREE.Vector3(-1.55, .25, 0), new THREE.Vector3(-.9, .55, 0), new THREE.Vector3(0, .5, 0), new THREE.Vector3(.85, .25, 0), new THREE.Vector3(1.4, .35, 0)]);
+    const NR = 30, NA = 20, pos = [], col = [], idx = [];
+    const rad = (t) => (t < .12 ? .18 + Math.sqrt(t / .12) * .27 : t < .45 ? .45 + Math.sin((t - .12) / .33 * Math.PI / 2) * .05 : .5 - Math.pow((t - .45) / .55, 1.4) * .4);
+    const TOP = new THREE.Color('#ff4a1c'), SIDE = new THREE.Color('#ff8a3a'), BELLY = new THREE.Color('#ffe7cf'), SPOT = new THREE.Color('#fff6ec');
+    for (let i = 0; i <= NR; i++) {
+      const t = i / NR, p = spine.getPointAt(t), tg = spine.getTangentAt(t), nz = new THREE.Vector3(0, 0, 1), ny = new THREE.Vector3().crossVectors(nz, tg).normalize(), r = rad(t);
+      for (let j = 0; j < NA; j++) {
+        const a0 = j / NA * TAU, cy = Math.cos(a0), cz = Math.sin(a0);
+        const q = p.clone().addScaledVector(ny, cy * r * 1.08).addScaledVector(nz, cz * r * .86); pos.push(q.x, q.y, q.z);
+        let c = cy > .2 ? TOP.clone().lerp(SIDE, 1 - (cy - .2) / .8) : cy > -.45 ? SIDE.clone().lerp(BELLY, (.2 - cy) / .65) : BELLY.clone();
+        if (t < .16 && cy > .3 && Math.abs(cz) < .55) c = SPOT.clone();                                  // 頭頂白斑
+        if (t > .16 && t < .86 && cy > -.35) { const sc = Math.sin(t * 46 + (Math.floor(t * 46 / Math.PI) % 2) * 1.6 + a0 * 4); if (sc > .35) c.multiplyScalar(.8); else if (sc < -.8) c.lerp(SPOT, .25); }   // 魚鱗：一片一片的深淺
+        col.push(c.r, c.g, c.b);
+      }
+    }
+    for (let i = 0; i < NR; i++) for (let j = 0; j < NA; j++) { const a0 = i * NA + j, a1 = i * NA + (j + 1) % NA, b0 = a0 + NA, b1 = a1 + NA; idx.push(a0, a1, b0, a1, b1, b0); }
+    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); geo.setIndex(idx); geo.computeVertexNormals();
+    const bodyK = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .35, metalness: .05, side: THREE.DoubleSide })); bodyK.castShadow = !low; leapKoi.add(bodyK);
+    const head = spine.getPointAt(0);
+    const mouth = new THREE.Mesh(new THREE.TorusGeometry(.12, .055, 8, 14), new THREE.MeshStandardMaterial({ color: '#ff9a6a', roughness: .5 })); mouth.position.copy(head).add(new THREE.Vector3(-.05, -.02, 0)); mouth.rotation.y = Math.PI / 2; leapKoi.add(mouth);
+    for (const sd of [1, -1]) {
+      const ep = spine.getPointAt(.07).add(new THREE.Vector3(.02, .16, sd * .3));
+      const e = new THREE.Mesh(new THREE.SphereGeometry(.13, 14, 10), new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: .3 })); e.position.copy(ep); leapKoi.add(e);
+      const pu = new THREE.Mesh(new THREE.SphereGeometry(.085, 12, 8), new THREE.MeshStandardMaterial({ color: '#111111', roughness: .2 })); pu.position.copy(ep).add(new THREE.Vector3(-.03, 0, sd * .06)); leapKoi.add(pu);
+      const hl = new THREE.Mesh(new THREE.SphereGeometry(.028, 8, 6), new THREE.MeshBasicMaterial({ color: '#ffffff' })); hl.position.copy(pu.position).add(new THREE.Vector3(-.03, .04, sd * .05)); leapKoi.add(hl);
+      // 鬍鬚：從嘴邊捲起來
+      const wc = new THREE.CatmullRomCurve3([head.clone().add(new THREE.Vector3(.02, .05, sd * .1)), head.clone().add(new THREE.Vector3(-.2, .3, sd * .16)), head.clone().add(new THREE.Vector3(-.05, .52, sd * .2)), head.clone().add(new THREE.Vector3(.1, .45, sd * .22))]);
+      const wh = new THREE.Mesh(new THREE.TubeGeometry(wc, 16, .018, 5), new THREE.MeshStandardMaterial({ color: '#ffd8a8', roughness: .4 })); leapKoi.add(wh);
+    }
+    // 魚鰭：背鰭、胸鰭、腹鰭、扇形尾鰭（半透明、有紋路）
+    const finTex = canvasTex(256, 256, (x, w, h) => { const g = x.createLinearGradient(0, 0, w, 0); g.addColorStop(0, '#ff7a3a'); g.addColorStop(1, '#ffd9a8'); x.fillStyle = g; x.fillRect(0, 0, w, h); x.strokeStyle = 'rgba(255,255,255,.75)'; x.lineWidth = 5; for (let k = 0; k < 9; k++) { x.beginPath(); x.moveTo(0, h / 2); x.lineTo(w, k * h / 8); x.stroke(); } });
+    const finM = new THREE.MeshStandardMaterial({ map: finTex, side: THREE.DoubleSide, transparent: true, opacity: .92, roughness: .4 });
+    const fin = (pts) => { const sh = new THREE.Shape(); sh.moveTo(pts[0][0], pts[0][1]); for (const q of pts.slice(1)) sh.lineTo(q[0], q[1]); const g = new THREE.ShapeGeometry(sh); g.computeBoundingBox(); const bb = g.boundingBox, uv = g.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, (g.attributes.position.getX(i) - bb.min.x) / (bb.max.x - bb.min.x || 1), (g.attributes.position.getY(i) - bb.min.y) / (bb.max.y - bb.min.y || 1)); return new THREE.Mesh(g, finM); };
+    const dorsal = fin([[-.55, 0], [-.35, .42], [.05, .55], [.45, .3], [.6, 0]]); dorsal.position.set(-.35, .98, 0); leapKoi.add(dorsal);
+    for (const sd of [1, -1]) { const pf = fin([[0, 0], [.15, -.45], [.55, -.55], [.4, -.1]]); pf.position.set(-.95, .2, sd * .3); pf.rotation.set(sd * .6, 0, -.3); leapKoi.add(pf);
+      const vf = fin([[0, 0], [.1, -.3], [.4, -.35], [.3, -.05]]); vf.position.set(.1, .1, sd * .25); vf.rotation.set(sd * .5, 0, -.2); leapKoi.add(vf); }
+    const tail = fin([[0, 0], [.5, .75], [1.05, .95], [.8, .35], [.95, 0], [.8, -.35], [1.0, -.8], [.45, -.55]]); tail.position.copy(spine.getPointAt(1)).add(new THREE.Vector3(-.05, 0, 0)); tail.rotation.z = .35; leapKoi.add(tail);
+    leapKoi.userData.tail = tail;
+    // 水花：藍白色的水滴
+    const dropM = new THREE.MeshStandardMaterial({ color: '#dff3ff', emissive: '#7cc8f0', emissiveIntensity: .35, roughness: .2, transparent: true, opacity: .9 });
+    for (const [x0, y0, z0, s0, rz] of [[-1.9, .2, .25, .16, .6], [-2.15, .55, -.2, .11, .9], [-1.75, -.2, -.3, .1, .3], [1.85, .9, .2, .14, -.5], [2.15, .6, -.25, .1, -.8], [1.6, 1.15, -.1, .08, -.3], [.4, -.35, .4, .09, .2], [-.5, -.4, -.4, .08, -.2]]) {
+      const d = new THREE.Mesh(new THREE.SphereGeometry(1, 10, 8), dropM); d.position.set(x0, y0, z0); d.scale.set(s0 * .7, s0 * 1.4, s0 * .7); d.rotation.z = rz; leapKoi.add(d);
+    }
+    if (low) leapKoi.traverse((o) => { if (o.isMesh) o.castShadow = false; });
+  }
+  // 招牌上緣的一道藍色浪花：把鯉魚和招牌連在一起（鯉魚從浪裡躍出來）
+  {
+    const crest = new THREE.Shape();
+    crest.moveTo(-2.1, 0); crest.bezierCurveTo(-1.7, .35, -1.2, .55, -.7, .42); crest.bezierCurveTo(-.4, .62, .1, .7, .45, .5);
+    crest.bezierCurveTo(.8, .66, 1.3, .6, 1.65, .32); crest.bezierCurveTo(1.85, .45, 2.1, .3, 2.2, 0); crest.lineTo(-2.1, 0);
+    const waveM = new THREE.MeshStandardMaterial({ color: '#3f9ae0', roughness: .35, metalness: .05 });
+    const foamM = new THREE.MeshStandardMaterial({ color: '#e8f6ff', roughness: .3 });
+    const wv = new THREE.Mesh(new THREE.ExtrudeGeometry(crest, { depth: .5, bevelEnabled: true, bevelThickness: .08, bevelSize: .06, bevelSegments: 3, curveSegments: 14 }), waveM);
+    wv.position.set(-.05, 2.12, -.25); wv.castShadow = !low; sign.add(wv);
+    for (const [x0, y0, r0] of [[-1.5, 2.5, .16], [-.75, 2.62, .14], [.1, 2.7, .17], [.95, 2.66, .14], [1.75, 2.45, .12]]) for (const z0 of [-.3, .3]) {   // 浪頭的白色泡沫
+      const f = new THREE.Mesh(new THREE.SphereGeometry(r0, 10, 8), foamM); f.position.set(x0, y0, z0); f.scale.y = .7; sign.add(f);
+    }
+  }
+  // 屋簷一排暖色小燈（屋頂邊緣）
+  { const bulbM = new THREE.MeshStandardMaterial({ color: '#fff4c8', emissive: '#ffc44a', emissiveIntensity: 2.2 });
+    for (let k = 0; k < 8; k++) for (const x0 of [inX * (PW + 1.0), -inX * .9]) { const b0 = new THREE.Mesh(new THREE.CylinderGeometry(.09, .09, .03, 10), bulbM); b0.position.set(x0, H + 2.72, -PLEN / 2 + 1.2 + k * (PLEN - 2.4) / 7); st.add(b0); } }
   // ---- 🎏 鯉魚旗：車站一端立一根旗桿（金球＋箭車），上面是五色吹流，接著黑、紅、藍、綠、小紅鯉魚，隨風飄
   const koiTex = (body, belly, face) => {
     const c = document.createElement('canvas'); c.width = 256; c.height = 512; const x = c.getContext('2d'); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
@@ -454,6 +539,7 @@ export function createCoaster(W, opts) {
   function update() {
     fishWave(performance.now() / 1000);
     flagWave(performance.now() / 1000);
+    { const tt = performance.now() / 1000; leapKoi.rotation.z = -.14 + Math.sin(tt * 1.6 + .6) * .03; if (leapKoi.userData.tail) leapKoi.userData.tail.rotation.y = Math.sin(tt * 3.2) * .35; }
     lastS = cur.s;
     cur = timeline(now() / 1000);
     placeCars();
