@@ -3,8 +3,8 @@
 // 大俯衝、海面波浪段，再依序飛過循環挖寶島、手作體驗二島、美食補給島、手作體驗一島，回到車站。
 // 時程用「網路時間」排班（所有裝置看到同一班車）：停站 25 秒 → 跑一圈 → 回站。
 import * as THREE from 'three';
-import { TAU, clamp } from './kit.js?v=20261124v';
-import { H } from './world.js?v=20261124v';
+import { TAU, clamp } from './kit.js?v=20261124w';
+import { H } from './world.js?v=20261124w';
 
 export const COASTER_CAP = 8;                 // 4 節車廂 × 每節 2 人
 const DOCK = 25;                              // 停站秒數
@@ -252,6 +252,21 @@ export function createCoaster(W, opts) {
     for (const tt of [.3, .7]) { const fr = frame(CAVE0 + LEN * tt), f = prof(tt), belly = fr.p.y + CY * f - HY * f;
       const col = new THREE.Mesh(new THREE.CylinderGeometry(.35, .5, belly + .3, 8), rock2); col.position.copy(fr.p).setY((belly - .3) / 2); col.castShadow = !low; fish.add(col); }
   }
+  // 鯉魚旗隨風飄：沿著旗子的長度做波浪（越往尾巴擺越大）
+  let flagT = 0;
+  const flagWave = (t) => {
+    if (low && t - flagT < .1) return; flagT = t;
+    if (flags.wheel) flags.wheel.rotation.y = t * 3;
+    for (const f of flags) {
+      const pos = f.geo.attributes.position, b = f.base;
+      for (let i = 0; i < pos.count; i++) {
+        const y = b[i * 3 + 1], k = -y / f.len;                       // 0＝嘴巴、1＝尾巴
+        const w = Math.sin(t * 3.2 + f.ph - k * 5) * .09 * k * f.len, w2 = Math.cos(t * 2.3 + f.ph - k * 4) * .05 * k * f.len;
+        pos.array[i * 3] = b[i * 3] + w; pos.array[i * 3 + 2] = b[i * 3 + 2] + w2;
+      }
+      pos.needsUpdate = true;
+    }
+  };
   const fishWave = (t) => { for (const w of fishWaving) { w.m.quaternion.copy(w.base); if (w.axis === 'x') w.m.rotateX(Math.sin(t * w.sp + w.ph) * w.amp); else w.m.rotateY(Math.sin(t * w.sp + w.ph) * w.amp); } };
   const inCave = (s0) => s0 > CAVE0 && s0 < CAVE1;
 
@@ -282,10 +297,111 @@ export function createCoaster(W, opts) {
   const roofM = new THREE.MeshStandardMaterial({ color: '#2f7fd1', roughness: .7 });
   for (const z of [-5.5, 5.5]) for (const x of [inX * (PW + .5), -inX * .95]) { const p = new THREE.Mesh(new THREE.CylinderGeometry(.07, .07, 2.6, 8), postM); p.position.set(x, H + 1.3, z); st.add(p); }
   box(roofM, PW + 2.2, .12, PLEN - 1, inX * (PW / 2 - .1), H + 2.65, 0);
-  const tex = (() => { const c = document.createElement('canvas'); c.width = 400; c.height = 100; const x = c.getContext('2d'); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
-    const paint = () => { x.fillStyle = '#e4532c'; x.beginPath(); x.roundRect(4, 4, 392, 92, 22); x.fill(); x.fillStyle = '#fff'; x.font = "900 44px 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', sans-serif"; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('🎢 雲霄飛車站', 200, 54); t.needsUpdate = true; };
-    paint(); if (document.fonts && document.fonts.ready) document.fonts.ready.then(paint); return t; })();
-  const sign = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex })); sign.scale.set(2.6, .65, 1); sign.position.set(inX * (PW / 2), H + 3.25, 0); st.add(sign);
+  // ---- 🐟 鯉魚造型的站名招牌：屋頂上一條大鯉魚，身上寫站名「鯉躍龍門站」（兩面都看得到）
+  const STATION_NAME = opts.stationName || '鯉躍龍門站';
+  const FONT = "'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', sans-serif";
+  const signTex = (() => {
+    const c = document.createElement('canvas'); c.width = 1024; c.height = 400; const x = c.getContext('2d'); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
+    const paint = () => {
+      x.clearRect(0, 0, 1024, 400);
+      // 尾鰭（右邊）
+      x.fillStyle = '#ff6a2a'; x.beginPath(); x.moveTo(820, 200); x.quadraticCurveTo(900, 90, 1010, 40); x.quadraticCurveTo(950, 200, 1010, 360); x.quadraticCurveTo(900, 310, 820, 200); x.fill();
+      x.strokeStyle = '#fff3e6'; x.lineWidth = 6; for (const k of [0, 1, 2]) { x.beginPath(); x.moveTo(840, 200); x.lineTo(990, 70 + k * 130); x.stroke(); }
+      // 背鰭、胸鰭
+      x.fillStyle = '#ff8a4a'; x.beginPath(); x.moveTo(380, 70); x.quadraticCurveTo(520, -10, 660, 75); x.lineTo(380, 75); x.fill();
+      x.beginPath(); x.moveTo(300, 300); x.quadraticCurveTo(330, 390, 410, 380); x.lineTo(380, 300); x.fill();
+      // 魚身：白底，外框
+      x.fillStyle = '#fffaf3'; x.strokeStyle = '#c23a1c'; x.lineWidth = 10;
+      x.beginPath(); x.moveTo(60, 200); x.bezierCurveTo(90, 60, 360, 40, 560, 70); x.bezierCurveTo(720, 95, 800, 160, 840, 200); x.bezierCurveTo(800, 240, 720, 305, 560, 330); x.bezierCurveTo(360, 360, 90, 340, 60, 200); x.closePath(); x.fill(); x.stroke();
+      // 魚鱗（淡淡的弧線）＋紅斑
+      x.save(); x.clip();
+      x.strokeStyle = 'rgba(194,58,28,.18)'; x.lineWidth = 3;
+      for (let yy = 60; yy < 360; yy += 34) for (let xx = 230 + ((yy / 34) % 2) * 22; xx < 840; xx += 44) { x.beginPath(); x.arc(xx, yy, 22, Math.PI * .6, Math.PI * 1.4); x.stroke(); }
+      x.fillStyle = '#e8401c'; for (const [cx, cy, rx, ry] of [[200, 95, 80, 45], [700, 120, 90, 50], [560, 300, 70, 35]]) { x.beginPath(); x.ellipse(cx, cy, rx, ry, .2, 0, Math.PI * 2); x.fill(); }
+      x.restore();
+      // 嘴巴、眼睛、鬍鬚
+      x.fillStyle = '#ff6a2a'; x.beginPath(); x.ellipse(62, 205, 18, 26, 0, 0, Math.PI * 2); x.fill();
+      x.strokeStyle = '#ff6a2a'; x.lineWidth = 6; x.beginPath(); x.moveTo(75, 230); x.quadraticCurveTo(70, 290, 30, 310); x.stroke(); x.beginPath(); x.moveTo(85, 175); x.quadraticCurveTo(60, 130, 25, 120); x.stroke();
+      x.fillStyle = '#fff'; x.beginPath(); x.arc(140, 165, 30, 0, Math.PI * 2); x.fill(); x.strokeStyle = '#111'; x.lineWidth = 5; x.stroke();
+      x.fillStyle = '#111'; x.beginPath(); x.arc(146, 168, 16, 0, Math.PI * 2); x.fill(); x.fillStyle = '#fff'; x.beginPath(); x.arc(152, 160, 6, 0, Math.PI * 2); x.fill();
+      // 站名
+      x.textAlign = 'center'; x.textBaseline = 'middle';
+      x.font = `900 108px ${FONT}`; x.lineWidth = 16; x.strokeStyle = '#7a1c08'; x.strokeText(STATION_NAME, 470, 190); x.fillStyle = '#ffd23a'; x.fillText(STATION_NAME, 470, 190);
+      x.font = `800 40px ${FONT}`; x.fillStyle = '#7a1c08'; x.fillText('🎢 鯉魚雲霄飛車', 470, 278);
+      t.needsUpdate = true;
+    };
+    paint(); if (document.fonts && document.fonts.ready) document.fonts.ready.then(paint); return t;
+  })();
+  {
+    const sm = new THREE.MeshStandardMaterial({ map: signTex, transparent: true, alphaTest: .4, roughness: .6, side: THREE.FrontSide });
+    const cx = inX * (PW / 2 - .1);
+    for (const ry of [Math.PI / 2, -Math.PI / 2]) { const pl = new THREE.Mesh(new THREE.PlaneGeometry(5.2, 2.03), sm); pl.position.set(cx + (ry > 0 ? .03 : -.03), H + 3.85, 0); pl.rotation.y = ry; st.add(pl); }
+    for (const z of [-1.6, 1.6]) { const p = new THREE.Mesh(new THREE.CylinderGeometry(.06, .06, 1.2, 6), postM); p.position.set(cx, H + 3.15, z); st.add(p); }
+  }
+  // ---- 🎏 鯉魚旗：車站一端立一根旗桿（金球＋箭車），上面是五色吹流，接著黑、紅、藍、綠、小紅鯉魚，隨風飄
+  const koiTex = (body, belly, face) => {
+    const c = document.createElement('canvas'); c.width = 256; c.height = 512; const x = c.getContext('2d'); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+    // 由上（嘴巴）往下（尾巴）：白色的臉、眼睛、鰓、魚鱗、尾巴
+    x.fillStyle = body; x.fillRect(0, 0, 256, 512);                 // 整圈都是魚身的顏色（像真的鯉魚旗，從哪一面看都是彩色的）
+    x.fillStyle = belly; x.fillRect(0, 0, 18, 512); x.fillRect(238, 0, 18, 512);   // 肚子只有細細一條
+    x.fillStyle = '#ffffff'; x.fillRect(0, 0, 256, 92);                             // 白色的臉
+    x.fillStyle = face; for (const ex of [64, 192]) { x.beginPath(); x.ellipse(ex, 46, 52, 44, 0, 0, Math.PI * 2); x.fill(); }   // 眼睛周圍的顏色
+    for (const ex of [64, 192]) {                                    // 兩隻大眼睛（左右兩面）
+      x.fillStyle = '#ffffff'; x.beginPath(); x.arc(ex, 58, 30, 0, Math.PI * 2); x.fill();
+      x.fillStyle = '#f2b51c'; x.beginPath(); x.arc(ex, 58, 22, 0, Math.PI * 2); x.fill();
+      x.fillStyle = '#1a3a8a'; x.beginPath(); x.arc(ex, 58, 15, 0, Math.PI * 2); x.fill();
+      x.fillStyle = '#111'; x.beginPath(); x.arc(ex, 58, 8, 0, Math.PI * 2); x.fill();
+    }
+    x.strokeStyle = '#f2b51c'; x.lineWidth = 6; x.beginPath(); x.moveTo(0, 104); for (let u = 0; u <= 256; u += 16) x.lineTo(u, 104 + Math.sin(u / 256 * Math.PI * 4) * 8); x.stroke();
+    x.strokeStyle = 'rgba(255,255,255,.75)'; x.lineWidth = 3;     // 魚鱗
+    for (let yy = 130; yy < 430; yy += 26) for (let xx = ((yy / 26) % 2) * 16; xx < 256; xx += 32) { x.beginPath(); x.arc(xx, yy, 16, Math.PI * .15, Math.PI * .85); x.stroke(); }
+    const g = x.createLinearGradient(0, 430, 0, 512); g.addColorStop(0, body); g.addColorStop(1, '#ffffff'); x.fillStyle = g; x.fillRect(0, 430, 256, 82);
+    x.strokeStyle = 'rgba(255,255,255,.8)'; x.lineWidth = 4; for (let u = 8; u < 256; u += 20) { x.beginPath(); x.moveTo(u, 440); x.lineTo(u + 4, 510); x.stroke(); }
+    t.needsUpdate = true; return t;
+  };
+  const stripeTex = (() => { const c = document.createElement('canvas'); c.width = 256; c.height = 64; const x = c.getContext('2d'); ['#e4332c', '#3fb5d8', '#f0c419', '#2f7fd1', '#ffffff'].forEach((col, i) => { x.fillStyle = col; x.fillRect(i * 52, 0, 52, 64); }); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; })();
+  const flags = [];          // 會飄動的旗子：{ geo, base, len }
+  const windsock = (len, r0, r1, mat, segs = 14) => {
+    // 一條圓筒：嘴巴（y=0）張開、往後（-y）越來越細；之後轉成水平，順著風飄
+    const geo = new THREE.CylinderGeometry(r1, r0, len, 14, segs, true); geo.translate(0, -len / 2, 0);
+    const m = new THREE.Mesh(geo, mat); m.castShadow = !low;
+    flags.push({ geo, base: Float32Array.from(geo.attributes.position.array), len, ph: Math.random() * 6 });
+    return m;
+  };
+  const pole = new THREE.Group(); pole.position.set(inX * (PW + .25), H, PLEN / 2 - .35); st.add(pole);   // 立在月台出口那一端的角落，鯉魚旗往海上飄
+  const PH0 = 6.4;                                              // 旗桿高（從月台算起）
+  { const p = new THREE.Mesh(new THREE.CylinderGeometry(.06, .1, PH0 + .3, 8), new THREE.MeshStandardMaterial({ color: '#f5f5f0', roughness: .5 })); p.position.y = (PH0 - .3) / 2; p.castShadow = !low; pole.add(p);
+    const ball = new THREE.Mesh(new THREE.SphereGeometry(.16, 12, 8), new THREE.MeshStandardMaterial({ color: '#f2c230', metalness: .6, roughness: .3 })); ball.position.y = PH0 + .15; pole.add(ball);
+    const wheel = new THREE.Group(); wheel.position.y = PH0 - .15; pole.add(wheel); wheel.userData.spin = true; flags.wheel = wheel;   // 箭車：會轉
+    for (let k = 0; k < 8; k++) { const sp = new THREE.Mesh(new THREE.BoxGeometry(.03, .03, .55), new THREE.MeshStandardMaterial({ color: k % 2 ? '#e4332c' : '#f2c230' })); sp.rotation.y = k / 8 * Math.PI; wheel.add(sp); }
+  }
+  const KOI = [
+    { len: 1.6, r: .22, mat: new THREE.MeshStandardMaterial({ map: stripeTex, side: THREE.DoubleSide, roughness: .8 }), y: PH0 - .5 },                 // 五色吹流
+    { len: 2.6, r: .36, tex: ['#1d1d22', '#f3f3f3', '#1d1d22'], y: PH0 - 1.5 },   // 黑鯉（爸爸）
+    { len: 2.2, r: .31, tex: ['#e8341c', '#ffe5e0', '#e8341c'], y: PH0 - 2.5 },   // 紅鯉（媽媽）
+    { len: 1.8, r: .26, tex: ['#1f5fd6', '#e6efff', '#1f5fd6'], y: PH0 - 3.35 },  // 藍鯉
+    { len: 1.5, r: .22, tex: ['#2f9a4a', '#e6f6ea', '#2f9a4a'], y: PH0 - 4.05 },  // 綠鯉
+    { len: 1.1, r: .17, tex: ['#ff5a3a', '#fff0ea', '#ff5a3a'], y: PH0 - 4.6 },   // 小紅鯉
+  ];
+  for (const k of KOI) {
+    const mat = k.mat || new THREE.MeshStandardMaterial({ map: koiTex(...k.tex), side: THREE.DoubleSide, roughness: .8 });
+    const holder = new THREE.Group(); holder.position.set(.08, k.y, 0); holder.rotation.z = Math.PI / 2 - .12; pole.add(holder);   // 往 +x 方向（順風）飄、尾巴稍微下垂
+    holder.rotation.y = 0;
+    const sock = windsock(k.len, k.r, k.r * .55, mat); holder.add(sock);
+    if (!k.mat) { const ring = new THREE.Mesh(new THREE.TorusGeometry(k.r, .025, 6, 16), new THREE.MeshStandardMaterial({ color: '#ffffff' })); ring.rotation.x = Math.PI / 2; holder.add(ring); }
+    const line = new THREE.Mesh(new THREE.CylinderGeometry(.008, .008, .14, 4), postM); line.position.set(-.07, 0, 0); line.rotation.z = Math.PI / 2; holder.add(line);
+  }
+  pole.rotation.y = -Math.PI / 2;           // 旗子順著軌道方向（往車站外）飄，在月台外側，不會擋到列車
+  // ---- 屋簷下一串小鯉魚旗（車站裝飾）
+  {
+    const n = 9, z0 = -PLEN / 2 + 1, z1 = PLEN / 2 - 1.2, xE = inX * (PW + .5), yE = H + 2.55;
+    const string = new THREE.Mesh(new THREE.CylinderGeometry(.012, .012, z1 - z0, 4), postM); string.rotation.x = Math.PI / 2; string.position.set(xE, yE, (z0 + z1) / 2); st.add(string);
+    const minis = [['#1d1d22', '#f3f3f3', '#1d1d22'], ['#e8341c', '#ffe5e0', '#e8341c'], ['#1f5fd6', '#e6efff', '#1f5fd6'], ['#2f9a4a', '#e6f6ea', '#2f9a4a']].map((c) => new THREE.MeshStandardMaterial({ map: koiTex(...c), side: THREE.DoubleSide, roughness: .8 }));
+    for (let k = 0; k < n; k++) {
+      const h = new THREE.Group(); h.position.set(xE, yE - .02, z0 + (z1 - z0) * k / (n - 1)); st.add(h);
+      h.add(windsock(.62, .1, .055, minis[k % minis.length], 6));
+    }
+  }
   const lampMat = new THREE.MeshStandardMaterial({ color: '#4caf50', emissive: '#2e9e3a', emissiveIntensity: 1.2 });
   const lamp = new THREE.Mesh(new THREE.SphereGeometry(.16, 10, 8), lampMat); lamp.position.set(inX * (PW + .5), H + 2.3, 5.5); st.add(lamp);
   // 平台踩得到（站內座標換算）
@@ -337,6 +453,7 @@ export function createCoaster(W, opts) {
   placeCars();
   function update() {
     fishWave(performance.now() / 1000);
+    flagWave(performance.now() / 1000);
     lastS = cur.s;
     cur = timeline(now() / 1000);
     placeCars();
@@ -361,7 +478,7 @@ export function createCoaster(W, opts) {
   }
   return {
     root, cars, cap: COASTER_CAP, length: L, cycle: CYCLE, ride: RIDE, topY,
-    station: { pos: stationC, exit: exitSpot, u: us, t: ts },
+    station: { pos: stationC, exit: exitSpot, u: us, t: ts, name: STATION_NAME },
     update, seatPose, riderSpot, hashSeat,
     docked: () => cur.phase === 'dock',
     boardOpen: () => cur.phase === 'dock' && cur.left > 3,
