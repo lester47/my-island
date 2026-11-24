@@ -627,3 +627,7 @@ html[data-theme="deep"] .job-msg { background: #23402a; color: #bff0c6; } html[d
 .btn.hold .lb { position: relative; }
 @media (max-width: 760px) { .jobbar { top: 64px; } }
 @media (max-width: 760px) { #coinBtn { position: fixed; left: 10px; bottom: calc(134px + env(safe-area-inset-bottom, 0px)); z-index: 15; } }
+.tch-box { margin-top: 12px; padding: 10px 12px; border: 2px dashed var(--line); border-radius: 12px; }
+.tch-box summary { cursor: pointer; font-weight: 900; min-height: 32px; }
+.tch-box p { margin: 6px 0; line-height: 1.6; }
+.wl-treat textarea { flex: 1; min-width: 220px; border-radius: 10px; border: 2px solid var(--line); background: var(--surface); color: var(--ink); padding: 8px 10px; font-size: 15px; }
