@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261124m">
+<link rel="stylesheet" href="styles.css?v=20261124n">
 <script type="importmap">{"imports":{"three":"./vendor/three/three.module.js","three/addons/":"./vendor/three/addons/"}}</script>
 </head>
 <body>
@@ -80,6 +80,7 @@
   <button type="button" class="hchip" id="catBtn" aria-label="貓咪圖鑑"><span aria-hidden="true">🐾</span><b id="catCount">0/6</b></button>
 </div>
 <button type="button" class="ticket" id="ticketChip" hidden></button>
+<div class="photobar mayorbar" id="mayorBar" role="toolbar" aria-label="選路燈位置" hidden><span class="mb-t">💡 點發亮的號碼，選路燈的位置</span><button type="button" class="x" id="mayorCancel">✕ 取消</button></div>
 <div class="photobar" id="photoBar" role="toolbar" aria-label="合照視角" hidden>
   <button type="button" data-view="far">🏞️ 遠景</button>
   <button type="button" data-view="mid">🌳 中景</button>
@@ -194,6 +195,10 @@
   <div class="dlg-hd"><h2 id="walletTitle">🪙 我的線上鯉魚幣</h2><button type="button" class="x" data-close aria-label="關閉">✕</button></div>
   <div id="walletBody"></div>
 </dialog>
+<dialog id="mayorDlg" class="dlg" aria-labelledby="mayorTitle">
+  <div class="dlg-hd"><h2 id="mayorTitle">🏛️ 市長任務：幫市集加路燈</h2><button type="button" class="x" data-close aria-label="關閉">✕</button></div>
+  <div id="mayorBody"></div>
+</dialog>
 <dialog id="shopDlg" class="dlg wide" aria-labelledby="shopTitle">
   <div class="dlg-hd"><h2 id="shopTitle">👕 服飾店</h2><button type="button" class="x" data-close aria-label="關閉">✕</button></div>
   <div id="shopBody"></div>
@@ -225,6 +230,6 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <noscript><p class="noscript">這個網站需要開啟 JavaScript。</p></noscript>
-<script type="module" src="js/main.js?v=20261124m"></script>
+<script type="module" src="js/main.js?v=20261124n"></script>
 </body>
 </html>

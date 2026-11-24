@@ -687,3 +687,12 @@ html[data-theme="deep"] .job-msg { background: #23402a; color: #bff0c6; } html[d
 .walk-bike { position: fixed; z-index: 22; top: 184px; right: 20px; min-height: 40px; border: 0; border-radius: 999px; padding: 0 14px; background: #3e9b4f; color: #fff; font-weight: 900; box-shadow: var(--shadow); }
 .walk-bike[hidden] { display: none; }
 @media (max-width: 760px) { .walk-bike { top: 112px; left: 12px; right: auto; font-size: 13px; min-height: 36px; } }
+
+/* 🏛️ 市長任務 */
+.mayorbar .mb-t { align-self: center; font-weight: 900; color: #5a3d00; padding: 0 6px; font-size: 14px; }
+.mayorbar .x { min-width: auto; padding: 0 12px; }
+.mayor-list { margin: 0; padding-left: 4px; list-style: none; display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px 12px; font-size: 14px; }
+.mayor-list li { color: #777; } .mayor-list li.on { color: #2f4a3a; font-weight: 700; }
+.btn.sm { min-height: 28px; padding: 0 8px; font-size: 12px; }
+@media (max-width: 480px) { .mayor-list { grid-template-columns: 1fr; } }
+.mayorbar .x { white-space: nowrap; }
