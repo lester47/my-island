@@ -766,3 +766,10 @@ body.droning .hud, body.droning .tools, body.droning .ticket, body.droning #labe
 .ad-alert ul { margin: 4px 0 0; padding-left: 18px; }
 .ad-tbl tr.flag td { background: #fff4f2; }
 .ad-flag { color: #c0392b; font-weight: 800; }
+
+/* 🪙 付錢確認 */
+.pay-dlg { max-width: 360px; }
+.pay-q { font-size: 1.05rem; line-height: 1.7; margin: 4px 0 10px; }
+.pay-skip { display: flex; align-items: center; gap: 6px; font-size: 14px; color: #555; margin: 0 0 12px; cursor: pointer; }
+.pay-skip input { width: 18px; height: 18px; }
+.pay-btns { display: flex; gap: 8px; justify-content: flex-end; }

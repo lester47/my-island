@@ -1,5 +1,5 @@
 // 🪙 線上鯉魚幣錢包（Firebase）
-// 規則：每天固定發起始幣，當天結束歸零（隔天重新發）；打工每天最多賺 dailyJob；錢包最多 cap。
+// 規則：每天固定發起始幣，當天結束歸零（隔天重新發）；打工每天最多賺 dailyJob（0＝不限）；錢包最多 cap。
 // 跟現場的實體鯉魚幣無關，也不能用真錢買。
 // 資料：market/wallets/{uid}（自己的錢包）、market/grants/{uid}（老師加發／扣回）、market/frozen/{uid}（凍結）、
 //       market/adminEmails/{email}（老師名冊：用 email 登入的老師，. 換成 ,）、market/inbox/{uid}（收到的請客券）、market/refunds/{uid}（被退回的請客券）、
@@ -18,8 +18,8 @@ export function createWallet({ cfg, onChange, toast }) {
   const today = () => new Date(now()).toLocaleDateString('sv-SE', { timeZone: DAY_TZ });
   // 台灣日期的「第幾天」（伺服器規則用同一個算法檢查：不能自己把日期往後調來重領起始幣）
   const dayNo = () => Math.floor((now() + 8 * 3600e3) / 86400e3);
-  const GAIN_CAP = cfg.gainCap ?? 100;
-  const RF_CAP = cfg.refundCap ?? 60;     // 每天最多退款幾枚（擼貓過號、放棄排隊、請客券被退回…）：跟伺服器規則一致   // 每天「賺來的」最多幾枚（打工、獎勵、收到的請客）：跟伺服器規則一致
+  const GAIN_CAP = cfg.gainCap ?? 500;   // 每天「賺來的」最多幾枚（打工、獎勵、收到的請客）：跟伺服器規則一致
+  const RF_CAP = cfg.refundCap ?? 60;     // 每天最多退款幾枚（擼貓過號、放棄排隊、請客券被退回…）：跟伺服器規則一致
   const fresh = (old) => ({
     day: today(), dn: dayNo(), bal: cfg.start, earned: 0, gain: 0, rf: 0, plays: {}, jobAt: {}, treats: 0, inT: cfg.start, outT: 0,
     log: [{ t: now(), k: 'start', a: cfg.start, n: '今天的起始幣' }],
@@ -145,12 +145,12 @@ export function createWallet({ cfg, onChange, toast }) {
       const w = ensure(); if (st.frozen) return 0;
       if (api.test) { log(kind, 0, `🧪 ${note}（老師測試：會賺 ${a} 枚）`); save(); return a; }
       let got = Math.min(a, cfg.cap - w.bal, GAIN_CAP - w.gain, 50);
-      if (isJob) got = Math.min(got, cfg.dailyJob - w.earned);
+      if (isJob && cfg.dailyJob > 0) got = Math.min(got, cfg.dailyJob - w.earned);
       got = Math.max(0, got);
       if (got) { w.bal += got; w.inT += got; w.gain += got; if (isJob) w.earned += got; log(kind, got, note); save(); }
       return got;
     },
-    jobLeft() { return api.test ? Infinity : Math.max(0, cfg.dailyJob - ensure().earned); },
+    jobLeft() { return api.test || !(cfg.dailyJob > 0) ? Infinity : Math.max(0, cfg.dailyJob - ensure().earned); },
     jobWait(job, cool) { if (api.test) return 0; const t = ensure().jobAt[job] || 0; return Math.max(0, Math.ceil((t + cool * 1000 - now()) / 1000)); },
     markJob(job) { ensure().jobAt[job] = now(); save(); },
     // 一輩子只發一次的獎勵（集章、圖鑑）

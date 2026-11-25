@@ -2,8 +2,8 @@
 // 停靠時從籃子前面的門走進去，時間到就升空，繞五座島飛一圈再降落回起降場。
 // 時程用「網路時間」排班（所有裝置看到的熱氣球都在同一個位置），一起搭的人會在同一個籃子裡。
 import * as THREE from 'three';
-import { TAU, clamp, batchStatic } from './kit.js?v=20261125g';
-import { H } from './world.js?v=20261125g';
+import { TAU, clamp, batchStatic } from './kit.js?v=20261125h';
+import { H } from './world.js?v=20261125h';
 
 export const BALLOON_CAP = 4;                    // 籃子最多 4 位登入者
 const DOCK = 30, ASC = 10, DESC = 12, ALT = 13, SPEED = 3.2;   // 停靠秒數、升空、降落、飛行高度、巡航速度

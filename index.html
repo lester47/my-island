@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261125g">
+<link rel="stylesheet" href="styles.css?v=20261125h">
 <script type="importmap">{"imports":{"three":"./vendor/three/three.module.js","three/addons/":"./vendor/three/addons/"}}</script>
 </head>
 <body>
@@ -205,6 +205,10 @@
   <div class="chal-btns"><a class="btn" id="coaPhotoSave" href="#" download>💾 存下來</a></div>
   <p class="foot">照片只存在你的裝置，不會上傳。</p>
 </dialog>
+<dialog id="payDlg" class="dlg pay-dlg" aria-labelledby="payTitle">
+  <div class="dlg-hd"><h2 id="payTitle">🪙 確定要付錢嗎？</h2><button type="button" class="x" data-close aria-label="關閉">✕</button></div>
+  <div id="payBody"></div>
+</dialog>
 <dialog id="drDlg" class="dlg" aria-labelledby="drTitle">
   <div class="dlg-hd"><h2 id="drTitle">🚁 無人機</h2><button type="button" class="x" data-close aria-label="關閉">✕</button></div>
   <div id="drBody"></div>
@@ -265,6 +269,6 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <noscript><p class="noscript">這個網站需要開啟 JavaScript。</p></noscript>
-<script type="module" src="js/main.js?v=20261125g"></script>
+<script type="module" src="js/main.js?v=20261125h"></script>
 </body>
 </html>
