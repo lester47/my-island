@@ -1579,6 +1579,7 @@
     "name": "線上鯉魚幣",
     "start": 200,
     "gainCap": 100,
+    "refundCap": 60,
     "dailyJob": 60,
     "cap": 300,
     "treatMax": 15,
