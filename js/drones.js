@@ -4,8 +4,8 @@
 // 2. 遙控無人機：從服務台旁的無人機基地起飛，用方向鍵／螢幕按鈕自己飛，可以空拍照相，電池 2 分鐘
 // 3. 送貨無人機：平常有幾台載著包裹在島之間飛；打工「無人機快遞」＝自己開無人機把包裹送到指定的島
 import * as THREE from 'three';
-import { TAU, rng } from './kit.js?v=20261125d';
-import { H } from './world.js?v=20261125d';
+import { TAU, rng } from './kit.js?v=20261125e';
+import { H } from './world.js?v=20261125e';
 
 const ease = (k) => (k <= 0 ? 0 : k >= 1 ? 1 : k * k * (3 - 2 * k));
 
@@ -53,11 +53,19 @@ export function createDrones(W, opts = {}) {
     const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
     const pad = new THREE.Mesh(new THREE.BoxGeometry(1.9, .08, 1.9), [m('#2f3b48'), m('#2f3b48'), new THREE.MeshStandardMaterial({ map: t, roughness: .8 }), m('#2f3b48'), m('#2f3b48'), m('#2f3b48')]); pad.position.y = .04; pad.receiveShadow = true; baseG.add(pad);
     // 小看板
-    const sc = document.createElement('canvas'); sc.width = 256; sc.height = 96; const sx = sc.getContext('2d');
-    sx.fillStyle = '#22d6ff'; sx.fillRect(0, 0, 256, 96); sx.fillStyle = '#0d2233'; sx.font = 'bold 44px sans-serif'; sx.textAlign = 'center'; sx.textBaseline = 'middle'; sx.fillText('🚁 無人機基地', 128, 50);
+    // 字太長會被切掉：畫布加寬，並依實際字寬自動縮小字級（字型晚載入時再畫一次）
+    const sc = document.createElement('canvas'); sc.width = 512; sc.height = 168; const sx = sc.getContext('2d');
     const st = new THREE.CanvasTexture(sc); st.colorSpace = THREE.SRGBColorSpace;
+    const paintSign = () => {
+      sx.fillStyle = '#22d6ff'; sx.fillRect(0, 0, 512, 168); sx.strokeStyle = '#ffffff'; sx.lineWidth = 8; sx.strokeRect(8, 8, 496, 152);
+      sx.fillStyle = '#0d2233'; sx.textAlign = 'center'; sx.textBaseline = 'middle';
+      let fs = 84; const font = (n) => `900 ${n}px 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', sans-serif`;
+      sx.font = font(fs); while (sx.measureText('🚁 無人機基地').width > 460 && fs > 30) { fs -= 4; sx.font = font(fs); }
+      sx.fillText('🚁 無人機基地', 256, 88); st.needsUpdate = true;
+    };
+    paintSign(); if (document.fonts && document.fonts.ready) document.fonts.ready.then(paintSign);
     const post = new THREE.Mesh(new THREE.CylinderGeometry(.04, .05, 1.5, 6), m('#dddddd')); post.position.set(-1.15, .75, -.7); baseG.add(post);
-    for (const ry of [0, Math.PI]) { const sign = new THREE.Mesh(new THREE.PlaneGeometry(1.1, .41), new THREE.MeshStandardMaterial({ map: st, emissive: '#ffffff', emissiveMap: st, emissiveIntensity: .25 })); sign.position.set(-1.15, 1.55, -.7 + (ry ? -.005 : .005)); sign.rotation.y = ry; baseG.add(sign); }   // 前後兩面都是正的字
+    for (const ry of [0, Math.PI]) { const sign = new THREE.Mesh(new THREE.PlaneGeometry(1.3, .43), new THREE.MeshStandardMaterial({ map: st, emissive: '#ffffff', emissiveMap: st, emissiveIntensity: .25 })); sign.position.set(-1.15, 1.55, -.7 + (ry ? -.005 : .005)); sign.rotation.y = ry; baseG.add(sign); }   // 前後兩面都是正的字
   }
   // 停在基地上的一台（沒人在飛時看得到）
   const parked = makeDrone('#ff8a1f', 1.2); parked.g.position.copy(base).setY(H + .25); parked.g.rotation.y = opts.base?.face ?? 0; scene.add(parked.g);
