@@ -1,11 +1,11 @@
 // 115 鯉魚市集｜介面與流程
 import * as THREE from 'three';
-import { ROLES, OUTFITS, HATS } from './roles.js?v=20261125c';
-import { createMeowBox } from './meow.js?v=20261125c';
-import { REACTIONS, REACTION_IDS, playReaction } from './cats.js?v=20261125c';
-import { createCatNet, SEATS, REST, CALL, pad } from './catnet.js?v=20261125c';
-import { createWallet } from './wallet.js?v=20261125c';
-import { createJobs } from './jobs.js?v=20261125c';
+import { ROLES, OUTFITS, HATS } from './roles.js?v=20261125d';
+import { createMeowBox } from './meow.js?v=20261125d';
+import { REACTIONS, REACTION_IDS, playReaction } from './cats.js?v=20261125d';
+import { createCatNet, SEATS, REST, CALL, pad } from './catnet.js?v=20261125d';
+import { createWallet } from './wallet.js?v=20261125d';
+import { createJobs } from './jobs.js?v=20261125d';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -22,7 +22,7 @@ const pad2 = (n) => String(n).padStart(2, '0');
 const fmtH = (h) => { h = ((h % 24) + 24) % 24; return `${pad2(Math.floor(h))}:${pad2(Math.floor((h % 1) * 60))}`; };
 
 // 介面 Logo：低多邊形鯉魚（橘紅魚背、米白魚腹、魚頭朝右），首頁、怎麼逛、集章完成共用這一張
-const LOGO_SRC = 'assets/brand/koi-logo.png?v=20261125c';
+const LOGO_SRC = 'assets/brand/koi-logo.png?v=20261125d';
 const MASCOT = `<img src="${LOGO_SRC}" alt="115 鯉魚市集 Logo：低多邊形小鯉魚" decoding="async">`;
 
 let C = null;            // content.json
@@ -817,7 +817,7 @@ function boardBoat() {
   const why = boardCheck();
   if (why) { toast('⛔ ' + why); return; }
   const bs = L.carp.boardSpot(); bs.yaw += Math.PI * .62;   // 一上船先朝向船的右舷（湖景那一側），不是看乘客的背影和桅杆
-  enterWalk(bs); CAM.walk.pitch = -.32; S.disHint = false;
+  enterWalk(bs); CAM.walk.pitch = -.32; S.disHint = !!L.carp.status().gang;   // 上船時船已經停好：不用再跳「靠岸了」
   const s = L.carp.status();
   toast(s.docked ? '⛵ 登上鯉魚號！待會兒就出航，想下船就從船尾左側走上跳板' : '⛵ 登上鯉魚號！船靠港放下跳板後，就能走上碼頭');
 }
@@ -1345,7 +1345,7 @@ function phoneDb() {
 }
 async function startPhone() {
   if (PH) return;
-  try { PHM = await import('./phone.js?v=20261125c'); } catch (e) { console.warn('遊戲電話載入失敗', e); return; }
+  try { PHM = await import('./phone.js?v=20261125d'); } catch (e) { console.warn('遊戲電話載入失敗', e); return; }
   const db = phoneDb(); if (!db) return;
   PH = PHM.createPhone(db, {
     name: () => FAKE_AS || (meProfile() || {}).name || '', where: whereAmI, toast,
@@ -1456,9 +1456,10 @@ $('#drBtn').addEventListener('click', openDrones);
 function droneShow() {
   if (!DR) return;
   const price = drPrice(true);
+  if (DR.showing && DR.showing()) { toast('✨ 燈光秀正在進行中，看北邊的天空！結束後再開下一場'); return; }   // 先檢查再收錢
   if (WAL) { const bad = WAL.pay(price, 'drone', '無人機燈光秀'); if (bad) { toast('⛔ ' + bad); return; } }
   const at = (NET ? NET.now() : Date.now()) + 700;
-  if (!DR.startShow(at)) { toast('✨ 燈光秀已經在進行了'); return; }
+  if (!DR.startShow(at)) { if (WAL) WAL.refund(price, '燈光秀沒開成，退款'); toast('✨ 燈光秀已經在進行了（已退款）'); return; }
   if (NET && NET.uid && NET.uid()) { const me = meProfile(); try { NET.fb.set(NET.fb.ref(NET.db, `market/fw/${NET.uid()}`), { k: 'drones', s: 1, t: NET.fb.serverTimestamp(), n: ((me && me.name) || '').slice(0, 16) }).catch(() => {}); } catch (e) { /* 沒有權限就只有自己看得到 */ } }
   if ($('#drDlg').open) $('#drDlg').close();
   if (!S.walking && !DR.pilot.on) { const s = DR.showSite; CAM.flight({ t: new THREE.Vector3(s.x, 21, s.z + 2), p: new THREE.Vector3(s.x + 2, 7, 8) }, 1400, 0); }
@@ -1853,12 +1854,12 @@ function onCanvasUp(e) {
   ray.setFromCamera(ndc, W.camera);
   if (FX) { const bh = ray.intersectObjects(FX.balloons(), false)[0]; if (bh && FX.pop(bh.object)) { balloonPopped(); return; } }
   if (S.mayorPick && MY) { const sp = MY.pickSpot(ray); if (sp) chooseLamp(sp); else toast('💡 點一個發亮的號碼；不想選了按「✕ 取消」'); return; }   // 市長任務：選路燈位置
+  if (JOBS && JOBS.pick(ray)) return;             // 打工：沙灘清潔員撿垃圾（優先：垃圾後面剛好有地標或攤子時，也要撿得到垃圾）
   if (MY && MY.pickBoard(ray)) { openMayor(); return; }   // 市長任務看板
   if (BK && BK.pick(ray)) { rentBike(); return; }   // 借車點：點車架借車
   if (SHOP && SHOP.pick(ray)) { openShop(); return; }   // 服飾店
   if (GM && GM.pick(ray)) return;                 // 釣魚區、躲貓貓
   if (IA && IA.pick(ray)) return;                 // 可以互動的地標（果汁杯、貼紙牆、彈珠、書櫃、合照點）
-  if (JOBS && JOBS.pick(ray)) return;             // 打工：沙灘清潔員撿垃圾
   // 漫遊時點攤位招牌或攤子：留在地面，右邊直接打開那一攤的介紹（不飛回鳥瞰）
   if (S.walking && SG) {
     const sw = ray.intersectObjects(SG.pickables.map((p) => p.obj), false)[0];
@@ -2517,7 +2518,7 @@ function renderHideMenu() {
 $('#hideBody').addEventListener('click', async (e) => {
   const b = e.target instanceof Element && e.target.closest('[data-mp]'); if (!b) return;
   const k = b.dataset.mp;
-  if (k === 'solo') { $('#hideDlg').close(); hideSolo && hideSolo(); return; }
+  if (k === 'solo') { $('#hideDlg').close(); if (typeof hideSolo === 'function') hideSolo(); else if (GM) GM.startHide(); return; }
   if (!HM) return;
   if (k === 'open') { await HM.open(); }
   if (k === 'start') { HM.start(); $('#hideDlg').close(); return; }
@@ -2617,7 +2618,7 @@ function balloonPopped() {
 }
 function startNet() {
   const M = C.multiplayer; if (!M || !M.enabled || !M.firebase || !PL) return;
-  import('./net.js?v=20261125c').then(({ createNet }) => {
+  import('./net.js?v=20261125d').then(({ createNet }) => {
     NET = createNet(M.firebase, {
       myPos: () => PL.myPos(), upsert: (id, info, pos) => { ONLINE.set(id, String(info.name || '').slice(0, 16)); PL.upsert(id, info, pos); }, remove: (id) => { ONLINE.delete(id); PL.remove(id); },
       onCount: (c) => { COUNT = c; const el = $('#onlineChip'); el.hidden = false; $('#onlineCount').textContent = c.players; el.setAttribute('aria-label', `市集島上 ${c.players} 人，開著網站 ${c.viewers} 人，點一下看各身分人數`); },
@@ -2633,7 +2634,7 @@ function startNet() {
     if (JOBS) JOBS.attach(NET);
     watchLamps();
     startPhone();
-    import('./hidemp.js?v=20261125c').then(({ createHideMP }) => {
+    import('./hidemp.js?v=20261125d').then(({ createHideMP }) => {
       HM = createHideMP(NET, {
         toast, profile: meProfile, enterWalk: () => { if (!S.walking) enterWalk(); },
         walkPos: () => (S.walking ? CAM.walk.pos : null), posOf: (id) => PL.posOf(id),
@@ -2756,7 +2757,8 @@ function webglOK() { try { const c = document.createElement('canvas'); return !!
 // ------------------------------------------------------------------ 啟動
 async function boot() {
   if (/[?&]fakedb\b/.test(location.search)) setTimeout(() => startPhone(), 1500);   // 測試：兩個分頁用假資料庫互打電話
-  if (/[?&]debug\b/.test(location.search)) window.__dbg = { get W() { return W; }, get CAM() { return CAM; }, get PL() { return PL; }, S, get BK() { return BK; }, get FW() { return FW; }, get DR() { return DR; }, get NM() { return NM; }, get BAL() { return BAL; }, get COA() { return COA; }, get DUCK() { return DUCK; }, get SG() { return SG; }, get FX() { return FX; }, get MY() { return MY; }, get IA() { return IA; } };   // 測試用（網址加 ?debug 才有）
+  if (/[?&]debug\b/.test(location.search)) window.__dbg = { get W() { return W; }, get CAM() { return CAM; }, get PL() { return PL; }, S, get BK() { return BK; }, get FW() { return FW; }, get DR() { return DR; }, get NM() { return NM; }, get BAL() { return BAL; }, get COA() { return COA; }, get DUCK() { return DUCK; }, get SG() { return SG; }, get FX() { return FX; }, get MY() { return MY; }, get IA() { return IA; }, get C() { return C; }, get JOBS() { return JOBS; }, get WAL() { return WAL; }, get GM() { return GM; }, get L() { return L; }, get K() { return K; }, get PL() { return PL; },
+    fn: { boardBoat, boatStatus, boardBalloon, balloonStatus, boardDuck, duckStatus, boardCoaster, coasterStatus, leaveCoaster, rentBike, dismountBike, openShop, doDance, startMayorPick, endMayorPick, photoSpot, startTour, endTour, openGame, enterWalk, exitWalk, openIsland, openPhone, openFireworks, launchFirework, openDrones, droneShow, startDronePilot, openWallet, goAgency, openHideMenu } };   // 測試用（網址加 ?debug 才有）
   bindPhotoBar();
   $('#brandMascot').innerHTML = MASCOT;
   C = await fetch('data/content.json', { cache: 'no-cache' }).then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); });
@@ -2770,14 +2772,14 @@ async function boot() {
   if (Q.has('nogl') || !webglOK()) { textOnly(Q.has('nogl') ? '已切換為文字清單版' : '這台裝置無法顯示 3D 畫面'); applyTheme(); updateClock(); setInterval(updateClock, 10000); window.__ready = true; return; }
   let mods;
   try {
-    mods = await Promise.all([import('./world.js?v=20261125c'), import('./life.js?v=20261125c'), import('./cam.js?v=20261125c'), import('./players.js?v=20261125c'), import('./signs.js?v=20261125c'), import('./festival.js?v=20261125c'), import('./fauna.js?v=20261125c'), import('./interact.js?v=20261125c'), import('./games.js?v=20261125c')]);
+    mods = await Promise.all([import('./world.js?v=20261125d'), import('./life.js?v=20261125d'), import('./cam.js?v=20261125d'), import('./players.js?v=20261125d'), import('./signs.js?v=20261125d'), import('./festival.js?v=20261125d'), import('./fauna.js?v=20261125d'), import('./interact.js?v=20261125d'), import('./games.js?v=20261125d')]);
     const [{ createWorld, H: GROUND_H }, { createLife, makePerson }, { createCam }, { createPlayers }, { createSigns }, { createFestival }, { createFauna }, { createInteract }, { createGames, FISH }] = mods;
     GH = GROUND_H;
     const mobile = isLite();   // 手機和平板都用輕量版場景
     W = createWorld($('#gl'), { quality: S.quality, mobile });
     W.renderer.setPixelRatio(Math.min(devicePixelRatio, S.quality === 'low' ? 1 : (mobile ? 1.5 : 2)));
     L = createLife(W, C, { halfPeople: mobile || S.quality === 'low', quality: S.quality });
-    try { const { createCats } = await import('./cats.js?v=20261125c'); K = createCats(W, C, { reduced: () => S.reduced }); } catch (e) { console.warn('島上的貓載入失敗', e); K = null; }
+    try { const { createCats } = await import('./cats.js?v=20261125d'); K = createCats(W, C, { reduced: () => S.reduced }); } catch (e) { console.warn('島上的貓載入失敗', e); K = null; }
     CAM = createCam(W, $('#gl'), { onZoom: showZoom, onIntro: (k) => { L.setDeck(k < .3 ? 1 : Math.max(0, 1 - (k - .3) / .25)); if (k > .55) $('.intro-title').classList.add('show'); } });
     CAM.S.reduced = S.reduced; CAM.S.mobile = isMobile();
     PL = createPlayers(W, GROUND_H); renderMe(); startNet();
@@ -2786,44 +2788,44 @@ async function boot() {
     W.canLeave = () => { const s = L.carp.status(); if (s.docked && s.gang) return true; if (performance.now() - lastBlockToast > 3000) { lastBlockToast = performance.now(); toast('⛔ 航行中請待在船上，靠港放下跳板後再下船'); } return false; };
     // 彩虹熱氣球：起降坪在服務台島西南邊海上（木棧道＋圓形停機坪）；用網路時間排班，大家看到同一顆
     try {
-      const { createBalloon } = await import('./balloon.js?v=20261125c');
+      const { createBalloon } = await import('./balloon.js?v=20261125d');
       BAL = createBalloon(W, { pier: { island: 'center', angle: BAL_ANGLE }, now: () => (NET ? NET.now() : Date.now()), low: mobile || S.quality === 'low' });
       W.islands.center.entryAngles.push(BAL_ANGLE * Math.PI / 180);   // 熱氣球棧道的入口
       W.balloon = BAL; W.gates = [balloonGate];
     } catch (e) { console.warn('熱氣球載入失敗', e); BAL = null; }
     // 🦆 鴨子船：停在益智島南側的棧道；一樣用網路時間排班
     try {
-      const { createDuckBoat } = await import('./duckboat.js?v=20261125c');
+      const { createDuckBoat } = await import('./duckboat.js?v=20261125d');
       DUCK = createDuckBoat(W, { island: 'puzzle', now: () => (NET ? NET.now() : Date.now()), low: mobile || S.quality === 'low' });
       W.islands.puzzle.entryAngles.push(70 * Math.PI / 180);    // 鴨子船棧道的入口（duckboat.js 的預設角度）
       W.duck = DUCK; W.gates = [...(W.gates || []), duckGate];
     } catch (e) { console.warn('鴨子船載入失敗', e); DUCK = null; }
     // 🎢 雲霄飛車：軌道支柱的位置先保留（裝飾不會擺在那裡）
     try {
-      const { createCoaster } = await import('./coaster.js?v=20261125c');
+      const { createCoaster } = await import('./coaster.js?v=20261125d');
       COA = createCoaster(W, { now: () => (NET ? NET.now() : Date.now()), low: mobile || S.quality === 'low' });
       { const I = W.islands.sport, e = COA.station.land; I.entryAngles.push(Math.atan2(e.z - I.pos.z, e.x - I.pos.x)); }   // 雲霄飛車月台棧道的入口
       W.coaster = COA; W.coasterMe = () => (S.coaster ? COA.seatPose(S.coaster.seat) : null);
     } catch (e) { console.warn('雲霄飛車載入失敗', e); COA = null; }
     // 🏛️ 市長任務：路燈候選位置先保留（裝飾不會擺在那裡）
-    try { const { createMayor } = await import('./mayor.js?v=20261125c'); MY = createMayor(W, { low: mobile || S.quality === 'low' }); } catch (e) { console.warn('市長任務載入失敗', e); MY = null; }
-    KIT = await import('./kit.js?v=20261125c');
-    SG = createSigns(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261125c')).rng, low: mobile || S.quality === 'low' });
-    FX = createFestival(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261125c')).rng, low: mobile || S.quality === 'low', avoid: [...(BAL ? BAL.avoid : []), ...(DUCK ? DUCK.avoid : []), ...(MY ? MY.avoid : []), ...(COA ? COA.avoid : []), ...SG.signs.map((s) => s.g.position), ...Object.values(W.islands).flatMap((I) => (I.trees || []).filter((tr) => tr.visible).map((tr) => tr.position.clone().add(I.pos)))], carp: L.carp });
+    try { const { createMayor } = await import('./mayor.js?v=20261125d'); MY = createMayor(W, { low: mobile || S.quality === 'low' }); } catch (e) { console.warn('市長任務載入失敗', e); MY = null; }
+    KIT = await import('./kit.js?v=20261125d');
+    SG = createSigns(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261125d')).rng, low: mobile || S.quality === 'low' });
+    FX = createFestival(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261125d')).rng, low: mobile || S.quality === 'low', avoid: [...(BAL ? BAL.avoid : []), ...(DUCK ? DUCK.avoid : []), ...(MY ? MY.avoid : []), ...(COA ? COA.avoid : []), ...SG.signs.map((s) => s.g.position), ...Object.values(W.islands).flatMap((I) => (I.trees || []).filter((tr) => tr.visible).map((tr) => tr.position.clone().add(I.pos)))], carp: L.carp });
     // 🏮 夜市燈火：燈籠串、攤位燈、島邊小燈、每座島的大暖燈（天黑才亮）
-    try { const { createNightMarket } = await import('./nightlights.js?v=20261125c'); NM = createNightMarket(W, { signs: SG.signs, low: mobile || S.quality === 'low', glow: BAL && BAL.edgeLampM ? [{ m: BAL.edgeLampM, max: 2.4, min: .2 }] : [] }); } catch (e) { console.warn('夜市燈火載入失敗', e); NM = null; }
+    try { const { createNightMarket } = await import('./nightlights.js?v=20261125d'); NM = createNightMarket(W, { signs: SG.signs, low: mobile || S.quality === 'low', glow: BAL && BAL.edgeLampM ? [{ m: BAL.edgeLampM, max: 2.4, min: .2 }] : [] }); } catch (e) { console.warn('夜市燈火載入失敗', e); NM = null; }
     // 🎆 煙火船：花鯉魚幣放煙火（停在市集北邊、鯉魚山後面的外海）
-    try { const { createFireworks } = await import('./fireworks.js?v=20261125c'); FW = createFireworks(W, { now: () => (NET ? NET.now() : Date.now()), low: mobile || S.quality === 'low', snd: SND, site: { x: 0, z: -44 } }); $('#fwBtn').hidden = false; fwListen(); } catch (e) { console.warn('煙火載入失敗', e); FW = null; }
+    try { const { createFireworks } = await import('./fireworks.js?v=20261125d'); FW = createFireworks(W, { now: () => (NET ? NET.now() : Date.now()), low: mobile || S.quality === 'low', snd: SND, site: { x: 0, z: -44 } }); $('#fwBtn').hidden = false; fwListen(); } catch (e) { console.warn('煙火載入失敗', e); FW = null; }
     // 🚁 無人機：基地放在服務台島的空地；燈光秀在北邊夜空（煙火船旁邊）
     try {
-      const { createDrones } = await import('./drones.js?v=20261125c');
+      const { createDrones } = await import('./drones.js?v=20261125d');
       const ds = FX.freeSpot('center', 1.4, 1.8);
       DR = createDrones(W, { now: () => (NET ? NET.now() : Date.now()), low: mobile || S.quality === 'low', base: ds ? { x: ds.x, z: ds.z, face: ds.face } : null, showSite: { x: 0, z: -40 }, onShotKey: () => droneShot() });
       $('#drBtn').hidden = false;
     } catch (e) { console.warn('無人機載入失敗', e); DR = null; }
     // 🚲 借車點與環島自行車道（車架放在服務台島的空地；車道沿著原本的石板環路）
     try {
-      BIKE_MOD = await import('./bike.js?v=20261125c');
+      BIKE_MOD = await import('./bike.js?v=20261125d');
       const rs = FX.freeSpot('center', 1.3, 1.7);
       BK = BIKE_MOD.createBikes(W, { spot: rs ? { x: rs.x, z: rs.z, face: rs.face } : null, islandName: (id) => (islandById(id) || {}).name || id, low: mobile || S.quality === 'low' });
       W.gates = [...(W.gates || []), bikeGate];
@@ -2831,7 +2833,7 @@ async function boot() {
     if (MY) { const ms = FX.freeSpot('center', .9, 1.2); MY.placeBoard(ms ? { x: ms.x, z: ms.z, face: ms.face } : null); MY.setLamps(lampState()); }
     // 👕 服飾店（服務台島的小攤子）
     try {
-      STY = await import('./style.js?v=20261125c');
+      STY = await import('./style.js?v=20261125d');
       const ss = FX.freeSpot('center', 1.1, 1.5);
       SHOP = STY.createShop(W, { spot: ss ? { x: ss.x, z: ss.z, face: ss.face } : null, low: mobile || S.quality === 'low' });
       applyLook();
@@ -2849,7 +2851,7 @@ async function boot() {
       }
       return best;
     });
-    FA = createFauna(W, { H: GROUND_H, rng: (await import('./kit.js?v=20261125c')).rng });
+    FA = createFauna(W, { H: GROUND_H, rng: (await import('./kit.js?v=20261125d')).rng });
     IA = createInteract(W, C, GROUND_H, {
       toast, carp: L.carp,
       toastIf: (m) => { if (!S.intro) toast(m); },

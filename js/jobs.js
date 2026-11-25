@@ -304,5 +304,5 @@ export function createJobs(api) {
     bar.classList.toggle('cry', !!active.need);
   }
 
-  return { JOBS, status, start, quit, pick, onStall, onTourEnd, attach, get active() { return active && active.id; } };
+  return { JOBS, status, start, quit, pick, onStall, onTourEnd, attach, get active() { return active && active.id; }, get trash() { return active && active.trash ? active.trash.filter((x) => x.g.parent).map((x) => x.g.position.clone()) : []; } };
 }

@@ -69,7 +69,7 @@ export function createGames(W, content, H, api) {
   for (const id of ['food', 'recycle']) {
     const I = islands[id]; if (!I) continue;
     const out = Math.atan2(I.pos.z, I.pos.x);
-    for (const da of [0, .35, -.35, .7, -.7, 1.0, -1.0]) {
+    for (const da of [.6, -.6, .9, -.9, .4, -.4, 1.2, -1.2]) {   // 不放正外側：那裡是島名牌的位置，會擋住釣魚區招牌
       const a = out + da, r = I.top(a) * .8, x = I.pos.x + Math.cos(a) * r, z = I.pos.z + Math.sin(a) * r;
       if (W.ground(x, z) == null || api.nearBooth(x, z, 2.2)) continue;
       fishingSpot(new THREE.Vector3(x, H, z), new THREE.Vector3(Math.cos(a), 0, Math.sin(a)), (content.islands.find((q) => q.id === id) || {}).name + '岸邊釣魚區');

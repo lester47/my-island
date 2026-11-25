@@ -4,8 +4,8 @@
 // 2. 遙控無人機：從服務台旁的無人機基地起飛，用方向鍵／螢幕按鈕自己飛，可以空拍照相，電池 2 分鐘
 // 3. 送貨無人機：平常有幾台載著包裹在島之間飛；打工「無人機快遞」＝自己開無人機把包裹送到指定的島
 import * as THREE from 'three';
-import { TAU, rng } from './kit.js?v=20261125c';
-import { H } from './world.js?v=20261125c';
+import { TAU, rng } from './kit.js?v=20261125d';
+import { H } from './world.js?v=20261125d';
 
 const ease = (k) => (k <= 0 ? 0 : k >= 1 ? 1 : k * k * (3 - 2 * k));
 
@@ -253,7 +253,7 @@ export function createDrones(W, opts = {}) {
     showStep(night);
   }
   return {
-    update, startShow, showLen: SHOW_LEN, base, showSite: site,
+    update, startShow, showLen: SHOW_LEN, showing: () => { const tn = now(); return shows.some((s) => tn >= s - 2000 && tn - s < SHOW_LEN * 1000); }, base, showSite: site,
     pilot: { start: startPilot, stop: stopPilot, cam: pilotCam, state: P, get on() { return P.on; } },
     couriers: () => couriers.map((c) => c.d.g.position.clone()),
     avoid: [base, base.clone().add(new THREE.Vector3(1, 0, 0)), base.clone().add(new THREE.Vector3(-1, 0, 0))],
