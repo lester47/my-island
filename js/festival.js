@@ -1,7 +1,7 @@
 // 園遊會氣氛：氣球、拱門、彩旗、燈籠、踩高蹺、小丑、舞獅、吉祥物、熱氣球、風箏、煙火……
 // 所有東西都放在橋上、天空、海面，或島上步道外側的空地（避開攤子），不擋步道
 import * as THREE from 'three';
-import { batchStatic } from './kit.js?v=20261125c';
+import { batchStatic } from './kit.js?v=20261125e';
 
 const TAU = Math.PI * 2;
 const M = {};
@@ -24,7 +24,7 @@ function markBalloon(mesh, group, color) {
 // 一顆氣球（橢圓球＋小結）
 // 鯉魚 Logo 貼片（旗子用）
 const LOGO_GEO = new THREE.PlaneGeometry(1, 1); let LOGO_M = null;
-function logoMat() { if (!LOGO_M) { const tx = new THREE.TextureLoader().load('assets/brand/koi-logo.png?v=20261125c'); tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 4; LOGO_M = new THREE.MeshStandardMaterial({ map: tx, transparent: true, alphaTest: .4, roughness: .8, polygonOffset: true, polygonOffsetFactor: -2 }); } return LOGO_M; }
+function logoMat() { if (!LOGO_M) { const tx = new THREE.TextureLoader().load('assets/brand/koi-logo.png?v=20261125e'); tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 4; LOGO_M = new THREE.MeshStandardMaterial({ map: tx, transparent: true, alphaTest: .4, roughness: .8, polygonOffset: true, polygonOffsetFactor: -2 }); } return LOGO_M; }
 function balloon(parent, c, x, y, z, s = 1) {
   const g = new THREE.Group(); g.position.set(x, y, z); parent.add(g);
   const b = add(g, G.sph, mat(c, { roughness: .35, metalness: .05 }), 0, 0, 0, .34 * s, .42 * s, .34 * s);
@@ -42,6 +42,7 @@ export function createFestival(W, content, H, opts = {}) {
   const stat = new THREE.Group(); root.add(stat); const statics = [];
   BALLOONS = [];
   const anim = [];          // 每格要更新的東西
+  const stringPoles = [];   // 燈泡串燈柱的位置（夜市燈火在下面放地面光暈）
   const nightGlow = [];     // 晚上會亮的材質
   const kinds = new Set();  // 記錄放了幾種裝飾
 
@@ -355,12 +356,16 @@ export function createFestival(W, content, H, opts = {}) {
     }
   }
 
-  // ㉓ 彩色燈泡串：中央島的燈柱之間拉一圈，晚上會亮
+  // ㉓ 彩色燈泡串：中央島的燈柱之間拉一圈，晚上會亮。
+  //    燈柱立在環島自行車道「外側」的草地上（車道寬 1.25，中心在 I.ring），不立在柏油路上；也讓開通往五座橋和停機坪的支線
   {
-    const I = islands.center, n = 28, rr = I.walk.radAt(0) + .3;
+    const I = islands.center, n = 28;
+    const rAt = (a) => Math.max(I.walk.radAt(a) + .3, I.ring + .95);
+    const corr = [...(I.bridgeAngles || []), ...(I.entryAngles || [])];
+    const off = (a) => { for (const b of corr) { const d = Math.atan2(Math.sin(a - b), Math.cos(a - b)); if (Math.abs(d) < .3) return b + Math.sign(d || 1) * .3; } return a; };
     const bulbMats = BAL.slice(0, 6).map((c) => { const m = new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 0 }); nightGlow.push(m); return m; });
-    for (let i = 0; i < n; i++) { const a = i / n * TAU, r = I.walk.radAt(a) + .3; const sag = Math.abs(Math.sin(i / 4 * Math.PI)) * .25; add(root, G.sph, bulbMats[i % 6], I.pos.x + Math.cos(a) * r, H + 2.5 - sag, I.pos.z + Math.sin(a) * r, .12, .16, .12); }
-    for (let i = 0; i < 7; i++) { const a = i / 7 * TAU, r = I.walk.radAt(a) + .3; add(root, G.cyl, '#5a3a1a', I.pos.x + Math.cos(a) * r, H + 1.3, I.pos.z + Math.sin(a) * r, .05, 2.6, .05); }
+    for (let i = 0; i < n; i++) { const a = i / n * TAU, r = rAt(a); const sag = Math.abs(Math.sin(i / 4 * Math.PI)) * .25; add(root, G.sph, bulbMats[i % 6], I.pos.x + Math.cos(a) * r, H + 2.5 - sag, I.pos.z + Math.sin(a) * r, .12, .16, .12); }
+    for (let i = 0; i < 7; i++) { const a = off(i / 7 * TAU), r = rAt(a); const x = I.pos.x + Math.cos(a) * r, z = I.pos.z + Math.sin(a) * r; add(root, G.cyl, '#5a3a1a', x, H + 1.3, z, .05, 2.6, .05); stringPoles.push({ x, z }); }
     kinds.add('彩色燈泡串');
   }
 
@@ -463,7 +468,7 @@ export function createFestival(W, content, H, opts = {}) {
     return null;
   }
   batchStatic(stat); for (const g of statics) batchStatic(g);
-  return { root, update, walkerAt, bridgeLights, freeSpot: (id, n, r) => spotAny([id], n, r), kinds: [...kinds], balloons: () => BALLOONS.filter((h) => !h.userData.balloon.group.userData.popped && h.parent && isVisible(h)), pop };
+  return { root, update, walkerAt, bridgeLights, stringPoles, freeSpot: (id, n, r) => spotAny([id], n, r), kinds: [...kinds], balloons: () => BALLOONS.filter((h) => !h.userData.balloon.group.userData.popped && h.parent && isVisible(h)), pop };
 }
 function isVisible(o) { for (let p = o; p; p = p.parent) if (!p.visible) return false; return true;
 }

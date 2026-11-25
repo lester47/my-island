@@ -759,3 +759,4 @@ body.droning .hud, body.droning .tools, body.droning .ticket, body.droning #labe
 
 .dr-alt button { width: 72px; height: 66px; background: rgba(34, 120, 200, .85); }
 .dr-alt { grid-template-rows: 66px 66px; }
+@media (max-width: 760px) { body.walking #fwBtn, body.walking #drBtn { display: none; } }   /* 漫遊時手機的動作鍵會蓋到：先收起來，回鳥瞰就出現 */
