@@ -3,8 +3,8 @@
 // 大俯衝、海面波浪段，再依序飛過循環挖寶島、手作體驗二島、美食補給島、手作體驗一島，回到車站。
 // 時程用「網路時間」排班（所有裝置看到同一班車）：停站 25 秒 → 跑一圈 → 回站。
 import * as THREE from 'three';
-import { TAU, clamp } from './kit.js?v=20261126d';
-import { H } from './world.js?v=20261126d';
+import { TAU, clamp } from './kit.js?v=20261126e';
+import { H } from './world.js?v=20261126e';
 
 export const COASTER_CAP = 8;                 // 4 節車廂 × 每節 2 人
 const DOCK = 25;                              // 停站秒數
@@ -142,9 +142,10 @@ export function createCoaster(W, opts) {
     posts.push({ x: p.x, z: p.z, y0: base - (g == null ? .3 : 0), y1: p.y - .3 });
   }
   // 迴圈的支架：兩側各一根高柱、頂上一根橫樑；底下兩根短柱撐住迴圈底部
+  const loopPost = {};   // 兩根高柱在 posts 裡的位置（拍大迴圈照時暫時收起來，才不會擋在圓圈正中間）
   for (const sd of [-1, 1]) {
     const b = LB.clone().addScaledVector(LS, sd * 1.95);
-    posts.push({ x: b.x, z: b.z, y0: -.3, y1: LB.y + LR * 2 + .55 });
+    loopPost[sd] = posts.length; posts.push({ x: b.x, z: b.z, y0: -.3, y1: LB.y + LR * 2 + .55 });
     const f = LB.clone().addScaledVector(LS, sd * .3).addScaledVector(LF, sd * .2);
     posts.push({ x: f.x, z: f.z, y0: -.3, y1: LB.y - .3 });
   }
@@ -154,6 +155,7 @@ export function createCoaster(W, opts) {
   const pm = new THREE.InstancedMesh(postGeo, postM, posts.length);
   posts.forEach((q, k) => { const h = q.y1 - q.y0; pm.setMatrixAt(k, M4.compose(V1.set(q.x, q.y0 + h / 2, q.z), Q.identity(), new THREE.Vector3(1, h, 1))); });
   pm.castShadow = !low; root.add(pm);
+  const loopPostHide = (sd, hide) => { const q = posts[loopPost[sd]], h = q.y1 - q.y0; pm.setMatrixAt(loopPost[sd], M4.compose(V1.set(q.x, q.y0 + h / 2, q.z), Q.identity(), new THREE.Vector3(hide ? 0 : 1, hide ? 0 : h, hide ? 0 : 1))); pm.instanceMatrix.needsUpdate = true; };
 
   const fishWaving = [];
   // ------------------------------------------------ 🐟 鯉魚山洞：美食補給島和手作體驗一島之間，貼著海面那段鑽進一條「大鯉魚」的身體
@@ -305,6 +307,20 @@ export function createCoaster(W, opts) {
   { // 照相機的小柱子＋鏡頭
     const pole = new THREE.Mesh(new THREE.CylinderGeometry(.06, .08, photoCamPos.y + .3, 6), postM); pole.position.copy(photoCamPos).setY((photoCamPos.y - .5) / 2); root.add(pole);
     const body = new THREE.Mesh(new THREE.BoxGeometry(.45, .32, .35), new THREE.MeshStandardMaterial({ color: '#333' })); body.position.copy(photoCamPos).setY(photoCamPos.y - .2); body.lookAt(photoTarget); root.add(body);
+    const lens = new THREE.Mesh(new THREE.CylinderGeometry(.11, .13, .2, 12), new THREE.MeshStandardMaterial({ color: '#1a1a1a' })); lens.position.set(0, 0, .25); lens.rotation.x = Math.PI / 2; body.add(lens);
+  }
+
+  // ------------------------------------------------ 📸 大迴圈照：照相機在迴圈中心點的正側邊、對著圓心，整個圓圈框住車子；車子在最高點頭下腳上時拍
+  let loopS = -1, loopY = -1;
+  for (let s0 = 0; s0 < L; s0 += .2) { const q = sample(s0).p; if (Math.hypot(q.x - LB.x, q.z - LB.z) < LR + 1.6 && q.y > loopY) { loopY = q.y; loopS = s0; } }
+  const loopTop = sample(loopS).p, loopC = LB.clone().addScaledVector(UP, LR);
+  loopC.addScaledVector(LS, loopTop.clone().sub(loopC).dot(LS));          // 圓心和最高點在同一個側面位置
+  const loopSide = loopC.clone().setY(0).dot(LS) >= 0 ? 1 : -1;           // 站在離市集比較遠的那一側，往市集方向拍（背景是島）
+  const loopCamPos = loopC.clone().addScaledVector(LS, loopSide * 10.5).addScaledVector(LF, -3.8).addScaledVector(UP, -1.6);   // 再低一點往上拍：倒過來的乘客頭朝圓心，從下面看得到臉   // 稍微偏向車子迎面來的方向（最高點往 −LF 跑），看得到臉
+  const loopTarget = loopC.clone().addScaledVector(UP, .5);
+  { // 迴圈照相機：柱子從海面撐上來＋機身＋鏡頭
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(.06, .08, loopCamPos.y + .3, 6), postM); pole.position.copy(loopCamPos).setY((loopCamPos.y - .5) / 2); root.add(pole);
+    const body = new THREE.Mesh(new THREE.BoxGeometry(.45, .32, .35), new THREE.MeshStandardMaterial({ color: '#333' })); body.position.copy(loopCamPos).setY(loopCamPos.y - .2); body.lookAt(loopTarget); root.add(body);
     const lens = new THREE.Mesh(new THREE.CylinderGeometry(.11, .13, .2, 12), new THREE.MeshStandardMaterial({ color: '#1a1a1a' })); lens.position.set(0, 0, .25); lens.rotation.x = Math.PI / 2; body.add(lens);
   }
 
@@ -686,6 +702,7 @@ export function createCoaster(W, opts) {
     debugPts: () => P,
     inCave: (k = 0) => cur.phase !== 'dock' && inCave(cur.s - k * CAR_GAP),
     photo: { s: photoS, cam: photoCamPos, target: photoTarget },
+    loopPhoto: { s: loopS, cam: loopCamPos, target: loopTarget, fov: 36, hide: (v) => { loopPostHide(1, v); loopPostHide(-1, v); } },
     frontS: () => (cur.phase === 'dock' ? -1 : cur.s),
   };
 }

@@ -1,10 +1,10 @@
 // 登入者：自己的人物＋頭上名牌；之後接上連線服務時，其他人也用同一套顯示（upsert / remove）
 import * as THREE from 'three';
-import { rng } from './kit.js?v=20261126d';
-import { makePerson } from './life.js?v=20261126d';
-import { ROLES, HATS } from './roles.js?v=20261126d';
-import { makeBike, poseRider, BIKE_LIFT } from './bike.js?v=20261126d';
-import { makeAcc, makePet, stepPet, poseDance, DANCE_SEC } from './style.js?v=20261126d';
+import { rng } from './kit.js?v=20261126e';
+import { makePerson } from './life.js?v=20261126e';
+import { ROLES, HATS } from './roles.js?v=20261126e';
+import { makeBike, poseRider, BIKE_LIFT } from './bike.js?v=20261126e';
+import { makeAcc, makePet, stepPet, poseDance, DANCE_SEC } from './style.js?v=20261126e';
 const SPAWN = { x: 0, z: 7.4, yaw: Math.PI };
 
 const seedOf = (s) => { let h = 2166136261; for (const c of String(s)) h = Math.imul(h ^ c.codePointAt(0), 16777619); return h >>> 0; };
@@ -13,7 +13,7 @@ const escH = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '
 // 登入者上衣胸前的小鯉魚 Logo（和網站左上角同一張圖）
 let LOGO_MAT = null;
 function withLogo(P) {
-  if (!LOGO_MAT) { const tx = new THREE.TextureLoader().load('assets/brand/koi-logo.png?v=20261126d'); tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 4; LOGO_MAT = new THREE.MeshStandardMaterial({ map: tx, transparent: true, alphaTest: .4, roughness: .8, polygonOffset: true, polygonOffsetFactor: -2 }); }
+  if (!LOGO_MAT) { const tx = new THREE.TextureLoader().load('assets/brand/koi-logo.png?v=20261126e'); tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 4; LOGO_MAT = new THREE.MeshStandardMaterial({ map: tx, transparent: true, alphaTest: .4, roughness: .8, polygonOffset: true, polygonOffsetFactor: -2 }); }
   const m = new THREE.Mesh(new THREE.PlaneGeometry(.17, .17), LOGO_MAT);
   m.position.set(0, .76, .232); m.rotation.x = -.1;          // 上衣是上窄下寬的圓柱，貼片稍微往後仰才貼合
   P.g.add(m); P.logo = m; return P;
@@ -212,5 +212,7 @@ export function createPlayers(W, H) {
   function inDuckCount() { let n = 0; for (const p of all.values()) if (p.id !== meId && W.duck && (W.duck.riderSpot(p.target, p.id) || W.duck.inBoat(p.pos))) n++; return n; }
   function inBalloonCount() { let n = 0; for (const p of all.values()) if (p.id !== meId && W.balloon && (W.balloon.riderSpot(p.target, p.id) || W.balloon.inBasket(p.pos))) n++; return n; }
   function onBoatCount() { let n = 0; for (const p of all.values()) if (p.id !== meId && onBoat(p.pos)) n++; return n; }
-  return { setMe, me, upsert, remove, setRide, riding, setLook, lookOf, update, myPos, spawnFor, onBoatCount, inBalloonCount, inDuckCount, setBadge, hideTag, posOf, count: () => all.size, layer };
+  // 📸 拍雲霄飛車照片那一下：第一人稱平常看不到自己，拍照時暫時讓自己的人偶出現在座位上（回傳原本的狀態，拍完還原）
+  function meVisible(v) { const p = meId && all.get(meId); if (!p) return null; const was = p.P.g.visible; p.P.g.visible = v; return was; }
+  return { setMe, me, meVisible, upsert, remove, setRide, riding, setLook, lookOf, update, myPos, spawnFor, onBoatCount, inBalloonCount, inDuckCount, setBadge, hideTag, posOf, count: () => all.size, layer };
 }
