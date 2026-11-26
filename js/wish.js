@@ -142,42 +142,63 @@ export function createWish(ctx) {
       <button type="submit" class="btn" ${left > 0 ? '' : 'disabled'}>🌠 送出願望</button></form>`;
   }
   function todayCount() { const d = dayNo(NET ? NET.now() : Date.now()); return Object.values(mine).filter((w) => w && w.t && dayNo(w.t) === d).length; }
+  // 分區：還在做的、已經實現的、其他（重複／這次不做）分開放，已經做完的不會跟還沒做的混在一起
+  const GROUPS = {
+    wait: { title: '📮 等老師看', st: ['new'] },
+    doing: { title: '🛠️ 進行中（老師答應要做）', st: ['ok', 'making'] },
+    done: { title: '✅ 已經實現的願望', st: ['done'], fold: true },
+    other: { title: '📦 其他（重複、這次不做）', st: ['dup', 'no'], fold: true },
+  };
+  const openGrp = new Set();   // 使用者打開的摺疊區（重畫時保持打開）
+  function groupsHTML(list, keys, item, scope, empty) {
+    const out = keys.map((k) => {
+      const G = GROUPS[k], rows = list.filter((w) => G.st.includes(w.st || 'new')); if (!rows.length) return '';
+      const inner = `<ul class="ws-list">${rows.map(item).join('')}</ul>`, key = `${scope}:${k}`;
+      return G.fold ? `<details class="ws-grp g-${k}" data-grp="${key}" ${openGrp.has(key) ? 'open' : ''}><summary><b>${G.title}</b>（${rows.length}）</summary>${inner}</details>`
+        : `<section class="ws-grp g-${k}"><h3 class="wl-h">${G.title}（${rows.length}）</h3>${inner}</section>`;
+    }).join('');
+    return out || empty;
+  }
+  const kindIcon = (w) => (KINDS[w.kind] ? KINDS[w.kind].icon : '💡');
   function wallHTML() {
     const list = Object.entries(wall).map(([id, w]) => ({ id, ...w })).sort((a, b) => voteN(b.id) - voteN(a.id) || (b.t || 0) - (a.t || 0));
     if (!list.length) return '<p class="foot">許願牆上還沒有願望。老師看過的願望會出現在這裡。</p>';
     const fame = {}; for (const w of list) if (w.card === 'gold') fame[w.name] = (fame[w.name] || 0) + 1;
-    return `${Object.keys(fame).length ? `<div class="ws-fame"><b>🏆 名人堂</b>：${Object.entries(fame).map(([n, c]) => `${esc(n)} 🥇${c > 1 ? `×${c}` : ''}`).join('、')}</div>` : ''}
-      <ul class="ws-list">${list.map((w) => `<li class="ws-item"><div class="ws-top">${KINDS[w.kind] ? KINDS[w.kind].icon : '💡'} <b>${esc(w.title)}</b></div>
+    const item = (w) => `<li class="ws-item ${w.st === 'done' ? 'is-done' : ''}"><div class="ws-top">${kindIcon(w)} <b>${esc(w.title)}</b></div>
         <div class="ws-meta">${stChip(w.st)}${cardChip(w.card)}<small>許願的人：${esc(w.name || '同學')}</small></div>
         ${w.body ? `<p class="ws-body">${esc(w.body)}</p>` : ''}${w.reply ? `<p class="ws-reply">🧑‍🏫 ${esc(w.reply)}</p>` : ''}
-        <button type="button" class="ws-vote ${iVoted(w.id) ? 'on' : ''}" data-ws-vote="${esc(w.id)}" ${canWish() ? '' : 'disabled'} aria-pressed="${iVoted(w.id)}">👍 ${w.kind === 'bug' ? '我也遇到' : '我也想要'}・${voteN(w.id)}</button></li>`).join('')}</ul>`;
+        ${w.st === 'done' ? `<p class="ws-yay">🎉 已經可以玩了！謝謝 ${esc(w.name || '同學')} 的點子</p>` : w.st === 'dup' || w.st === 'no' ? '' : `<button type="button" class="ws-vote ${iVoted(w.id) ? 'on' : ''}" data-ws-vote="${esc(w.id)}" ${canWish() ? '' : 'disabled'} aria-pressed="${iVoted(w.id)}">👍 ${w.kind === 'bug' ? '我也遇到' : '我也想要'}・${voteN(w.id)}</button>`}</li>`;
+    return `${Object.keys(fame).length ? `<div class="ws-fame"><b>🏆 名人堂</b>：${Object.entries(fame).map(([n, c]) => `${esc(n)} 🥇${c > 1 ? `×${c}` : ''}`).join('、')}</div>` : ''}
+      ${groupsHTML(list, ['doing', 'done', 'other'], item, 'wall', '<p class="foot">許願牆上還沒有願望。</p>')}`;
   }
   function mineHTML() {
     const cards = Object.entries(myCards).map(([id, c]) => ({ id, ...c })).sort((a, b) => (b.t || 0) - (a.t || 0));
     const list = Object.entries(mine).map(([id, w]) => ({ id, ...w })).filter((w) => w.title).sort((a, b) => (b.t || 0) - (a.t || 0));
     const cnt = { good: 0, silver: 0, gold: 0 }; for (const c of cards) if (cnt[c.k] != null) cnt[c.k]++;
+    const item = (w) => `<li class="ws-item ${w.st === 'done' ? 'is-done' : ''}"><div class="ws-top">${kindIcon(w)} <b>${esc(w.title)}</b></div><div class="ws-meta">${stChip(w.st)}${cardChip(w.card)}</div>${w.reply ? `<p class="ws-reply">🧑‍🏫 ${esc(w.reply)}</p>` : ''}</li>`;
     return `<h3 class="wl-h">🎴 我的卡片</h3>
       <div class="ws-cards">${Object.entries(CARDS).map(([k, K]) => `<div class="ws-cbox c-${k}"><span>${K.icon}</span><b>${cnt[k]}</b><small>${K.name}</small></div>`).join('')}</div>
       ${cards.length ? `<ul class="wl-log">${cards.map((c) => `<li>${cardChip(c.k)} ${esc(c.title || '')}</li>`).join('')}</ul>` : '<p class="foot">還沒有卡片。許願被老師採用就會拿到！</p>'}
       <h3 class="wl-h">🌠 我的願望</h3>
-      ${list.length ? `<ul class="ws-list">${list.map((w) => `<li class="ws-item"><div class="ws-top">${KINDS[w.kind] ? KINDS[w.kind].icon : '💡'} <b>${esc(w.title)}</b></div><div class="ws-meta">${stChip(w.st)}${cardChip(w.card)}</div>${w.reply ? `<p class="ws-reply">🧑‍🏫 ${esc(w.reply)}</p>` : ''}</li>`).join('')}</ul>` : '<p class="foot">還沒有許願。</p>'}
+      ${groupsHTML(list, ['wait', 'doing', 'done', 'other'], item, 'mine', '<p class="foot">還沒有許願。</p>')}
       <p class="foot">🎓 已用 ${esc(email() || '')} 登入。<button type="button" class="linkish" data-ws="logout">登出</button></p>`;
   }
   function adminHTML() {
-    const list = Object.entries(adminList).map(([id, w]) => ({ id, ...w })).sort((a, b) => (a.st === 'new' ? 0 : 1) - (b.st === 'new' ? 0 : 1) || (b.t || 0) - (a.t || 0));
+    const list = Object.entries(adminList).map(([id, w]) => ({ id, ...w })).sort((a, b) => (b.t || 0) - (a.t || 0));
     const rw = rewards();
     if (!list.length) return '<p class="foot">還沒有人許願。</p>';
-    return `<p class="foot">採用時選一張卡，會自動發卡給學生，並加發鯉魚幣（💚 ${rw.good}・🥈 ${rw.silver}・🥇 ${rw.gold} 枚）。🔒 祕密回報不會公開到許願牆。<button type="button" class="linkish" data-ws="export">📋 複製採用的點子清單</button></p>
-      <ul class="ws-list">${list.map((w) => `<li class="ws-item ${w.st === 'new' ? 'is-new' : ''}">
-        <div class="ws-top">${KINDS[w.kind] ? KINDS[w.kind].icon : '💡'} <b>${esc(w.title)}</b> <small>— ${esc(w.name || '')}（${esc(w.email || '')}）</small></div>
+    const item = (w) => `<li class="ws-item ${w.st === 'new' ? 'is-new' : ''} ${w.st === 'done' ? 'is-done' : ''}">
+        <div class="ws-top">${kindIcon(w)} <b>${esc(w.title)}</b> <small>— ${esc(w.name || '')}（${esc(w.email || '')}）</small></div>
         ${w.body ? `<p class="ws-body">${esc(w.body)}</p>` : ''}
         ${w.kind !== 'idea' ? `<p class="foot">📍 ${esc(w.where || '')}・${esc(w.dev || '')}・${esc(w.ver || '')}</p>` : ''}
         <div class="ws-meta">${stChip(w.st)}${cardChip(w.card)}<small>👍 ${voteN(w.id)}</small></div>
         ${w.reply ? `<p class="ws-reply">🧑‍🏫 ${esc(w.reply)}</p>` : ''}
         <div class="ws-adm">${w.card ? '' : Object.entries(CARDS).map(([k, K]) => `<button type="button" data-ws-adm="card:${k}" data-id="${esc(w.id)}">${K.icon} 採用＋${K.name}</button>`).join('')}
-          <button type="button" data-ws-adm="st:making" data-id="${esc(w.id)}">🛠️ 製作中</button><button type="button" data-ws-adm="st:done" data-id="${esc(w.id)}">✅ 上線了</button>
+          ${w.st === 'making' ? '' : `<button type="button" data-ws-adm="st:making" data-id="${esc(w.id)}">🛠️ 製作中</button>`}${w.st === 'done' ? '' : `<button type="button" data-ws-adm="st:done" data-id="${esc(w.id)}">✅ 上線了</button>`}
           <button type="button" data-ws-adm="st:dup" data-id="${esc(w.id)}">🔁 重複</button><button type="button" data-ws-adm="st:no" data-id="${esc(w.id)}">🙏 這次不做</button>
-          <button type="button" data-ws-adm="reply" data-id="${esc(w.id)}">💬 回覆</button></div></li>`).join('')}</ul>`;
+          <button type="button" data-ws-adm="reply" data-id="${esc(w.id)}">💬 回覆</button></div></li>`;
+    return `<p class="foot">採用時選一張卡，會自動發卡給學生，並加發鯉魚幣（💚 ${rw.good}・🥈 ${rw.silver}・🥇 ${rw.gold} 枚）。🔒 祕密回報不會公開到許願牆。做完的願望按「✅ 上線了」，就會移到「已經實現」那一區。<button type="button" class="linkish" data-ws="export">📋 複製採用的點子清單</button></p>
+      ${groupsHTML(list, ['wait', 'doing', 'done', 'other'], item, 'admin', '<p class="foot">還沒有人許願。</p>')}`;
   }
   function render() {
     const body = $('#wishBody'); if (!body || !$('#wishDlg').open) return;
@@ -272,6 +293,7 @@ export function createWish(ctx) {
       if (f.dataset.wsForm === 'mail') login('mail', f.querySelector('input').value);
       else if (f.dataset.wsForm === 'wish') submit(f);
     });
+    body.addEventListener('toggle', (e) => { const d = e.target; if (d.dataset && d.dataset.grp) { if (d.open) openGrp.add(d.dataset.grp); else openGrp.delete(d.dataset.grp); } }, true);
     body.addEventListener('input', (e) => { const f = e.target.closest && e.target.closest('.ws-form'); if (f) { const er = f.querySelector('.ws-err'); if (er) er.hidden = true; if (e.target.name === 'title') similar(f); } });
     body.addEventListener('keydown', (e) => { if (e.target.matches && e.target.matches('input, textarea')) e.stopPropagation(); });   // 打字時不觸發漫遊快捷鍵
   }
