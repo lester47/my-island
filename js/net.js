@@ -2,7 +2,7 @@
 // 資料只有：暱稱、身分、衣服顏色、位置；關掉網頁就自動刪除（onDisconnect）
 import { initializeApp } from '../vendor/firebase/firebase-app.js';
 import { getAuth, signInAnonymously, onAuthStateChanged, sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink, GoogleAuthProvider, signInWithPopup, signOut } from '../vendor/firebase/firebase-auth.js';
-import { getDatabase, ref, set, update, remove, onValue, onChildAdded, onChildChanged, onChildRemoved, onDisconnect, serverTimestamp } from '../vendor/firebase/firebase-database.js';
+import { getDatabase, ref, set, update, remove, get, onValue, onChildAdded, onChildChanged, onChildRemoved, onDisconnect, serverTimestamp } from '../vendor/firebase/firebase-database.js';
 
 const ROOT = 'market';
 const STALE = 3 * 60 * 1000;   // 超過 3 分鐘沒更新的人不顯示（例如手機睡著）
@@ -20,7 +20,7 @@ export function createNet(config, hooks) {
     const on = !!s.val(); status(on ? 'online' : 'offline');
     if (on && uid) goOnline();
   });
-  // 一般訪客用匿名登入；老師用名冊上的 email 登入（信箱連結或 Google）
+  // 一般訪客用匿名登入；老師用名冊上的 email 登入、學生用學校帳號（@liwps.ntct.edu.tw）登入（信箱連結或 Google）
   const TKEY = 'liyu115.teacherEmail';
   onAuthStateChanged(auth, (u) => {
     if (u) { if (uid && uid !== u.uid && meRef) { remove(meRef).catch(() => {}); meRef = null; } uid = u.uid; goOnline(); return; }
@@ -40,7 +40,8 @@ export function createNet(config, hooks) {
       try { localStorage.setItem(TKEY, email); } catch (e) { /* 私密模式 */ }
       await sendSignInLinkToEmail(auth, email, { url: location.origin + location.pathname, handleCodeInApp: true });
     },
-    async google() { await signInWithPopup(auth, new GoogleAuthProvider()); },
+    async google(hd) { const pv = new GoogleAuthProvider(); pv.setCustomParameters(hd ? { hd, prompt: 'select_account' } : { prompt: 'select_account' }); await signInWithPopup(auth, pv); },
+    verified: () => { const u = auth.currentUser; return !!(u && !u.isAnonymous && u.emailVerified); },
     async logout() { if (meRef) { await remove(meRef).catch(() => {}); meRef = null; } await signOut(auth); },
   };
 
@@ -122,5 +123,5 @@ export function createNet(config, hooks) {
     hooks.onCount({ players: n, byRole, viewers: Math.max(viewers, n ? 1 : 0) });
   }
   // 給多人小遊戲用：資料庫、自己的 id、伺服器時間
-  return { setMe, setFx, tick, db, uid: () => uid, now: () => Date.now() + skew, teacher, fb: { ref, set, update, remove, onValue, onDisconnect, serverTimestamp } };
+  return { setMe, setFx, tick, db, uid: () => uid, now: () => Date.now() + skew, teacher, fb: { ref, set, update, remove, get, onValue, onDisconnect, serverTimestamp } };
 }
