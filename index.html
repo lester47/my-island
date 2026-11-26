@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261126n">
+<link rel="stylesheet" href="styles.css?v=20261126o">
 <script type="importmap">{"imports":{"three":"./vendor/three/three.module.js","three/addons/":"./vendor/three/addons/"}}</script>
 </head>
 <body>
@@ -42,6 +42,7 @@
     <button type="button" class="tbtn" id="walkBtn" aria-label="地面漫遊，第一人稱走在島上"><span aria-hidden="true">🚶</span><span class="tx">漫遊</span></button>
     <button type="button" class="tbtn" id="homeBtn" aria-label="回到全景"><span aria-hidden="true">🏝️</span><span class="tx">全景</span></button>
     <button type="button" class="tbtn" id="passBtn" aria-label="我的闖關護照" aria-haspopup="dialog"><span aria-hidden="true">🎫</span><span class="tx">護照</span></button>
+    <button type="button" class="tbtn" id="wishBtn" aria-label="許願池：向老師許願、回報問題" aria-haspopup="dialog"><span aria-hidden="true">🌠</span><span class="tx">許願</span></button>
     <button type="button" class="tbtn" id="setBtn" aria-label="設定：底色、晝夜、減少動態、畫質" aria-expanded="false" aria-controls="settings"><span aria-hidden="true">⚙️</span><span class="tx">設定</span></button>
     <button type="button" class="tbtn" id="helpBtn" aria-label="操作說明"><span aria-hidden="true">？</span><span class="tx">說明</span></button>
   </nav>
@@ -165,6 +166,10 @@
   <div class="dlg-hd"><h2 id="helpTitle">📖 遊戲說明</h2><button type="button" class="x" data-close aria-label="關閉">✕</button></div>
   <div id="helpBody"></div>
 </dialog>
+<dialog id="wishDlg" class="dlg wide" aria-labelledby="wishTitle">
+  <div class="dlg-hd"><h2 id="wishTitle">🌠 許願池</h2><button type="button" class="x" data-close aria-label="關閉">✕</button></div>
+  <div id="wishBody"></div>
+</dialog>
 <dialog id="passDlg" class="dlg" aria-labelledby="passTitle">
   <div class="dlg-hd"><h2 id="passTitle">🎫 我的闖關護照</h2><button type="button" class="x" data-close aria-label="關閉">✕</button></div>
   <div id="passBody"></div>
@@ -282,6 +287,6 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <noscript><p class="noscript">這個網站需要開啟 JavaScript。</p></noscript>
-<script type="module" src="js/main.js?v=20261126n"></script>
+<script type="module" src="js/main.js?v=20261126o"></script>
 </body>
 </html>
