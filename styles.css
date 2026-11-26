@@ -836,3 +836,9 @@ body.droning .hud, body.droning .tools, body.droning .ticket, body.droning #labe
 .cp-yay { font-weight: 900; color: var(--primary); }
 html[data-theme="deep"] .cp-pill.on { background: #4a3a14; color: #ffe6a8; }
 @media (max-width: 520px) { .cp-tabs button { font-size: 13px; padding: 0 4px; } .cp-bar { top: 50px; } }
+
+/* 🎫 雲霄飛車掛號號碼牌：疊在擼貓號碼牌上面一格 */
+.ticket.coa { bottom: 134px; background: #ffe9dc; color: #7a2410; border-color: #c23a1c; }
+html[data-theme="deep"] .ticket.coa { background: #4a2414; color: #ffd2bd; }
+@media (max-width: 760px) { .ticket.coa { bottom: 188px; } }
+@media (max-width: 480px) { .ticket.coa { bottom: 202px; } }
