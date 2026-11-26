@@ -4,8 +4,8 @@
 // 2. 遙控無人機：從服務台旁的無人機基地起飛，用方向鍵／螢幕按鈕自己飛，可以空拍照相，電池 2 分鐘
 // 3. 送貨無人機：平常有幾台載著包裹在島之間飛；打工「無人機快遞」＝自己開無人機把包裹送到指定的島
 import * as THREE from 'three';
-import { TAU, rng } from './kit.js?v=20261126o';
-import { H } from './world.js?v=20261126o';
+import { TAU, rng } from './kit.js?v=20261126p';
+import { H } from './world.js?v=20261126p';
 
 const ease = (k) => (k <= 0 ? 0 : k >= 1 ? 1 : k * k * (3 - 2 * k));
 
