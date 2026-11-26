@@ -932,3 +932,15 @@ html[data-theme="deep"] .ticket.coa { background: #4a2414; color: #ffd2bd; }
 .bgm-lab select { flex: 1; min-height: 36px; padding: 0 8px; font: inherit; font-weight: 400; }
 .bgm-lab input[type="range"] { flex: 1; accent-color: var(--accent); }
 .bgm-lab b { min-width: 42px; text-align: right; font-size: 12.5px; }
+
+/* 🌠 許願分區：進行中／已經實現／其他 */
+.ws-grp { margin: 10px 0; }
+.ws-grp > .wl-h { margin: 6px 0; }
+details.ws-grp { border: 2px solid var(--line); border-radius: 14px; padding: 6px 10px; background: var(--surface); }
+details.ws-grp > summary { cursor: pointer; padding: 6px 0; font-size: 15px; list-style-position: inside; }
+details.ws-grp[open] > summary { margin-bottom: 6px; }
+details.ws-grp.g-done { border-color: #b9dfb5; background: #f3faf2; }
+html[data-theme="deep"] details.ws-grp.g-done { background: #1f2e22; border-color: #3f6b45; }
+.ws-item.is-done { opacity: .92; }
+.ws-yay { margin: 0; font-weight: 800; color: #22612a; }
+html[data-theme="deep"] .ws-yay { color: #9fdc9a; }
