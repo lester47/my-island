@@ -836,3 +836,24 @@ body.droning .hud, body.droning .tools, body.droning .ticket, body.droning #labe
 .cp-yay { font-weight: 900; color: var(--primary); }
 html[data-theme="deep"] .cp-pill.on { background: #4a3a14; color: #ffe6a8; }
 @media (max-width: 520px) { .cp-tabs button { font-size: 13px; padding: 0 4px; } .cp-bar { top: 50px; } }
+
+/* 🎫 雲霄飛車掛號號碼牌：疊在擼貓號碼牌上面一格 */
+.ticket.coa { bottom: 134px; background: #ffe9dc; color: #7a2410; border-color: #c23a1c; }
+html[data-theme="deep"] .ticket.coa { background: #4a2414; color: #ffd2bd; }
+@media (max-width: 760px) { .ticket.coa { bottom: 188px; } }
+@media (max-width: 480px) { .ticket.coa { bottom: 202px; } }
+
+/* 💺 雲霄飛車選座位 */
+.seat-q { margin: 0 0 10px; font-weight: 700; line-height: 1.6; }
+.seat-train { display: grid; gap: 6px; padding: 8px; border-radius: 16px; background: var(--surface2); border: 2px solid var(--line); }
+.seat-dir { text-align: center; font-size: 12px; font-weight: 900; color: var(--muted); }
+.seat-car { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 14px; color: #fff; }
+.seat-car.c0 { background: #e4532c; } .seat-car.c1 { background: #d9a020; } .seat-car.c2 { background: #2f7fd1; } .seat-car.c3 { background: #3e9b4f; }
+.seat-cn { flex: 1; font-weight: 900; font-size: 13.5px; text-shadow: 0 1px 2px rgba(0,0,0,.35); }
+.seat-pair { display: flex; gap: 6px; }
+.seat { min-width: 64px; min-height: 48px; border-radius: 12px; border: 3px solid rgba(255,255,255,.85); background: #fff; color: #2b2210; font: inherit; font-weight: 900; cursor: pointer; }
+.seat.on { background: #ffd23a; border-color: #fff; box-shadow: 0 0 0 3px #2b2210; }
+.seat.taken { background: rgba(255,255,255,.35); color: #fff; border-style: dashed; cursor: not-allowed; }
+.seat-now { margin: 8px 0; }
+@media (max-width: 420px) { .seat { min-width: 54px; } .seat-cn { font-size: 12.5px; } }
+#seatBody .pay-btns { flex-wrap: wrap; } #seatBody .pay-btns .btn { flex: 1; min-width: 96px; }
