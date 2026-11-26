@@ -1,16 +1,17 @@
 // 115 鯉魚市集｜介面與流程
 import * as THREE from 'three';
-import { ROLES, OUTFITS, HATS } from './roles.js?v=20261126m';
-import { createMeowBox } from './meow.js?v=20261126m';
-import { createCoasterSound } from './coastersound.js?v=20261126m';
-import { createQr } from './qr.js?v=20261126m';
-import { createBgm } from './bgm.js?v=20261126m';
-import { installGuard } from './guard.js?v=20261126m';
-import { REACTIONS, REACTION_IDS, playReaction } from './cats.js?v=20261126m';
-import { createCatNet, SEATS, REST, CALL, pad } from './catnet.js?v=20261126m';
-import { createWallet } from './wallet.js?v=20261126m';
-import { createJobs } from './jobs.js?v=20261126m';
-import { createCoinPlan } from './coinplan.js?v=20261126m';
+import { ROLES, OUTFITS, HATS } from './roles.js?v=20261126n';
+import { createMeowBox } from './meow.js?v=20261126n';
+import { createCoasterSound } from './coastersound.js?v=20261126n';
+import { createQr } from './qr.js?v=20261126n';
+import { createBgm } from './bgm.js?v=20261126n';
+import { installGuard } from './guard.js?v=20261126n';
+import { hasBadWord, checkMessage } from './badwords.js?v=20261126n';
+import { REACTIONS, REACTION_IDS, playReaction } from './cats.js?v=20261126n';
+import { createCatNet, SEATS, REST, CALL, pad } from './catnet.js?v=20261126n';
+import { createWallet } from './wallet.js?v=20261126n';
+import { createJobs } from './jobs.js?v=20261126n';
+import { createCoinPlan } from './coinplan.js?v=20261126n';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -27,7 +28,7 @@ const pad2 = (n) => String(n).padStart(2, '0');
 const fmtH = (h) => { h = ((h % 24) + 24) % 24; return `${pad2(Math.floor(h))}:${pad2(Math.floor((h % 1) * 60))}`; };
 
 // 介面 Logo：低多邊形鯉魚（橘紅魚背、米白魚腹、魚頭朝右），首頁、怎麼逛、集章完成共用這一張
-const LOGO_SRC = 'assets/brand/koi-logo.png?v=20261126m';
+const LOGO_SRC = 'assets/brand/koi-logo.png?v=20261126n';
 const MASCOT = `<img src="${LOGO_SRC}" alt="115 鯉魚市集 Logo：低多邊形小鯉魚" decoding="async">`;
 
 let C = null;            // content.json
@@ -1531,7 +1532,7 @@ function buildLamp(sp) {
   } else { const L0 = lampsLocal(); L0[sp.id] = v; store.set('lampsLocal', L0); done(); }
 }
 
-// ------------------------------------------------------------------ 📞 遊戲電話：打給同時在線上的同學，只能用預設短句和表情
+// ------------------------------------------------------------------ 📞 遊戲電話：打給同時在線上的同學，可以自己打字（有字數上限、會擋不適當字眼）或按現成短句
 function whereAmI() {
   const p = S.walking && CAM ? CAM.walk.pos : PL && PL.me() ? PL.me().pos : null;
   if (!p || !W) return '市集';
@@ -1553,13 +1554,14 @@ function phoneDb() {
 }
 async function startPhone() {
   if (PH) return;
-  try { PHM = await import('./phone.js?v=20261126m'); } catch (e) { console.warn('遊戲電話載入失敗', e); return; }
+  try { PHM = await import('./phone.js?v=20261126n'); } catch (e) { console.warn('遊戲電話載入失敗', e); return; }
   const db = phoneDb(); if (!db) return;
   PH = PHM.createPhone(db, {
     name: () => FAKE_AS || (meProfile() || {}).name || '', where: whereAmI, toast,
     chime: (soft) => { try { if (SND) soft ? SND.chirp && SND.chirp() : SND.chime && SND.chime(); } catch (e) { /* 沒聲音也沒關係 */ } },
     canUse: () => { if (!meProfile()) { toast('📞 先按「👤 加入」取暱稱，才能打電話'); return false; } return true; },
     render: renderPhone,
+    check: (t) => checkMessage(t, PHM.TEXT_MAX),
   });
   PH.setDnd(store.get('phoneDnd', false));
   PH.start();
@@ -1572,13 +1574,19 @@ function renderPhone(st) {
   if (c && key === card.dataset.key) { const sec = card.querySelector('.cc-sec'); if (sec) sec.textContent = c.left; }
   else if (!c) { card.hidden = true; card.innerHTML = ''; card.dataset.key = ''; } else {
     card.hidden = false; card.dataset.key = key;
-    const heard = c.heard ? `<p class="cc-heard"><b>${esc(c.peerName)}：</b>${esc(PH.phrase(c.heard.k, c.heard.where))}</p>` : '';
-    const said = c.said ? `<p class="cc-said"><b>我：</b>${esc(PH.phrase(c.said.k, c.said.where))}</p>` : '';
+    const heard = c.heard ? `<p class="cc-heard"><b>${esc(c.peerName)}：</b>${esc(PH.line(c.heard))}</p>` : '';
+    const said = c.said ? `<p class="cc-said"><b>我：</b>${esc(PH.line(c.said))}</p>` : '';
+    const draft = card.querySelector('#ccText'), keep = draft ? { v: draft.value, f: document.activeElement === draft } : null;   // 重畫時保留打到一半的字
     if (c.st === 'ring' && c.role === 'in') card.innerHTML = `<p class="cc-t">📞 <b>${esc(c.peerName)}</b> 打電話給你（<span class="cc-sec">${c.left}</span> 秒）</p><div class="cc-btns"><button type="button" class="btn" data-cc="yes">✅ 接聽</button><button type="button" class="btn ghost" data-cc="no">❌ 拒絕</button></div>`;
     else if (c.st === 'ring') card.innerHTML = `<p class="cc-t">📞 正在打給 <b>${esc(c.peerName)}</b>…（<span class="cc-sec">${c.left}</span> 秒）</p><div class="cc-btns"><button type="button" class="btn ghost" data-cc="hang">取消</button></div>`;
     else {
       const ph = PHM.PHRASES.map((p, i) => `<button type="button" class="cc-ph" data-say="${i}">${esc(PH.phrase(i, '📍這裡'))}</button>`).join('');
-      card.innerHTML = `<p class="cc-t">📞 和 <b>${esc(c.peerName)}</b> 通話中</p>${heard}${said}<div class="cc-phs">${ph}</div><div class="cc-btns"><button type="button" class="btn ghost" data-cc="find">📍 去找他</button><button type="button" class="btn danger" data-cc="hang">掛斷</button></div>`;
+      const max = PHM.TEXT_MAX;
+      card.innerHTML = `<p class="cc-t">📞 和 <b>${esc(c.peerName)}</b> 通話中</p>${heard}${said}
+        <form class="cc-type" autocomplete="off"><input id="ccText" type="text" maxlength="${max}" enterkeyhint="send" placeholder="自己打字（最多 ${max} 字）" aria-label="自己打想說的話，最多 ${max} 個字"><button type="submit" class="btn">送出</button></form>
+        <p class="cc-rule"><span id="ccCount">0/${max}</span>・要有禮貌：不適當的字眼、電話號碼、網址都會被擋下來</p><p class="cc-err" id="ccErr" role="alert" hidden></p>
+        <p class="cc-rule">或按一句現成的：</p><div class="cc-phs">${ph}</div>
+        <div class="cc-btns"><button type="button" class="btn ghost" data-cc="find">📍 去找他</button><button type="button" class="btn danger" data-cc="hang">掛斷</button></div>`;
     }
     card.querySelectorAll('[data-cc]').forEach((b) => (b.onclick = () => {
       const k = b.dataset.cc;
@@ -1586,12 +1594,29 @@ function renderPhone(st) {
       else if (k === 'find') { const p = PL && PL.posOf(c.peer); if (!p) { toast('📞 現在看不到他的人物（他可能還沒加入或在看網站）'); return; } if (S.walking && !exitWalk(true)) return; closePanel(false); const t = p.clone().setY(p.y + 1); CAM.flight({ t, p: t.clone().add(new THREE.Vector3(5, 7, 9)) }, 1400, 2, () => toast(`📍 ${c.peerName} 在這裡`)); }
     }));
     card.querySelectorAll('[data-say]').forEach((b) => (b.onclick = () => PH.say(+b.dataset.say)));
+    const form = card.querySelector('.cc-type');
+    if (form) {
+      const inp = form.querySelector('#ccText'), err = card.querySelector('#ccErr'), cnt = card.querySelector('#ccCount'), max = PHM.TEXT_MAX;
+      const sync = () => { const n = [...inp.value].length; cnt.textContent = `${n}/${max}`; cnt.classList.toggle('over', n > max); err.hidden = true; };
+      if (keep) { inp.value = keep.v; if (keep.f) inp.focus(); }
+      sync();
+      inp.addEventListener('input', sync);
+      inp.addEventListener('keydown', (e) => e.stopPropagation());     // 打字時不要觸發漫遊的方向鍵、快捷鍵
+      form.onsubmit = (e) => {
+        e.preventDefault();
+        const v = inp.value; inp.value = '';                         // 先清掉：送出後通話卡會重畫
+        const why = PH.sayText(v);
+        const cur = $('#ccText'), ce = $('#ccErr'), cc = $('#ccCount');
+        if (why) { if (cur) { cur.value = v; cur.focus(); } if (cc) cc.textContent = `${[...v].length}/${max}`; if (ce) { ce.textContent = '🙅 ' + why; ce.hidden = false; } return; }
+        if (cur) { cur.value = ''; cur.focus(); } if (cc) cc.textContent = `0/${max}`;
+      };
+    }
   }
   if ($('#phoneDlg').open) $('#phoneBody').innerHTML = phoneListHTML(st), bindPhoneList();
 }
 function phoneListHTML(st) {
   const rows = st.list.length ? st.list.map((p, i) => `<li class="ag-job"><span class="ag-no">${i + 1}</span><span class="ic" aria-hidden="true">🧑</span><div class="ag-main"><b>${esc(p.name)}</b><small>在線上，可以接電話</small></div><div class="ag-side"><button type="button" class="btn" data-dial="${esc(p.id)}" ${st.call ? 'disabled' : ''}>📞 打給他</button></div></li>`).join('') : '<p class="foot">現在沒有其他同學可以接電話。等同學加入市集、打開網站再試試。</p>';
-  return `<ol class="ag-rules"><li>電話只能打給<b>現在在線上、有加入市集</b>的同學。</li><li>接通後只能用<b>預設的短句和表情</b>聊天（例如「來服務台找我！」），不能自己打字。</li><li>不想被打擾就打開下面的「🔕 不接電話」。</li></ol>
+  return `<ol class="ag-rules"><li>電話只能打給<b>現在在線上、有加入市集</b>的同學。</li><li>接通後可以<b>自己打字</b>（每句最多 ${PHM ? PHM.TEXT_MAX : 30} 個字），也可以按現成的短句和表情（例如「來服務台找我！」）。</li><li>📏 打字的規則：要有禮貌，<b>不適當的字眼會被擋下來</b>；不要留電話號碼、網址或帳號；兩句之間要隔一下，不能洗版。</li><li>不想被打擾就打開下面的「🔕 不接電話」。</li></ol>
     <ol class="ag-list">${rows}</ol>
     <label class="ph-dnd"><input type="checkbox" id="phDnd" ${st.dnd ? 'checked' : ''}> 🔕 不接電話（別人在電話簿裡看不到我）</label>`;
 }
@@ -2689,15 +2714,16 @@ $('#walkView').addEventListener('click', () => { CAM.walk.third = !CAM.walk.thir
 
 // ------------------------------------------------------------------ 用暱稱加入市集（目前只在這台裝置；之後接連線服務會看到其他人）
 let PL = null;
-const BAD_WORDS = ['幹', '靠北', '靠杯', '白痴', '白癡', '智障', '垃圾', '去死', '屌', '機掰', '雞掰', '王八', '賤', 'fuck', 'shit', 'bitch', 'damn', 'sex'];
+
 function cleanName(s) { return String(s || '').replace(/[\u0000-\u001f<>]/g, '').replace(/\s+/g, ' ').trim(); }
 function nameProblem(n) {
   if (!n) return '請輸入暱稱';
   if ([...n].length > 10) return '暱稱最多 10 個字';
   const low = n.toLowerCase().replace(/[\s._\-*]/g, '');
-  if (BAD_WORDS.some((w) => low.includes(w))) return '這個暱稱不太適合，換一個吧';
+  if (hasBadWord(n) || BAD_NICK.some((w) => low.includes(w))) return '這個暱稱不太適合，換一個吧';
   return '';
 }
+const BAD_NICK = ['幹', '垃圾'];   // 暱稱比較嚴格：連單獨一個「幹」、「垃圾」都不行
 const meProfile = () => { const p = store.get('me', null); return p && p.role === 'teacher' && !(WAL && WAL.admin) ? { ...p, role: 'visitor' } : p; };   // 只有老師名單上的帳號能當老師，其他人都是參觀者
 function renderMe() {
   const p = meProfile(), R = p && ROLES[p.role];
@@ -2899,7 +2925,7 @@ function balloonPopped() {
 }
 function startNet() {
   const M = C.multiplayer; if (!M || !M.enabled || !M.firebase || !PL) return;
-  import('./net.js?v=20261126m').then(({ createNet }) => {
+  import('./net.js?v=20261126n').then(({ createNet }) => {
     NET = createNet(M.firebase, {
       myPos: () => PL.myPos(), upsert: (id, info, pos) => { ONLINE.set(id, String(info.name || '').slice(0, 16)); PL.upsert(id, info, pos); }, remove: (id) => { ONLINE.delete(id); PL.remove(id); },
       onCount: (c) => { COUNT = c; const el = $('#onlineChip'); el.hidden = false; $('#onlineCount').textContent = c.players; el.setAttribute('aria-label', `市集島上 ${c.players} 人，開著網站 ${c.viewers} 人，點一下看各身分人數`); },
@@ -2915,7 +2941,7 @@ function startNet() {
     if (JOBS) JOBS.attach(NET);
     watchLamps();
     startPhone();
-    import('./hidemp.js?v=20261126m').then(({ createHideMP }) => {
+    import('./hidemp.js?v=20261126n').then(({ createHideMP }) => {
       HM = createHideMP(NET, {
         toast, profile: meProfile, enterWalk: () => { if (!S.walking) enterWalk(); },
         walkPos: () => (S.walking ? CAM.walk.pos : null), posOf: (id) => PL.posOf(id),
@@ -3039,7 +3065,7 @@ function webglOK() { try { const c = document.createElement('canvas'); return !!
 // ------------------------------------------------------------------ 啟動
 async function boot() {
   if (/[?&]fakedb\b/.test(location.search)) setTimeout(() => startPhone(), 1500);   // 測試：兩個分頁用假資料庫互打電話
-  if (/[?&]debug\b/.test(location.search)) window.__dbg = { get W() { return W; }, get CAM() { return CAM; }, get PL() { return PL; }, S, get BK() { return BK; }, get FW() { return FW; }, get DR() { return DR; }, get NM() { return NM; }, get BAL() { return BAL; }, get COA() { return COA; }, CSND, BGM, get DUCK() { return DUCK; }, get SG() { return SG; }, get FX() { return FX; }, get MY() { return MY; }, get IA() { return IA; }, get C() { return C; }, get JOBS() { return JOBS; }, get WAL() { return WAL; }, get GM() { return GM; }, get L() { return L; }, get K() { return K; }, get PL() { return PL; },
+  if (/[?&]debug\b/.test(location.search)) window.__dbg = { get W() { return W; }, get CAM() { return CAM; }, get PL() { return PL; }, S, get BK() { return BK; }, get FW() { return FW; }, get DR() { return DR; }, get NM() { return NM; }, get BAL() { return BAL; }, get COA() { return COA; }, CSND, get PH() { return PH; }, BGM, get DUCK() { return DUCK; }, get SG() { return SG; }, get FX() { return FX; }, get MY() { return MY; }, get IA() { return IA; }, get C() { return C; }, get JOBS() { return JOBS; }, get WAL() { return WAL; }, get GM() { return GM; }, get L() { return L; }, get K() { return K; }, get PL() { return PL; },
     fn: { boardBoat, boatStatus, boardBalloon, balloonStatus, boardDuck, duckStatus, boardCoaster, coasterAct, coasterStatus, leaveCoaster, rentBike, dismountBike, openShop, doDance, startMayorPick, endMayorPick, photoSpot, startTour, endTour, openGame, enterWalk, exitWalk, openIsland, openPhone, openFireworks, launchFirework, openDrones, droneShow, startDronePilot, openWallet, goAgency, openHideMenu } };   // 測試用（網址加 ?debug 才有）
   bindPhotoBar();
   $('#brandMascot').innerHTML = MASCOT;
@@ -3054,14 +3080,14 @@ async function boot() {
   if (Q.has('nogl') || !webglOK()) { textOnly(Q.has('nogl') ? '已切換為文字清單版' : '這台裝置無法顯示 3D 畫面'); applyTheme(); updateClock(); setInterval(updateClock, 10000); window.__ready = true; return; }
   let mods;
   try {
-    mods = await Promise.all([import('./world.js?v=20261126m'), import('./life.js?v=20261126m'), import('./cam.js?v=20261126m'), import('./players.js?v=20261126m'), import('./signs.js?v=20261126m'), import('./festival.js?v=20261126m'), import('./fauna.js?v=20261126m'), import('./interact.js?v=20261126m'), import('./games.js?v=20261126m')]);
+    mods = await Promise.all([import('./world.js?v=20261126n'), import('./life.js?v=20261126n'), import('./cam.js?v=20261126n'), import('./players.js?v=20261126n'), import('./signs.js?v=20261126n'), import('./festival.js?v=20261126n'), import('./fauna.js?v=20261126n'), import('./interact.js?v=20261126n'), import('./games.js?v=20261126n')]);
     const [{ createWorld, H: GROUND_H }, { createLife, makePerson }, { createCam }, { createPlayers }, { createSigns }, { createFestival }, { createFauna }, { createInteract }, { createGames, FISH }] = mods;
     GH = GROUND_H;
     const mobile = isLite();   // 手機和平板都用輕量版場景
     W = createWorld($('#gl'), { quality: S.quality, mobile });
     W.renderer.setPixelRatio(Math.min(devicePixelRatio, S.quality === 'low' ? 1 : (mobile ? 1.5 : 2)));
     L = createLife(W, C, { halfPeople: mobile || S.quality === 'low', quality: S.quality });
-    try { const { createCats } = await import('./cats.js?v=20261126m'); K = createCats(W, C, { reduced: () => S.reduced }); } catch (e) { console.warn('島上的貓載入失敗', e); K = null; }
+    try { const { createCats } = await import('./cats.js?v=20261126n'); K = createCats(W, C, { reduced: () => S.reduced }); } catch (e) { console.warn('島上的貓載入失敗', e); K = null; }
     CAM = createCam(W, $('#gl'), { onZoom: showZoom, onIntro: (k) => { L.setDeck(k < .3 ? 1 : Math.max(0, 1 - (k - .3) / .25)); if (k > .55) $('.intro-title').classList.add('show'); } });
     CAM.S.reduced = S.reduced; CAM.S.mobile = isMobile();
     PL = createPlayers(W, GROUND_H); renderMe(); startNet();
@@ -3070,33 +3096,33 @@ async function boot() {
     W.canLeave = () => { const s = L.carp.status(); if (s.docked && s.gang) return true; if (performance.now() - lastBlockToast > 3000) { lastBlockToast = performance.now(); toast('⛔ 航行中請待在船上，靠港放下跳板後再下船'); } return false; };
     // 彩虹熱氣球：起降坪在服務台島西南邊海上（木棧道＋圓形停機坪）；用網路時間排班，大家看到同一顆
     try {
-      const { createBalloon } = await import('./balloon.js?v=20261126m');
+      const { createBalloon } = await import('./balloon.js?v=20261126n');
       BAL = createBalloon(W, { pier: { island: 'center', angle: BAL_ANGLE }, now: () => (NET ? NET.now() : Date.now()), low: mobile || S.quality === 'low' });
       W.islands.center.entryAngles.push(BAL_ANGLE * Math.PI / 180);   // 熱氣球棧道的入口
       W.balloon = BAL; W.gates = [balloonGate];
     } catch (e) { console.warn('熱氣球載入失敗', e); BAL = null; }
     // 🦆 鴨子船：停在益智島南側的棧道；一樣用網路時間排班
     try {
-      const { createDuckBoat } = await import('./duckboat.js?v=20261126m');
+      const { createDuckBoat } = await import('./duckboat.js?v=20261126n');
       DUCK = createDuckBoat(W, { island: 'puzzle', now: () => (NET ? NET.now() : Date.now()), low: mobile || S.quality === 'low' });
       W.islands.puzzle.entryAngles.push(70 * Math.PI / 180);    // 鴨子船棧道的入口（duckboat.js 的預設角度）
       W.duck = DUCK; W.gates = [...(W.gates || []), duckGate];
     } catch (e) { console.warn('鴨子船載入失敗', e); DUCK = null; }
     // 🎢 雲霄飛車：軌道支柱的位置先保留（裝飾不會擺在那裡）
     try {
-      const { createCoaster } = await import('./coaster.js?v=20261126m');
+      const { createCoaster } = await import('./coaster.js?v=20261126n');
       COA = createCoaster(W, { now: () => (NET ? NET.now() : Date.now()), low: mobile || S.quality === 'low' });
       { const I = W.islands.sport, e = COA.station.land; I.entryAngles.push(Math.atan2(e.z - I.pos.z, e.x - I.pos.x)); }   // 雲霄飛車月台棧道的入口
       W.coaster = COA; W.coasterMe = () => (S.coaster ? COA.seatPose(S.coaster.seat) : null);
       COA.setSeatFor((id) => fxSeat.get(id));
     } catch (e) { console.warn('雲霄飛車載入失敗', e); COA = null; }
     // 🏛️ 市長任務：路燈候選位置先保留（裝飾不會擺在那裡）
-    try { const { createMayor } = await import('./mayor.js?v=20261126m'); MY = createMayor(W, { low: mobile || S.quality === 'low' }); } catch (e) { console.warn('市長任務載入失敗', e); MY = null; }
-    KIT = await import('./kit.js?v=20261126m');
-    SG = createSigns(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261126m')).rng, low: mobile || S.quality === 'low' });
-    FX = createFestival(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261126m')).rng, low: mobile || S.quality === 'low', avoid: [...(BAL ? BAL.avoid : []), ...(DUCK ? DUCK.avoid : []), ...(MY ? MY.avoid : []), ...(COA ? COA.avoid : []), ...SG.signs.map((s) => s.g.position), ...Object.values(W.islands).flatMap((I) => (I.trees || []).filter((tr) => tr.visible).map((tr) => tr.position.clone().add(I.pos)))], carp: L.carp });
+    try { const { createMayor } = await import('./mayor.js?v=20261126n'); MY = createMayor(W, { low: mobile || S.quality === 'low' }); } catch (e) { console.warn('市長任務載入失敗', e); MY = null; }
+    KIT = await import('./kit.js?v=20261126n');
+    SG = createSigns(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261126n')).rng, low: mobile || S.quality === 'low' });
+    FX = createFestival(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261126n')).rng, low: mobile || S.quality === 'low', avoid: [...(BAL ? BAL.avoid : []), ...(DUCK ? DUCK.avoid : []), ...(MY ? MY.avoid : []), ...(COA ? COA.avoid : []), ...SG.signs.map((s) => s.g.position), ...Object.values(W.islands).flatMap((I) => (I.trees || []).filter((tr) => tr.visible).map((tr) => tr.position.clone().add(I.pos)))], carp: L.carp });
     // 🏮 夜市燈火：燈籠串、攤位燈、島邊小燈、每座島的大暖燈（天黑才亮）
-    try { const { createNightMarket } = await import('./nightlights.js?v=20261126m'); const nmPaths = [], nmLamps = [];
+    try { const { createNightMarket } = await import('./nightlights.js?v=20261126n'); const nmPaths = [], nmLamps = [];
       if (BAL && BAL.dir) { const I = W.islands.center, d = BAL.dir, ang = Math.atan2(d.z, d.x), e = I.top(ang) * .97; nmPaths.push({ a: { x: I.pos.x + d.x * e, z: I.pos.z + d.z * e }, b: { x: BAL.pad.x - d.x * 3.2, z: BAL.pad.z - d.z * 3.2 }, w: .75 }); }   // 熱氣球木棧道
       if (COA && COA.station.land) nmPaths.push({ a: COA.station.land, b: COA.station.exit, w: .8 });                                                                   // 雲霄飛車月台棧道
       for (const I of Object.values(W.islands)) for (const c of I.colliders) if (c.r === .2) nmLamps.push({ x: I.pos.x + c.x, z: I.pos.z + c.z, r: 3.2 });            // 島上的路燈
@@ -3104,17 +3130,17 @@ async function boot() {
       NM = createNightMarket(W, { signs: SG.signs, low: mobile || S.quality === 'low', paths: nmPaths, lampSpots: nmLamps, glow: BAL && BAL.edgeLampM ? [{ m: BAL.edgeLampM, max: 2.4, min: .2 }] : [] }); } catch (e) { console.warn('夜市燈火載入失敗', e); NM = null; }
     try { setupTorch(); } catch (e) { console.warn("手電筒載入失敗", e); }
     // 🎆 煙火船：花鯉魚幣放煙火（停在市集北邊、鯉魚山後面的外海）
-    try { const { createFireworks } = await import('./fireworks.js?v=20261126m'); FW = createFireworks(W, { now: () => (NET ? NET.now() : Date.now()), low: mobile || S.quality === 'low', snd: SND, site: { x: 0, z: -44 } }); $('#fwBtn').hidden = false; fwListen(); } catch (e) { console.warn('煙火載入失敗', e); FW = null; }
+    try { const { createFireworks } = await import('./fireworks.js?v=20261126n'); FW = createFireworks(W, { now: () => (NET ? NET.now() : Date.now()), low: mobile || S.quality === 'low', snd: SND, site: { x: 0, z: -44 } }); $('#fwBtn').hidden = false; fwListen(); } catch (e) { console.warn('煙火載入失敗', e); FW = null; }
     // 🚁 無人機：基地放在服務台島的空地；燈光秀在北邊夜空（煙火船旁邊）
     try {
-      const { createDrones } = await import('./drones.js?v=20261126m');
+      const { createDrones } = await import('./drones.js?v=20261126n');
       const ds = FX.freeSpot('center', 1.4, 1.8);
       DR = createDrones(W, { now: () => (NET ? NET.now() : Date.now()), low: mobile || S.quality === 'low', base: ds ? { x: ds.x, z: ds.z, face: ds.face } : null, showSite: { x: 0, z: -40 }, onShotKey: () => droneShot() });
       $('#drBtn').hidden = false;
     } catch (e) { console.warn('無人機載入失敗', e); DR = null; }
     // 🚲 借車點與環島自行車道（車架放在服務台島的空地；車道沿著原本的石板環路）
     try {
-      BIKE_MOD = await import('./bike.js?v=20261126m');
+      BIKE_MOD = await import('./bike.js?v=20261126n');
       const rs = FX.freeSpot('center', 1.3, 1.7);
       BK = BIKE_MOD.createBikes(W, { spot: rs ? { x: rs.x, z: rs.z, face: rs.face } : null, islandName: (id) => (islandById(id) || {}).name || id, low: mobile || S.quality === 'low' });
       W.gates = [...(W.gates || []), bikeGate];
@@ -3122,7 +3148,7 @@ async function boot() {
     if (MY) { const ms = FX.freeSpot('center', .9, 1.2) || FX.freeSpot('center', .6, .9) || boardSpotScan(); MY.placeBoard(ms ? { x: ms.x, z: ms.z, face: ms.face } : null); MY.setLamps(lampState()); }   // 找不到大空地就放寬條件，不要用固定的備用位置（會立在車道上）
     // 👕 服飾店（服務台島的小攤子）
     try {
-      STY = await import('./style.js?v=20261126m');
+      STY = await import('./style.js?v=20261126n');
       const ss = FX.freeSpot('center', 1.1, 1.5);
       SHOP = STY.createShop(W, { spot: ss ? { x: ss.x, z: ss.z, face: ss.face } : null, low: mobile || S.quality === 'low' });
       applyLook();
@@ -3140,7 +3166,7 @@ async function boot() {
       }
       return best;
     });
-    FA = createFauna(W, { H: GROUND_H, rng: (await import('./kit.js?v=20261126m')).rng });
+    FA = createFauna(W, { H: GROUND_H, rng: (await import('./kit.js?v=20261126n')).rng });
     IA = createInteract(W, C, GROUND_H, {
       toast, carp: L.carp,
       toastIf: (m) => { if (!S.intro) toast(m); },

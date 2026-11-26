@@ -698,7 +698,7 @@ html[data-theme="deep"] .job-msg { background: #23402a; color: #bff0c6; } html[d
 .mayorbar .x { white-space: nowrap; }
 
 /* 📞 遊戲電話 */
-.callcard { position: fixed; z-index: 40; right: 16px; bottom: 96px; width: min(360px, calc(100vw - 32px)); max-height: min(60vh, 460px); overflow: auto; background: var(--surface); border: 3px solid #3e9b4f; border-radius: 18px; box-shadow: var(--shadow); padding: 12px 14px; }
+.callcard { position: fixed; z-index: 40; right: 16px; bottom: 96px; width: min(360px, calc(100vw - 32px)); max-height: min(70vh, 540px); overflow: auto; background: var(--surface); border: 3px solid #3e9b4f; border-radius: 18px; box-shadow: var(--shadow); padding: 12px 14px; }
 .callcard[hidden] { display: none; }
 .callcard .cc-t { margin: 0 0 8px; font-size: 15px; }
 .callcard .cc-heard { margin: 0 0 6px; background: #e7f6ec; border-radius: 12px; padding: 6px 10px; }
@@ -877,3 +877,12 @@ html[data-theme="deep"] .ticket.coa { background: #4a2414; color: #ffd2bd; }
 .qr-btns { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
 .qr-btns .btn { flex: 1; min-width: 120px; text-align: center; }
 .qr-btns a.btn { text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
+
+/* 📞 電話：自己打字 */
+.callcard .cc-type { display: flex; gap: 6px; margin: 8px 0 2px; }
+.callcard .cc-type input { flex: 1; min-width: 0; min-height: 40px; border: 2px solid var(--line); border-radius: 12px; padding: 0 10px; font: inherit; background: var(--surface); color: var(--ink); }
+.callcard .cc-type input:focus { outline: none; border-color: var(--accent); }
+.callcard .cc-type .btn { flex: none; min-height: 40px; padding: 0 14px; }
+.callcard .cc-rule { margin: 2px 0 0; font-size: 11.5px; color: var(--muted); }
+.callcard .cc-rule .over { color: #b3261e; font-weight: 900; }
+.callcard .cc-err { margin: 4px 0 0; font-size: 13px; font-weight: 700; color: #b3261e; }
