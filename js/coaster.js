@@ -3,8 +3,8 @@
 // 大俯衝、海面波浪段，再依序飛過循環挖寶島、手作體驗二島、美食補給島、手作體驗一島，回到車站。
 // 時程用「網路時間」排班（所有裝置看到同一班車）：停站 25 秒 → 跑一圈 → 回站。
 import * as THREE from 'three';
-import { TAU, clamp } from './kit.js?v=20261126h';
-import { H } from './world.js?v=20261126h';
+import { TAU, clamp } from './kit.js?v=20261126i';
+import { H } from './world.js?v=20261126i';
 
 export const COASTER_CAP = 8;                 // 4 節車廂 × 每節 2 人
 const DOCK = 25;                              // 停站秒數
@@ -316,6 +316,9 @@ export function createCoaster(W, opts) {
   // ------------------------------------------------ 📸 大迴圈照：照相機在迴圈中心點的正側邊、對著圓心，整個圓圈框住車子；車子在最高點頭下腳上時拍
   let loopS = -1, loopY = -1;
   for (let s0 = 0; s0 < L; s0 += .2) { const q = sample(s0).p; if (Math.hypot(q.x - LB.x, q.z - LB.z) < LR + 1.6 && q.y > loopY) { loopY = q.y; loopS = s0; } }
+  // 尖叫的重點時段：坡頂 → 大俯衝最低點 → 迴圈最高點 → 出迴圈
+  let diveBottomS = topS, dbY = 99; for (let s0 = topS; s0 < loopS - 6; s0 += .2) { const y = sample(s0).p.y; if (y < dbY) { dbY = y; diveBottomS = s0; } }
+  let loopExitS = loopS; for (let s0 = loopS; s0 < loopS + 20; s0 += .2) { const q = sample(s0).p; if (Math.hypot(q.x - LB.x, q.z - LB.z) < LR + 1.6 && q.y > 2.6) loopExitS = s0; else break; }
   const loopTop = sample(loopS).p, loopC = LB.clone().addScaledVector(UP, LR);
   loopC.addScaledVector(LS, loopTop.clone().sub(loopC).dot(LS));          // 圓心和最高點在同一個側面位置
   const loopSide = loopC.clone().setY(0).dot(LS) >= 0 ? 1 : -1;           // 站在離市集比較遠的那一側，往市集方向拍（背景是島）
@@ -708,6 +711,8 @@ export function createCoaster(W, opts) {
     thrill: () => cur.phase === 'ride' && (cur.s - lastS) > 0 && sample(cur.s).t.y < -.25,   // 正在往下衝
     status: () => ({ phase: cur.phase, docked: cur.phase === 'dock', left: Math.ceil(cur.left), eta: Math.ceil(cur.eta), s: cur.s }),
     speed: () => cur.v || 0,
+    topS, diveBottomS: () => diveBottomS, loopExitS: () => loopExitS,
+    travelTime: (s0, s1) => { const tAt = (x) => { let lo = 0, hi = dist.length - 1; while (hi - lo > 1) { const m = (lo + hi) >> 1; if (dist[m] < x) lo = m; else hi = m; } return times[hi]; }; return Math.max(0, tAt(s1) - tAt(s0)); },
     profile: () => ({ times, speeds, dist, topS, brakeS: BRAKE_S, L, at: (s0) => { const q = sample(s0); return [q.p.y, q.t.y]; } }),
     grade: () => (cur.phase === 'dock' ? 0 : sample(cur.s).t.y),
     anchor: () => cars[0].position,
