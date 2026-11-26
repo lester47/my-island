@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261126u">
+<link rel="stylesheet" href="styles.css?v=20261126v">
 <script type="importmap">{"imports":{"three":"./vendor/three/three.module.js","three/addons/":"./vendor/three/addons/"}}</script>
 </head>
 <body>
@@ -290,8 +290,19 @@
   <div id="doneBody"></div>
 </dialog>
 
+<!-- 🕙 休市畫面：22:00～06:00（老師名冊上的帳號不受限制） -->
+<dialog class="closed-scr" id="closedScr" aria-labelledby="closedTitle">
+  <div class="closed-card">
+    <div class="closed-moon" aria-hidden="true">🌙</div>
+    <h2 id="closedTitle">鯉魚市集休市中</h2>
+    <p class="closed-hours">營業時間：每天 <b>06:00</b> ～ <b>22:00</b></p>
+    <p class="closed-left" id="closedLeft"></p>
+    <p class="closed-msg">大家都回家睡覺了，鯉魚也在池塘裡休息 🐟💤<br>明天早上 6 點再來玩吧！</p>
+    <div class="closed-tch" id="closedTch"></div>
+  </div>
+</dialog>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <noscript><p class="noscript">這個網站需要開啟 JavaScript。</p></noscript>
-<script type="module" src="js/main.js?v=20261126u"></script>
+<script type="module" src="js/main.js?v=20261126v"></script>
 </body>
 </html>
