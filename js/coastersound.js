@@ -135,6 +135,14 @@ export function createCoasterSound() {
         t += len - .05 + .12 + Math.random() * .2;                               // 換氣
       }
     }
+    // 爆發點（迴圈最高點）：再多加幾個人，音高往上拉成尖銳的「呀啊啊啊——！」，從頂點前一點點叫到頂點過後
+    for (const p of peaks) if (p.burst && p.at > 0 && p.at < dur + .5) {
+      const k = n + 3, t0 = now + Math.max(0, p.at - .45);
+      for (let i = 0; i < k; i++) {
+        const f0 = (720 + Math.random() * 420) * (i % 3 === 0 ? 1.25 : 1), len = 1.3 + Math.random() * .6;
+        voice(c, t0 + i * .035 + Math.random() * .06, len, f0, (.2 + Math.random() * .08) / Math.sqrt(k) * 1.6, bus);
+      }
+    }
     setTimeout(() => { try { bus.disconnect(); } catch (e) { /* 已經斷了 */ } }, (dur + 3) * 1000);
   }
   // 短短的尖叫（保留給別的地方用）
