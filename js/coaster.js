@@ -636,7 +636,11 @@ export function createCoaster(W, opts) {
     const night = nightN > .05;
     for (const b of beams) b.m.visible = !on && night;
     for (const b of carBeams) b.beam.visible = !on && night;
-    if (on && night && camPos) { flash.position.copy(camPos).lerp(target || camPos, .25); flash.intensity = 60 + 140 * nightN; }
+    if (on && night && camPos) {   // 照相機離車子越近，閃光越弱（俯衝照比較近，不然車廂會被照成一片白）
+      flash.position.copy(camPos).lerp(target || camPos, .25);
+      const d = target ? camPos.distanceTo(target) : 11.5;
+      flash.intensity = (60 + 140 * nightN) * Math.pow(d / 11.5, 1.6) * (d < 9 ? .55 : 1);
+    }
     else flash.intensity = 0;
   }
   let chaseT = 0, nightN = 0;
