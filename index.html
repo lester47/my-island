@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261125f">
+<link rel="stylesheet" href="styles.css?v=20261126d">
 <script type="importmap">{"imports":{"three":"./vendor/three/three.module.js","three/addons/":"./vendor/three/addons/"}}</script>
 </head>
 <body>
@@ -83,6 +83,7 @@
   <button type="button" class="hchip" id="catBtn" aria-label="貓咪圖鑑"><span aria-hidden="true">🐾</span><b id="catCount">0/6</b></button>
 </div>
 <button type="button" class="ticket" id="ticketChip" hidden></button>
+<button type="button" class="ticket coa" id="coaQChip" hidden></button>
 <div class="photobar mayorbar" id="mayorBar" role="toolbar" aria-label="選路燈位置" hidden><span class="mb-t">💡 點發亮的號碼，選路燈的位置</span><button type="button" class="x" id="mayorCancel">✕ 取消</button></div>
 <div class="photobar" id="photoBar" role="toolbar" aria-label="合照視角" hidden>
   <button type="button" data-view="far">🏞️ 遠景</button>
@@ -179,6 +180,14 @@
   <div class="dlg-hd"><h2 id="planTitle">⭐ 我的必逛＋鯉魚幣預算</h2><button type="button" class="x" data-close aria-label="關閉">✕</button></div>
   <div id="planBody"></div>
 </dialog>
+<dialog id="seatDlg" class="dlg" aria-labelledby="seatTitle">
+  <div class="dlg-hd"><h2 id="seatTitle">💺 選雲霄飛車座位</h2><button type="button" class="x" data-close aria-label="關閉">✕</button></div>
+  <div id="seatBody"></div>
+</dialog>
+<dialog id="cpDlg" class="dlg wide" aria-labelledby="cpTitle">
+  <div class="dlg-hd"><h2 id="cpTitle">🗺️ 線上鯉魚幣怎麼玩</h2><button type="button" class="x" data-close aria-label="關閉">✕</button></div>
+  <div id="cpBody"></div>
+</dialog>
 <dialog id="fishDlg" class="dlg" aria-labelledby="fishTitle">
   <div class="dlg-hd"><h2 id="fishTitle">📖 釣魚圖鑑</h2><button type="button" class="x" data-close aria-label="關閉">✕</button></div>
   <div id="fishBody"></div>
@@ -204,6 +213,10 @@
   <img id="coaPhotoImg" class="coa-photo" alt="坐雲霄飛車衝下坡時，軌道旁照相機拍的照片">
   <div class="chal-btns"><a class="btn" id="coaPhotoSave" href="#" download>💾 存下來</a></div>
   <p class="foot">照片只存在你的裝置，不會上傳。</p>
+</dialog>
+<dialog id="payDlg" class="dlg pay-dlg" aria-labelledby="payTitle">
+  <div class="dlg-hd"><h2 id="payTitle">🪙 確定要付錢嗎？</h2><button type="button" class="x" data-close aria-label="關閉">✕</button></div>
+  <div id="payBody"></div>
 </dialog>
 <dialog id="drDlg" class="dlg" aria-labelledby="drTitle">
   <div class="dlg-hd"><h2 id="drTitle">🚁 無人機</h2><button type="button" class="x" data-close aria-label="關閉">✕</button></div>
@@ -265,6 +278,6 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <noscript><p class="noscript">這個網站需要開啟 JavaScript。</p></noscript>
-<script type="module" src="js/main.js?v=20261125f"></script>
+<script type="module" src="js/main.js?v=20261126d"></script>
 </body>
 </html>

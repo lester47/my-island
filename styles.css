@@ -766,3 +766,94 @@ body.droning .hud, body.droning .tools, body.droning .ticket, body.droning #labe
 .ad-alert ul { margin: 4px 0 0; padding-left: 18px; }
 .ad-tbl tr.flag td { background: #fff4f2; }
 .ad-flag { color: #c0392b; font-weight: 800; }
+
+/* 🪙 付錢確認 */
+.pay-dlg { max-width: 360px; }
+.pay-q { font-size: 1.05rem; line-height: 1.7; margin: 4px 0 10px; }
+.pay-skip { display: flex; align-items: center; gap: 6px; font-size: 14px; color: #555; margin: 0 0 12px; cursor: pointer; }
+.pay-skip input { width: 18px; height: 18px; }
+.pay-btns { display: flex; gap: 8px; justify-content: flex-end; }
+
+/* 🗺️ 線上鯉魚幣行程規劃（js/coinplan.js） */
+.cp-open { width: 100%; margin: 0 0 8px; }
+.cp-link { display: flex; align-items: center; gap: 10px; width: 100%; margin: 0 0 10px; padding: 10px 12px; border: 2px solid var(--accent); border-radius: 14px; background: var(--surface2); color: var(--ink); font: inherit; text-align: left; cursor: pointer; }
+.cp-link > span:first-child { font-size: 26px; }
+.cp-link > span:nth-child(2) { flex: 1; }
+.cp-link small { display: block; color: var(--muted); font-size: 12px; }
+.cp-link > span:last-child { font-size: 22px; font-weight: 900; color: var(--accent); }
+.cp-tabs { display: flex; gap: 6px; margin-bottom: 10px; position: sticky; top: 0; z-index: 2; background: var(--surface); padding-bottom: 4px; }
+.cp-tabs button { flex: 1; min-height: 44px; border: 2px solid var(--line); border-radius: 12px; background: var(--surface2); color: var(--ink); font: inherit; font-weight: 900; font-size: 14px; cursor: pointer; }
+.cp-tabs button.on { background: var(--primary); color: var(--primary-ink); border-color: var(--primary); }
+.cp-budget { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; font-weight: 700; font-size: 14px; }
+.cp-pill { min-height: 36px; padding: 0 12px; border-radius: 999px; border: 2px solid var(--line); background: var(--surface2); color: var(--ink); font: inherit; font-weight: 700; cursor: pointer; }
+.cp-pill.on { border-color: var(--accent); background: #fff3d1; color: #5a3a0a; }
+.cp-lead { margin: 0 0 10px; font-weight: 700; }
+.cp-pkgs { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; }
+.cp-pkg { display: flex; flex-direction: column; gap: 8px; border: 2px solid var(--line); border-radius: 16px; padding: 12px; background: var(--surface2); }
+.cp-pkg.mine { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(63, 125, 58, .18); }
+.cp-pkg-hd { display: flex; gap: 8px; align-items: flex-start; }
+.cp-pkg-hd > div { flex: 1; }
+.cp-pkg h3 { margin: 0; font-size: 16px; }
+.cp-pkg-hd small { color: var(--muted); font-size: 12.5px; line-height: 1.5; }
+.cp-ic { font-size: 24px; line-height: 1; flex: none; width: 30px; text-align: center; }
+.cp-price { white-space: nowrap; background: #ffd23a; color: #5a3a0a; border-radius: 999px; padding: 2px 10px; font-size: 14px; }
+.cp-price.over { background: #fdeaea; color: #a32020; }
+.cp-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.cp-chip { font-size: 12.5px; padding: 3px 8px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); }
+.cp-chip b { margin-left: 2px; color: var(--primary); }
+.cp-tip { margin: 0; font-size: 12.5px; color: var(--muted); line-height: 1.6; }
+.cp-tip.why, .cp-bar.over .cp-bar-t span { color: #b3261e; font-weight: 700; }
+.cp-acts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: auto; }
+.cp-acts .btn { flex: 1; min-width: 110px; }
+.cp-acts.sticky { position: sticky; bottom: -2px; background: var(--surface); padding: 8px 0 2px; margin-top: 8px; }
+.cp-bar { position: sticky; top: 52px; z-index: 1; background: #fff7e0; color: #2b2210; border: 2px solid var(--accent); border-radius: 14px; padding: 8px 12px; margin-bottom: 8px; }
+.cp-bar.over { background: #fdeaea; border-color: #dc4848; }
+.cp-bar-t { display: flex; justify-content: space-between; gap: 8px; font-size: 14px; }
+.cp-meter { height: 12px; border-radius: 999px; background: #efe5c8; margin-top: 6px; overflow: hidden; }
+.cp-meter i { display: block; height: 100%; background: linear-gradient(90deg, #ffd23a, #e3a33b); border-radius: inherit; transition: width .25s; }
+.cp-bar.over .cp-meter i { background: #dc4848; }
+.cp-h { margin: 12px 0 6px; font-size: 15px; }
+.cp-rows, .cp-todo { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.cp-rows { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+.cp-row, .cp-todo li { display: flex; align-items: center; gap: 8px; background: var(--surface2); border: 2px solid transparent; border-radius: 12px; padding: 6px 8px; }
+.cp-row.on { border-color: var(--accent); }
+.cp-main { flex: 1; min-width: 0; }
+.cp-main small { display: block; color: var(--muted); font-size: 12px; }
+.cp-step { display: inline-flex; align-items: center; gap: 4px; }
+.cp-step b { min-width: 20px; text-align: center; }
+.cp-step button { width: 36px; height: 36px; border-radius: 50%; border: 0; background: var(--surface); color: var(--ink); box-shadow: var(--shadow); font-size: 18px; font-weight: 900; cursor: pointer; }
+.cp-step button:disabled { opacity: .35; cursor: default; box-shadow: none; }
+.cp-sum { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 10px; text-align: center; }
+.cp-sum div { background: var(--surface2); border-radius: 12px; padding: 8px 4px; }
+.cp-sum b { display: block; font-size: 22px; }
+.cp-sum small { color: var(--muted); font-size: 12px; }
+.cp-todo li.done { opacity: .6; }
+.cp-todo li.done .cp-main > b { text-decoration: line-through; }
+.cp-ticks { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.cp-ticks button { width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--line); background: var(--surface); color: var(--muted); font-weight: 900; font-size: 13px; cursor: pointer; }
+.cp-ticks button.on { background: var(--primary); border-color: var(--primary); color: var(--primary-ink); }
+.cp-go { min-height: 36px; padding: 0 12px; flex: none; }
+.cp-yay { font-weight: 900; color: var(--primary); }
+html[data-theme="deep"] .cp-pill.on { background: #4a3a14; color: #ffe6a8; }
+@media (max-width: 520px) { .cp-tabs button { font-size: 13px; padding: 0 4px; } .cp-bar { top: 50px; } }
+
+/* 🎫 雲霄飛車掛號號碼牌：疊在擼貓號碼牌上面一格 */
+.ticket.coa { bottom: 134px; background: #ffe9dc; color: #7a2410; border-color: #c23a1c; }
+html[data-theme="deep"] .ticket.coa { background: #4a2414; color: #ffd2bd; }
+@media (max-width: 760px) { .ticket.coa { bottom: 188px; } }
+@media (max-width: 480px) { .ticket.coa { bottom: 202px; } }
+
+/* 💺 雲霄飛車選座位 */
+.seat-q { margin: 0 0 10px; font-weight: 700; line-height: 1.6; }
+.seat-train { display: grid; gap: 6px; padding: 8px; border-radius: 16px; background: var(--surface2); border: 2px solid var(--line); }
+.seat-dir { text-align: center; font-size: 12px; font-weight: 900; color: var(--muted); }
+.seat-car { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 14px; color: #fff; }
+.seat-car.c0 { background: #e4532c; } .seat-car.c1 { background: #d9a020; } .seat-car.c2 { background: #2f7fd1; } .seat-car.c3 { background: #3e9b4f; }
+.seat-cn { flex: 1; font-weight: 900; font-size: 13.5px; text-shadow: 0 1px 2px rgba(0,0,0,.35); }
+.seat-pair { display: flex; gap: 6px; }
+.seat { min-width: 64px; min-height: 48px; border-radius: 12px; border: 3px solid rgba(255,255,255,.85); background: #fff; color: #2b2210; font: inherit; font-weight: 900; cursor: pointer; }
+.seat.on { background: #ffd23a; border-color: #fff; box-shadow: 0 0 0 3px #2b2210; }
+.seat.taken { background: rgba(255,255,255,.35); color: #fff; border-style: dashed; cursor: not-allowed; }
+.seat-now { margin: 8px 0; }
+@media (max-width: 420px) { .seat { min-width: 54px; } .seat-cn { font-size: 12.5px; } }
+#seatBody .pay-btns { flex-wrap: wrap; } #seatBody .pay-btns .btn { flex: 1; min-width: 96px; }

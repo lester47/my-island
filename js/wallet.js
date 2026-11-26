@@ -1,5 +1,5 @@
 // 🪙 線上鯉魚幣錢包（Firebase）
-// 規則：每天固定發起始幣，當天結束歸零（隔天重新發）；打工每天最多賺 dailyJob；錢包最多 cap。
+// 規則：每天固定發起始幣，當天結束歸零（隔天重新發）；打工每天最多賺 dailyJob（0＝不限）；錢包最多 cap。
 // 跟現場的實體鯉魚幣無關，也不能用真錢買。
 // 資料：market/wallets/{uid}（自己的錢包）、market/grants/{uid}（老師加發／扣回）、market/frozen/{uid}（凍結）、
 //       market/adminEmails/{email}（老師名冊：用 email 登入的老師，. 換成 ,）、market/inbox/{uid}（收到的請客券）、market/refunds/{uid}（被退回的請客券）、
@@ -18,9 +18,10 @@ export function createWallet({ cfg, onChange, toast }) {
   const today = () => new Date(now()).toLocaleDateString('sv-SE', { timeZone: DAY_TZ });
   // 台灣日期的「第幾天」（伺服器規則用同一個算法檢查：不能自己把日期往後調來重領起始幣）
   const dayNo = () => Math.floor((now() + 8 * 3600e3) / 86400e3);
-  const GAIN_CAP = cfg.gainCap ?? 100;   // 每天「賺來的」最多幾枚（打工、獎勵、收到的請客）：跟伺服器規則一致
+  const GAIN_CAP = cfg.gainCap ?? 500;   // 每天「賺來的」最多幾枚（打工、獎勵、收到的請客）：跟伺服器規則一致
+  const RF_CAP = cfg.refundCap ?? 60;     // 每天最多退款幾枚（擼貓過號、放棄排隊、請客券被退回…）：跟伺服器規則一致
   const fresh = (old) => ({
-    day: today(), dn: dayNo(), bal: cfg.start, earned: 0, gain: 0, plays: {}, jobAt: {}, treats: 0, inT: cfg.start, outT: 0,
+    day: today(), dn: dayNo(), bal: cfg.start, earned: 0, gain: 0, rf: 0, plays: {}, jobAt: {}, treats: 0, inT: cfg.start, outT: 0,
     log: [{ t: now(), k: 'start', a: cfg.start, n: '今天的起始幣' }],
     bonusEver: (old && old.bonusEver) || {}, applied: (old && old.applied) || {},
   });
@@ -30,7 +31,7 @@ export function createWallet({ cfg, onChange, toast }) {
     w = { ...w };
     for (const k of ['plays', 'jobAt', 'bonusEver', 'applied']) if (!w[k] || typeof w[k] !== 'object') w[k] = {};
     if (!Array.isArray(w.log)) w.log = w.log && typeof w.log === 'object' ? Object.values(w.log) : [];
-    for (const k of ['bal', 'earned', 'treats', 'inT', 'outT', 'gain']) if (typeof w[k] !== 'number') w[k] = 0;
+    for (const k of ['bal', 'earned', 'treats', 'inT', 'outT', 'gain', 'rf']) if (typeof w[k] !== 'number') w[k] = 0;
     if (typeof w.dn !== 'number') w.dn = dayNo();   // 舊版錢包：補上日期編號
     return w;
   };
@@ -115,7 +116,7 @@ export function createWallet({ cfg, onChange, toast }) {
             fb.remove(R(`market/refunds/${uid}/${id}`)).catch(() => {});
             if (w.applied['r' + id] || !x || typeof x.a !== 'number') continue;
             w.applied['r' + id] = 1;
-            const a = Math.min(Math.max(0, Math.round(x.a)), cfg.treatMax, cfg.cap - w.bal, w.outT); w.bal += a; w.outT -= a;   // 退回＝退款：今天花掉的減少
+            const a = Math.max(0, Math.min(Math.round(x.a), cfg.treatMax, cfg.cap - w.bal, w.outT, RF_CAP - w.rf)); w.bal += a; w.outT -= a; w.rf += a;   // 退回＝退款：今天花掉的減少
             log('refund', a, x.n || '請客券退回'); toast(`↩️ ${x.n || '請客券被退回'}，${a} 枚還給你`);
             save();                                                                            // 一筆一存：伺服器一次只接受一種異動
           }
@@ -138,18 +139,18 @@ export function createWallet({ cfg, onChange, toast }) {
       log(kind, -price, note); save(); return '';
     },
     // 退款：只能退今天真的花掉的錢（伺服器規則：退款＝「今天花掉的」減少一樣多）
-    refund(a, note) { const w = ensure(); const got = Math.max(0, Math.min(a, cfg.cap - w.bal, w.outT)); if (!got) return 0; w.bal += got; w.outT -= got; log('refund', got, note); save(); return got; },
+    refund(a, note) { const w = ensure(); const got = Math.max(0, Math.min(a, cfg.cap - w.bal, w.outT, RF_CAP - w.rf)); if (!got) return 0; w.bal += got; w.outT -= got; w.rf += got; log('refund', got, note); save(); return got; },
     // ---- 賺錢：打工有每日上限，錢包有上限
     earn(a, kind, note, isJob) {
       const w = ensure(); if (st.frozen) return 0;
       if (api.test) { log(kind, 0, `🧪 ${note}（老師測試：會賺 ${a} 枚）`); save(); return a; }
       let got = Math.min(a, cfg.cap - w.bal, GAIN_CAP - w.gain, 50);
-      if (isJob) got = Math.min(got, cfg.dailyJob - w.earned);
+      if (isJob && cfg.dailyJob > 0) got = Math.min(got, cfg.dailyJob - w.earned);
       got = Math.max(0, got);
       if (got) { w.bal += got; w.inT += got; w.gain += got; if (isJob) w.earned += got; log(kind, got, note); save(); }
       return got;
     },
-    jobLeft() { return api.test ? Infinity : Math.max(0, cfg.dailyJob - ensure().earned); },
+    jobLeft() { return api.test || !(cfg.dailyJob > 0) ? Infinity : Math.max(0, cfg.dailyJob - ensure().earned); },
     jobWait(job, cool) { if (api.test) return 0; const t = ensure().jobAt[job] || 0; return Math.max(0, Math.ceil((t + cool * 1000 - now()) / 1000)); },
     markJob(job) { ensure().jobAt[job] = now(); save(); },
     // 一輩子只發一次的獎勵（集章、圖鑑）
@@ -162,11 +163,20 @@ export function createWallet({ cfg, onChange, toast }) {
       if (toUid === st.uid) return '不能請自己喔';
       const w = st.w; if (w.bal < a) return '你的線上鯉魚幣不夠';
       const id = `${now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, me = (profile() || {}).name || '同學';
+      // 請客券和自己的錢包扣款「一起」寫：伺服器會檢查送出的金額＝自己錢包少掉的錢，對不上就整筆拒絕（不能不花錢一直送）
+      const nw = { ...w, bal: w.bal - a, outT: w.outT + a, treats: (w.treats || 0) + 1, tr: id };
+      nw.log = [{ t: now(), k: 'treat', a: -a, n: `請 ${String(toName).slice(0, 16)} ${a} 枚` }, ...(w.log || [])].slice(0, 40);
+      const p = profile() || {};
       try {
-        await fb.set(fb.ref(NET.db, `market/inbox/${toUid}/${id}`), { from: st.uid, fromName: me, a, t: fb.serverTimestamp(), day: today() });
-        fb.set(fb.ref(NET.db, `market/treatLog/${id}`), { from: st.uid, to: toUid, fromName: me, toName: String(toName).slice(0, 16), a, st: 'sent', t: fb.serverTimestamp() }).catch(() => {});
-      } catch (e) { return '送不出去：請老師確認 Firebase 規則'; }
-      w.bal -= a; w.outT += a; w.treats += 1; log('treat', -a, `請 ${toName} ${a} 枚`); save(); return '';
+        await saving;
+        await fb.update(fb.ref(NET.db), {
+          [`market/wallets/${st.uid}`]: { ...nw, name: p.name || '', role: p.role || '', upd: fb.serverTimestamp() },
+          [`market/inbox/${toUid}/${id}`]: { from: st.uid, fromName: me, a, t: fb.serverTimestamp(), day: today() },
+        });
+      } catch (e) { return '送不出去：請客券和錢包對不上，請重新整理再試'; }
+      st.w = nw; onChange();
+      fb.set(fb.ref(NET.db, `market/treatLog/${id}`), { from: st.uid, to: toUid, fromName: me, toName: String(toName).slice(0, 16), a, st: 'sent', t: fb.serverTimestamp() }).catch(() => {});
+      return '';
     },
     // 收下／退回／告訴老師
     async answerTreat(item, how) {

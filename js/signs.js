@@ -1,7 +1,7 @@
 // 攤位實體：每個攤位在自己的島上有一座小攤子（桌子、條紋遮雨棚、招牌、依類型擺的道具）
 // 招牌寫攤號和攤名，前後兩面都有字；點攤子或招牌就打開那一攤的攤位卡
 import * as THREE from 'three';
-import { batchStatic } from './kit.js?v=20261125f';
+import { batchStatic } from './kit.js?v=20261126d';
 
 const TAU = Math.PI * 2;
 const FONT = '"Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif';

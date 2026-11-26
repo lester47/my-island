@@ -79,15 +79,19 @@ export function createNet(config, hooks) {
 
   // 人物的小狀態（🚲 騎車、💃 跳舞、🐶 寵物…）：放在另一個路徑 market/fx/{uid}，
   // 就算 Firebase 規則還沒加上這個路徑，也不會影響人物位置的同步（寫不進去就只有自己看得到）
-  let fxMe = {}, fxRef = null, fxWarned = false;
+  let fxMe = {}, fxRef = null, fxWarned = false, noSeat = false;
   function setFx(patch) {
+    if (noSeat && patch && 'seat' in patch) { patch = { ...patch }; delete patch.seat; }
     fxMe = { ...fxMe, ...patch };
     for (const k in fxMe) if (fxMe[k] === '' || fxMe[k] == null) delete fxMe[k];
     if (!uid) return;
     fxRef = ref(db, `${ROOT}/fx/${uid}`);
     const data = Object.keys(fxMe).length ? { ...fxMe, t: serverTimestamp() } : null;
     const w = data ? onDisconnect(fxRef).remove().then(() => set(fxRef, data)) : remove(fxRef);
-    w.catch((e) => { if (!fxWarned) { fxWarned = true; console.warn('Firebase 規則還沒加上 market/fx：騎車、跳舞、寵物先只有自己看得到', e && e.code); } });
+    w.catch((e) => {
+      // 舊版規則不認得座位（seat）欄位會整筆被擋：先拿掉座位再送一次，騎車、配件、寵物照常同步
+      if (data && 'seat' in fxMe && !noSeat) { noSeat = true; console.warn('Firebase 規則還沒認得雲霄飛車座位，先不同步座位'); delete fxMe.seat; setFx({}); return; }
+      if (!fxWarned) { fxWarned = true; console.warn('Firebase 規則還沒加上 market/fx：騎車、跳舞、寵物先只有自己看得到', e && e.code); } });
   }
   const fxSub = () => { if (!uid) { setTimeout(fxSub, 400); return; } onValue(ref(db, `${ROOT}/fx`), (s) => { const all = s.val() || {}; if (hooks.onFx) hooks.onFx(all, uid); }, () => {}); };
   fxSub();
