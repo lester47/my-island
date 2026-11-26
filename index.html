@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261126q">
+<link rel="stylesheet" href="styles.css?v=20261126r">
 <script type="importmap">{"imports":{"three":"./vendor/three/three.module.js","three/addons/":"./vendor/three/addons/"}}</script>
 </head>
 <body>
@@ -61,6 +61,10 @@
   <div class="row">
     <button type="button" class="chip" id="musicBtn" aria-pressed="true">🎵 背景音樂</button>
     <button type="button" class="chip" id="muteBtn" aria-pressed="false">🔇 全部靜音</button>
+  </div>
+  <div class="row bgm-opts">
+    <label class="bgm-lab">🎼 曲風 <select id="bgmStyle" class="pp-in" aria-label="背景音樂的曲風"></select></label>
+    <label class="bgm-lab">🔉 音量 <input type="range" id="bgmVol" min="0" max="150" step="10" value="100" aria-label="背景音樂音量"><b id="bgmVolTx">100%</b></label>
   </div>
   <div class="row">
     <button type="button" class="chip" id="replayBtn">🎬 重播開場</button>
@@ -287,6 +291,6 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <noscript><p class="noscript">這個網站需要開啟 JavaScript。</p></noscript>
-<script type="module" src="js/main.js?v=20261126q"></script>
+<script type="module" src="js/main.js?v=20261126r"></script>
 </body>
 </html>
