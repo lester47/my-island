@@ -1,12 +1,12 @@
 // 115 鯉魚市集｜介面與流程
 import * as THREE from 'three';
-import { ROLES, OUTFITS, HATS } from './roles.js?v=20261126c';
-import { createMeowBox } from './meow.js?v=20261126c';
-import { REACTIONS, REACTION_IDS, playReaction } from './cats.js?v=20261126c';
-import { createCatNet, SEATS, REST, CALL, pad } from './catnet.js?v=20261126c';
-import { createWallet } from './wallet.js?v=20261126c';
-import { createJobs } from './jobs.js?v=20261126c';
-import { createCoinPlan } from './coinplan.js?v=20261126c';
+import { ROLES, OUTFITS, HATS } from './roles.js?v=20261126d';
+import { createMeowBox } from './meow.js?v=20261126d';
+import { REACTIONS, REACTION_IDS, playReaction } from './cats.js?v=20261126d';
+import { createCatNet, SEATS, REST, CALL, pad } from './catnet.js?v=20261126d';
+import { createWallet } from './wallet.js?v=20261126d';
+import { createJobs } from './jobs.js?v=20261126d';
+import { createCoinPlan } from './coinplan.js?v=20261126d';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -23,7 +23,7 @@ const pad2 = (n) => String(n).padStart(2, '0');
 const fmtH = (h) => { h = ((h % 24) + 24) % 24; return `${pad2(Math.floor(h))}:${pad2(Math.floor((h % 1) * 60))}`; };
 
 // 介面 Logo：低多邊形鯉魚（橘紅魚背、米白魚腹、魚頭朝右），首頁、怎麼逛、集章完成共用這一張
-const LOGO_SRC = 'assets/brand/koi-logo.png?v=20261126c';
+const LOGO_SRC = 'assets/brand/koi-logo.png?v=20261126d';
 const MASCOT = `<img src="${LOGO_SRC}" alt="115 鯉魚市集 Logo：低多邊形小鯉魚" decoding="async">`;
 
 let C = null;            // content.json
@@ -90,7 +90,7 @@ const duckDef = () => Object.assign({}, DUCK_DEF, C.duckBoat || {});
 const COASTER_DEF = {
   name: '鯉魚雲霄飛車', role: '刺激遊樂設施', color: '#c23a1c',
   intro: '軌道繞一大圈，從五座主題島的上空飛過去！車站「鯉躍龍門站」在趣味遊戲島外側的海上平台，掛滿鯉魚旗，第一節車廂是鯉魚頭。出站後喀啦喀啦爬上坡頂，一口氣俯衝下來（軌道旁的照相機會拍下你的俯衝照），翻過 360 度大迴圈，經過循環挖寶島、手作體驗二島、美食補給島，再從大鯉魚張開的嘴巴鑽進牠的肚子、從尾巴鑽出來，經過手作體驗一島回到車站。',
-  how: ['最簡單：點車站木棧道入口旁、飄在空中的大按鈕「🎢 點我上車」（鳥瞰、漫遊都點得到，點車站或車廂也可以）。', '綠色「點我上車」＝現在就能上車；紅色「點我掛號」＝車子還在跑，掛號後車子一回站就自動幫你上車，不用一直盯著。掛號後右下角會出現號碼牌，點它可以取消。', '上車會坐進車廂裡，可以拖曳畫面轉頭看風景。', '開車後不能下車；回到車站停好會自動下車，站在車站平台上。', '往下衝的時候大家會把手舉高！大迴圈會倒過來，怕暈的話可以按「切換視角」從車外看。', '衝下坡時會自動拍「📸 俯衝照」，回到車站後可以按「💾 存下來」。', '一班車最多 8 位登入者（4 節車廂 × 2 人），大家看到的是同一班車。'],
+  how: ['最簡單：點車站月台角落、飄在空中的大按鈕「🎢 點我上車」（鳥瞰、漫遊都點得到，點車站或車廂也可以）。', '綠色「點我上車」＝現在就能上車；紅色「點我掛號」＝車子還在跑，掛號後車子一回站就自動幫你上車，不用一直盯著。', '💺 上車或掛號時可以選座位：4 節車廂、每節左右各一個，第 1 節是鯉魚頭最前面；灰色虛線的是有人坐了。不想選就按「隨便坐」。掛號時選的位子如果到站被別人先坐走，會幫你換最近的空位。', '掛號後右下角會出現號碼牌，點它可以換座位或取消掛號。', '上車會坐進車廂裡，可以拖曳畫面轉頭看風景。', '開車後不能下車；回到車站停好會自動下車，站在車站平台上。', '往下衝的時候大家會把手舉高！大迴圈會倒過來，怕暈的話可以按「切換視角」從車外看。', '衝下坡時會自動拍「📸 俯衝照」，回到車站後可以按「💾 存下來」。', '一班車最多 8 位登入者（4 節車廂 × 2 人），大家看到的是同一班車。'],
   note: '雲霄飛車只在網站裡，市集現場沒有雲霄飛車。',
 };
 const coasterDef = () => Object.assign({}, COASTER_DEF, C.coaster || {});
@@ -1061,41 +1061,89 @@ function coasterCheck() {
   return WAL ? WAL.canPay(ECO().prices.coaster, 'coaster', 0) : '';   // 不限次數：鯉魚幣夠就能坐
 }
 // 🎫 雲霄飛車掛號：沒停站（或快開車）時先掛號，車子一回站就自動上車；車站的大按鈕、點車站／車廂、面板按鈕都走這裡
-let coaQ = null;          // { at: 掛號時間, full: 已提醒滿座 }
+// 💺 上車或掛號前可以選座位（4 節 × 左右 2 個）；選的座位會同步給其他人（market/fx 的 seat）
+let coaQ = null;          // { at: 掛號時間, full: 已提醒滿座, seat: 想坐的位子（null＝隨便坐） }
+const seatName = (i) => `第 ${Math.floor(i / 2) + 1} 節${i % 2 ? '左' : '右'}邊`;   // 車廂面向 +z，站內 +x 是乘客的左手邊
 function coaBtnLabel() {
   if (S.coaster) return '🎢 你在車上';
-  if (coaQ) return '🎫 已掛號・點我取消';
-  return COA && COA.boardOpen() ? '🎢 坐雲霄飛車' : '🎫 掛號搭下一班';
+  if (coaQ) return '🎫 已掛號・換座位／取消';
+  return COA && COA.boardOpen() ? '🎢 選座位上車' : '🎫 掛號搭下一班';
 }
 function coaBusyRide() { const w = S.walking ? whereAmI() : ''; return /船上|熱氣球上/.test(w) ? w : ''; }
+function coaTaken() { const t = new Set(); if (PL) for (const id of ONLINE.keys()) { const r = COA.riderSpot(PL.posOf(id), id); if (r) t.add(r.seat); } return t; }
 function coasterAct() {
   if (!W || !COA) return;
   if (S.coaster) { toast('🎢 你已經在車上了，回到車站會自動下車'); return; }
-  if (coaQ) { cancelCoaQ(); return; }
+  if (coaQ) { openSeatPicker('change'); return; }
   const r = coaBusyRide(); if (r) { toast(`🎢 你在${r}，先下來再坐雲霄飛車`); return; }
   const why = WAL ? WAL.canPay(ECO().prices.coaster, 'coaster', 0) : ''; if (why) { toast('⛔ ' + why); return; }
-  const queue = (msg) => { coaQ = { at: performance.now(), full: false }; renderCoaQ(); refreshCoasterPanel(0); toast(msg); };
-  if (COA.boardOpen() && coasterRiders() < COA.cap) {
-    // 按「確定」時車子可能剛好開走：那就自動改成掛號下一班，不用重按
-    confirmPay('coaster', WAL ? ECO().prices.coaster : 0, '坐雲霄飛車（上車後要坐完全程才能下車）', () => {
-      if (S.coaster) return;
-      if (COA.boardOpen() && coasterRiders() < COA.cap) boardCoaster(true);
-      else queue('🎫 車子剛開走了，已經幫你掛號下一班，回站會自動上車（那時才扣錢）');
-    });
-    return;
-  }
-  const s = COA.status(), wait = s.docked ? s.left + Math.round(COA.ride) : s.eta;
-  confirmPay('coaster', WAL ? ECO().prices.coaster : 0, `掛號坐下一班雲霄飛車（約 ${wait} 秒後到站，到站會自動幫你上車，那時才扣錢）`, () => {
-    if (S.coaster || coaQ) return;
-    queue(`🎫 掛號好了！約 ${wait} 秒後車子回站，會自動幫你上車；想取消就點右下角的號碼牌`);
+  openSeatPicker(COA.boardOpen() && coasterRiders() < COA.cap ? 'now' : 'queue');
+}
+// 選座位視窗：now＝現在就上車（看得到誰已經坐了）；queue＝掛號下一班；change＝已掛號，換座位或取消
+let seatMode = 'now', seatPick = null, seatTimer = 0;
+function seatHTML() {
+  const price = WAL ? ECO().prices.coaster : 0, s = COA.status();
+  if (seatMode === 'now' && !(COA.boardOpen() && coasterRiders() < COA.cap)) seatMode = 'queue';   // 視窗開著時車子開走了：改成掛號
+  const live = seatMode === 'now', taken = live ? coaTaken() : new Set();
+  if (seatPick != null && taken.has(seatPick)) seatPick = null;
+  const cars = ['🐟 鯉魚頭（最前面，最刺激）', '🟡 第 2 節', '🔵 第 3 節', '🟢 第 4 節（最後面，往下衝最有感）'];
+  const head = live ? `🟢 車子停在站上，約 <b>${s.left}</b> 秒後開車。點一個空位：` : seatMode === 'change' ? `🎫 你已經掛號了，約 <b>${s.docked ? s.left + Math.round(COA.ride) : s.eta}</b> 秒後車子回站。想換位子就點一下：` : `🎫 車子還在跑，約 <b>${s.docked ? s.left + Math.round(COA.ride) : s.eta}</b> 秒後回站。先選想坐的位子，到站會自動幫你坐上去：`;
+  const btn = (i) => { const t = taken.has(i), on = seatPick === i;
+    return `<button type="button" class="seat${on ? ' on' : ''}${t ? ' taken' : ''}" data-seat="${i}" ${t ? 'disabled' : ''} aria-pressed="${on}" aria-label="${seatName(i)}${t ? '（有人坐了）' : ''}">${t ? '🧑 有人' : on ? '✅ 你' : i % 2 ? '左' : '右'}</button>`; };
+  const pay = price ? (seatMode === 'now' ? `確定，付 ${price} 枚上車` : seatMode === 'change' ? '換這個位子' : `掛號（到站上車才扣 ${price} 枚）`) : (seatMode === 'now' ? '確定上車' : seatMode === 'change' ? '換這個位子' : '掛號');
+  return `<p class="seat-q">${head}</p>
+    <div class="seat-train" role="group" aria-label="雲霄飛車座位，車頭在上面"><div class="seat-dir" aria-hidden="true">▲ 車頭方向</div>
+      ${[0, 1, 2, 3].map((k) => `<div class="seat-car c${k}"><span class="seat-cn">${cars[k]}</span><div class="seat-pair">${btn(k * 2 + 1)}${btn(k * 2)}</div></div>`).join('')}</div>
+    <p class="foot seat-now">${seatPick == null ? '還沒選：會幫你隨便找一個空位。' : `你選了：<b>${seatName(seatPick)}</b>`}${live ? '' : '<br>現在車上的人回站會下車；如果到站時你想坐的位子被別人先坐走，會幫你換最近的空位。'}${price && seatMode !== 'change' ? `<br>你現在有 ${WAL.bal()} 枚。` : ''}</p>
+    <div class="pay-btns">${seatMode === 'change' ? '<button type="button" class="btn ghost" data-seat-do="cancel">取消掛號</button>' : '<button type="button" class="btn ghost" data-seat-do="close">先不要</button>'}<button type="button" class="btn ghost" data-seat-do="any">隨便坐</button><button type="button" class="btn" data-seat-do="ok">${pay}</button></div>`;
+}
+// 每秒更新倒數和誰坐了：只改有變的字和按鈕狀態，不整個重畫（不然手指按下去的那一刻按鈕被換掉，會點不到）
+function renderSeat(full) {
+  const body = $('#seatBody'); if (!$('#seatDlg').open) return;
+  const html = seatHTML();
+  if (full || body.dataset.mode !== seatMode || !body.querySelector('.seat-q')) { body.innerHTML = html; body.dataset.mode = seatMode; return; }
+  const tmp = document.createElement('div'); tmp.innerHTML = html;
+  for (const sel of ['.seat-q', '.seat-now']) { const a = body.querySelector(sel), b = tmp.querySelector(sel); if (a && b && a.innerHTML !== b.innerHTML) a.innerHTML = b.innerHTML; }
+  tmp.querySelectorAll('[data-seat], [data-seat-do]').forEach((b) => {
+    const a = body.querySelector(b.dataset.seat != null ? `[data-seat="${b.dataset.seat}"]` : `[data-seat-do="${b.dataset.seatDo}"]`); if (!a) return;
+    if (a.className !== b.className) a.className = b.className;
+    if (a.disabled !== b.disabled) a.disabled = b.disabled;
+    for (const k of ['aria-pressed', 'aria-label']) if (b.hasAttribute(k) && a.getAttribute(k) !== b.getAttribute(k)) a.setAttribute(k, b.getAttribute(k));
+    if (a.textContent !== b.textContent) a.textContent = b.textContent;
   });
 }
+function openSeatPicker(mode) {
+  seatMode = mode;
+  seatPick = mode === 'change' ? coaQ.seat : (() => { const v = store.get('coaSeat', null); return Number.isInteger(v) ? v : null; })();
+  openDlg('#seatDlg'); renderSeat(true);
+  clearInterval(seatTimer); seatTimer = setInterval(() => { if (!$('#seatDlg').open) { clearInterval(seatTimer); return; } renderSeat(); }, 1000);
+}
+function seatDone(seat) {
+  if (seat != null) store.set('coaSeat', seat);
+  $('#seatDlg').close();
+  if (S.coaster) return;
+  if (seatMode === 'change') { if (coaQ) { coaQ.seat = seat; toast(seat == null ? '💺 好，到站幫你隨便找空位' : `💺 換好了，想坐 ${seatName(seat)}`); } return; }
+  if (seatMode === 'now' && COA.boardOpen() && coasterRiders() < COA.cap) { boardCoaster(true, seat); return; }
+  const s = COA.status(), wait = s.docked ? s.left + Math.round(COA.ride) : s.eta;
+  coaQ = { at: performance.now(), full: false, seat }; renderCoaQ(); refreshCoasterPanel(0);
+  toast(seatMode === 'now' ? '🎫 車子剛開走了，已經幫你掛號下一班，回站會自動坐上你選的位子（那時才扣錢）' : `🎫 掛號好了${seat == null ? '' : `（${seatName(seat)}）`}！約 ${wait} 秒後車子回站會自動幫你上車；點右下角的號碼牌可以換座位或取消`);
+}
+$('#seatBody').addEventListener('click', (e) => {
+  const t = e.target instanceof Element ? e.target : null; if (!t) return;
+  const b = t.closest('[data-seat]'); if (b && !b.disabled) { const i = +b.dataset.seat; seatPick = seatPick === i ? null : i; renderSeat(); const f = $(`#seatBody [data-seat="${i}"]`); if (f) f.focus(); return; }
+  const d = t.closest('[data-seat-do]'); if (!d) return;
+  const k = d.dataset.seatDo;
+  if (k === 'close') { $('#seatDlg').close(); return; }
+  if (k === 'cancel') { $('#seatDlg').close(); cancelCoaQ(); return; }
+  if (k === 'any') { seatPick = null; seatDone(null); return; }
+  if (k === 'ok') seatDone(seatPick);
+});
 function cancelCoaQ(quiet) { coaQ = null; renderCoaQ(); refreshCoasterPanel(0); if (!quiet) toast('🎫 已取消雲霄飛車掛號'); }
 function renderCoaQ() {
   const el = $('#coaQChip'); if (!el) return;
   if (!coaQ || !COA) { el.hidden = true; return; }
   const s = COA.status(), t = s.docked ? (COA.boardOpen() ? '要上車了！' : `約 ${s.left + Math.round(COA.ride)} 秒後到站`) : `約 ${s.eta} 秒後到站`;
-  const txt = `🎫 雲霄飛車掛號中・${t}（點我取消）`; el.hidden = false; if (el.textContent !== txt) el.textContent = txt;
+  const txt = `🎫 雲霄飛車掛號中${coaQ.seat == null ? '' : `・💺${seatName(coaQ.seat)}`}・${t}（點我換座位／取消）`; el.hidden = false; if (el.textContent !== txt) el.textContent = txt;
 }
 let coaQT = 0, coaNear = false;
 function coasterQueueTick(now) {
@@ -1110,7 +1158,7 @@ function coasterQueueTick(now) {
   // 漫遊走到車站附近：提示一次怎麼上車
   if (S.walking && !S.coaster) {
     const kp = COA.kioskPos(), d = Math.hypot(CAM.walk.pos.x - kp.x, CAM.walk.pos.z - kp.z);
-    if (d < 5 && !coaNear) { coaNear = true; toast('🎢 雲霄飛車車站到了！點旁邊飄著的大按鈕「點我上車」就能坐（沒停站可以先掛號）'); }
+    if (d < 5 && !coaNear) { coaNear = true; toast('🎢 雲霄飛車車站到了！點旁邊飄著的大按鈕「點我上車」，選好座位就能坐（沒停站可以先掛號）'); }
     else if (d > 9) coaNear = false;
   }
   renderCoaQ();
@@ -1121,36 +1169,43 @@ function coasterQueueTick(now) {
   if (full) { if (!coaQ.full) { coaQ.full = true; toast(`🎫 這班 ${COA.cap} 個位子坐滿了，幫你繼續排下一班`); } return; }
   const why = WAL ? WAL.canPay(ECO().prices.coaster, 'coaster', 0) : '';
   if (why) { cancelCoaQ(true); toast('🎫 掛號取消：' + why); return; }
-  coaQ = null; renderCoaQ();
+  const want = coaQ.seat; coaQ = null; renderCoaQ();
+  if ($('#seatDlg').open) $('#seatDlg').close();
   toast('🎫 叫到你了！雲霄飛車到站，幫你上車～');
-  boardCoaster(true);
+  boardCoaster(true, want);
 }
-$('#coaQChip').addEventListener('click', () => cancelCoaQ());
-function boardCoaster(ok) {
+$('#coaQChip').addEventListener('click', () => { if (coaQ) openSeatPicker('change'); });
+function boardCoaster(ok, want = null) {
   if (!W || !COA) return;
   if (S.coaster) { toast('🎢 你已經在車上了'); return; }
+  if (ok !== true) { coasterAct(); return; }                // 從別的地方叫（例如測試）：一樣先選座位
   const why = coasterCheck(); if (why) { toast('⛔ ' + why); return; }
-  if (ok !== true) { confirmPay('coaster', WAL ? ECO().prices.coaster : 0, '坐雲霄飛車（上車後要坐完全程才能下車）', () => boardCoaster(true)); return; }
   if (WAL) { const bad = WAL.pay(ECO().prices.coaster, 'coaster', '坐雲霄飛車', 'coaster'); if (bad) { toast('⛔ ' + bad); return; } }
   if (S.bike) dismountBike(true);
   closePanel(false);
-  // 座位：先用自己的編號算座位，被別人坐了就往後找空位
-  const taken = new Set(); for (const id of ONLINE.keys()) { const r = COA.riderSpot(PL.posOf(id), id); if (r) taken.add(r.seat); }
+  // 座位：先坐自己選的；被別人坐走了就換最近的空位（同一節優先）；沒選就用自己的編號算，被坐了往後找
+  const taken = coaTaken();
   const me = (NET && NET.uid()) || (meProfile() || {}).id || 'me';
-  let seat = COA.hashSeat(me); for (let k = 0; k < COA.cap && taken.has(seat); k++) seat = (seat + 1) % COA.cap;
+  let seat;
+  if (Number.isInteger(want) && !taken.has(want)) seat = want;
+  else if (Number.isInteger(want)) { const free = [...Array(COA.cap).keys()].filter((i) => !taken.has(i)); free.sort((a, b) => (Math.abs(a - want) + (Math.floor(a / 2) === Math.floor(want / 2) ? 0 : .5)) - (Math.abs(b - want) + (Math.floor(b / 2) === Math.floor(want / 2) ? 0 : .5))); seat = free.length ? free[0] : want; }
+  else { seat = COA.hashSeat(me); for (let k = 0; k < COA.cap && taken.has(seat); k++) seat = (seat + 1) % COA.cap; }
   const sp = COA.seatPose(seat), f = new THREE.Vector3(0, 0, 1).applyQuaternion(sp.q);
   const yaw0 = Math.atan2(f.x, f.z);
   if (!S.walking) enterWalk({ pos: sp.pos.clone(), yaw: yaw0 }); else { CAM.walk.pos.copy(sp.pos); CAM.walk.yaw = yaw0; }   // 先進漫遊再坐上車（enterWalk 會讓停站中的乘客先下車）
   S.coaster = { seat, yaw: yaw0, pitch: Math.asin(Math.max(-1, Math.min(1, f.y))), was: 'dock', paid: true };
+  if (NET && NET.setFx) NET.setFx({ seat });                // 讓別人看到你坐在哪個位子
   CAM.walk.frozen = true; CAM.walk.seatDrop = .26; CAM.walk.yaw = 0; CAM.walk.pitch = -.08; CAM.walk.ride = { q: sp.q, seat: sp.pos }; W.coasterRiding = true;   // yaw／pitch 改成「相對車頭」
   if (S.reduced) { CAM.walk.third = true; syncViewBtn(); }
   $('#coasterBtn').hidden = false;
-  toast(`🎢 坐好了${WAL ? `（付 ${ECO().prices.coaster} 枚）` : ''}！約 ${COA.status().left} 秒後開車，抓好扶手～`);
+  const moved = Number.isInteger(want) && seat !== want ? `你選的${seatName(want)}被坐走了，幫你換到${seatName(seat)}。` : `坐在${seatName(seat)}，`;
+  toast(`🎢 ${moved}${WAL ? `付了 ${ECO().prices.coaster} 枚，` : ''}約 ${COA.status().left} 秒後開車，抓好扶手～`);
 }
 function leaveCoaster(quiet) {
   if (!S.coaster) return;
   const photo = S.coaster.photo;
   S.coaster = null; W.coasterRiding = false;
+  if (NET && NET.setFx) NET.setFx({ seat: '' });
   if (CAM) { CAM.walk.frozen = false; CAM.walk.seatDrop = 0; CAM.walk.ride = null; const e = COA.station.exit; CAM.walk.pos.set(e.x, GH, e.z); const s0 = COA.station; CAM.walk.yaw = Math.atan2(-s0.u.x, -s0.u.z); CAM.walk.pitch = -.05; }   // 下車後面向島
   $('#coasterBtn').hidden = true;
   if (!quiet) { toast('🎉 好刺激！回到車站了，從平台走回趣味遊戲島'); if (photo) showCoasterPhoto(photo); }
@@ -1279,6 +1334,7 @@ function bikeGate(from, x, z) {
 }
 // 其他登入者的車（market/fx）
 let fxRiders = new Set();
+const fxSeat = new Map();
 function applyFx(all, myUid) {
   if (!PL) return;
   const now = new Set();
@@ -1289,6 +1345,7 @@ function applyFx(all, myUid) {
   }
   for (const id of fxRiders) if (!now.has(id)) PL.setRide(id, null);
   fxRiders = now;
+  fxSeat.clear(); for (const [id, v] of Object.entries(all || {})) if (id !== myUid && v && Number.isInteger(v.seat)) fxSeat.set(id, v.seat);   // 💺 別人在雲霄飛車選的座位
 }
 
 // ------------------------------------------------------------------ 👕 服飾店、💃 閃身步、🐾 寵物
@@ -1447,7 +1504,7 @@ function phoneDb() {
 }
 async function startPhone() {
   if (PH) return;
-  try { PHM = await import('./phone.js?v=20261126c'); } catch (e) { console.warn('遊戲電話載入失敗', e); return; }
+  try { PHM = await import('./phone.js?v=20261126d'); } catch (e) { console.warn('遊戲電話載入失敗', e); return; }
   const db = phoneDb(); if (!db) return;
   PH = PHM.createPhone(db, {
     name: () => FAKE_AS || (meProfile() || {}).name || '', where: whereAmI, toast,
@@ -2790,7 +2847,7 @@ function balloonPopped() {
 }
 function startNet() {
   const M = C.multiplayer; if (!M || !M.enabled || !M.firebase || !PL) return;
-  import('./net.js?v=20261126c').then(({ createNet }) => {
+  import('./net.js?v=20261126d').then(({ createNet }) => {
     NET = createNet(M.firebase, {
       myPos: () => PL.myPos(), upsert: (id, info, pos) => { ONLINE.set(id, String(info.name || '').slice(0, 16)); PL.upsert(id, info, pos); }, remove: (id) => { ONLINE.delete(id); PL.remove(id); },
       onCount: (c) => { COUNT = c; const el = $('#onlineChip'); el.hidden = false; $('#onlineCount').textContent = c.players; el.setAttribute('aria-label', `市集島上 ${c.players} 人，開著網站 ${c.viewers} 人，點一下看各身分人數`); },
@@ -2806,7 +2863,7 @@ function startNet() {
     if (JOBS) JOBS.attach(NET);
     watchLamps();
     startPhone();
-    import('./hidemp.js?v=20261126c').then(({ createHideMP }) => {
+    import('./hidemp.js?v=20261126d').then(({ createHideMP }) => {
       HM = createHideMP(NET, {
         toast, profile: meProfile, enterWalk: () => { if (!S.walking) enterWalk(); },
         walkPos: () => (S.walking ? CAM.walk.pos : null), posOf: (id) => PL.posOf(id),
@@ -2945,14 +3002,14 @@ async function boot() {
   if (Q.has('nogl') || !webglOK()) { textOnly(Q.has('nogl') ? '已切換為文字清單版' : '這台裝置無法顯示 3D 畫面'); applyTheme(); updateClock(); setInterval(updateClock, 10000); window.__ready = true; return; }
   let mods;
   try {
-    mods = await Promise.all([import('./world.js?v=20261126c'), import('./life.js?v=20261126c'), import('./cam.js?v=20261126c'), import('./players.js?v=20261126c'), import('./signs.js?v=20261126c'), import('./festival.js?v=20261126c'), import('./fauna.js?v=20261126c'), import('./interact.js?v=20261126c'), import('./games.js?v=20261126c')]);
+    mods = await Promise.all([import('./world.js?v=20261126d'), import('./life.js?v=20261126d'), import('./cam.js?v=20261126d'), import('./players.js?v=20261126d'), import('./signs.js?v=20261126d'), import('./festival.js?v=20261126d'), import('./fauna.js?v=20261126d'), import('./interact.js?v=20261126d'), import('./games.js?v=20261126d')]);
     const [{ createWorld, H: GROUND_H }, { createLife, makePerson }, { createCam }, { createPlayers }, { createSigns }, { createFestival }, { createFauna }, { createInteract }, { createGames, FISH }] = mods;
     GH = GROUND_H;
     const mobile = isLite();   // 手機和平板都用輕量版場景
     W = createWorld($('#gl'), { quality: S.quality, mobile });
     W.renderer.setPixelRatio(Math.min(devicePixelRatio, S.quality === 'low' ? 1 : (mobile ? 1.5 : 2)));
     L = createLife(W, C, { halfPeople: mobile || S.quality === 'low', quality: S.quality });
-    try { const { createCats } = await import('./cats.js?v=20261126c'); K = createCats(W, C, { reduced: () => S.reduced }); } catch (e) { console.warn('島上的貓載入失敗', e); K = null; }
+    try { const { createCats } = await import('./cats.js?v=20261126d'); K = createCats(W, C, { reduced: () => S.reduced }); } catch (e) { console.warn('島上的貓載入失敗', e); K = null; }
     CAM = createCam(W, $('#gl'), { onZoom: showZoom, onIntro: (k) => { L.setDeck(k < .3 ? 1 : Math.max(0, 1 - (k - .3) / .25)); if (k > .55) $('.intro-title').classList.add('show'); } });
     CAM.S.reduced = S.reduced; CAM.S.mobile = isMobile();
     PL = createPlayers(W, GROUND_H); renderMe(); startNet();
@@ -2961,32 +3018,33 @@ async function boot() {
     W.canLeave = () => { const s = L.carp.status(); if (s.docked && s.gang) return true; if (performance.now() - lastBlockToast > 3000) { lastBlockToast = performance.now(); toast('⛔ 航行中請待在船上，靠港放下跳板後再下船'); } return false; };
     // 彩虹熱氣球：起降坪在服務台島西南邊海上（木棧道＋圓形停機坪）；用網路時間排班，大家看到同一顆
     try {
-      const { createBalloon } = await import('./balloon.js?v=20261126c');
+      const { createBalloon } = await import('./balloon.js?v=20261126d');
       BAL = createBalloon(W, { pier: { island: 'center', angle: BAL_ANGLE }, now: () => (NET ? NET.now() : Date.now()), low: mobile || S.quality === 'low' });
       W.islands.center.entryAngles.push(BAL_ANGLE * Math.PI / 180);   // 熱氣球棧道的入口
       W.balloon = BAL; W.gates = [balloonGate];
     } catch (e) { console.warn('熱氣球載入失敗', e); BAL = null; }
     // 🦆 鴨子船：停在益智島南側的棧道；一樣用網路時間排班
     try {
-      const { createDuckBoat } = await import('./duckboat.js?v=20261126c');
+      const { createDuckBoat } = await import('./duckboat.js?v=20261126d');
       DUCK = createDuckBoat(W, { island: 'puzzle', now: () => (NET ? NET.now() : Date.now()), low: mobile || S.quality === 'low' });
       W.islands.puzzle.entryAngles.push(70 * Math.PI / 180);    // 鴨子船棧道的入口（duckboat.js 的預設角度）
       W.duck = DUCK; W.gates = [...(W.gates || []), duckGate];
     } catch (e) { console.warn('鴨子船載入失敗', e); DUCK = null; }
     // 🎢 雲霄飛車：軌道支柱的位置先保留（裝飾不會擺在那裡）
     try {
-      const { createCoaster } = await import('./coaster.js?v=20261126c');
+      const { createCoaster } = await import('./coaster.js?v=20261126d');
       COA = createCoaster(W, { now: () => (NET ? NET.now() : Date.now()), low: mobile || S.quality === 'low' });
       { const I = W.islands.sport, e = COA.station.land; I.entryAngles.push(Math.atan2(e.z - I.pos.z, e.x - I.pos.x)); }   // 雲霄飛車月台棧道的入口
       W.coaster = COA; W.coasterMe = () => (S.coaster ? COA.seatPose(S.coaster.seat) : null);
+      COA.setSeatFor((id) => fxSeat.get(id));
     } catch (e) { console.warn('雲霄飛車載入失敗', e); COA = null; }
     // 🏛️ 市長任務：路燈候選位置先保留（裝飾不會擺在那裡）
-    try { const { createMayor } = await import('./mayor.js?v=20261126c'); MY = createMayor(W, { low: mobile || S.quality === 'low' }); } catch (e) { console.warn('市長任務載入失敗', e); MY = null; }
-    KIT = await import('./kit.js?v=20261126c');
-    SG = createSigns(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261126c')).rng, low: mobile || S.quality === 'low' });
-    FX = createFestival(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261126c')).rng, low: mobile || S.quality === 'low', avoid: [...(BAL ? BAL.avoid : []), ...(DUCK ? DUCK.avoid : []), ...(MY ? MY.avoid : []), ...(COA ? COA.avoid : []), ...SG.signs.map((s) => s.g.position), ...Object.values(W.islands).flatMap((I) => (I.trees || []).filter((tr) => tr.visible).map((tr) => tr.position.clone().add(I.pos)))], carp: L.carp });
+    try { const { createMayor } = await import('./mayor.js?v=20261126d'); MY = createMayor(W, { low: mobile || S.quality === 'low' }); } catch (e) { console.warn('市長任務載入失敗', e); MY = null; }
+    KIT = await import('./kit.js?v=20261126d');
+    SG = createSigns(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261126d')).rng, low: mobile || S.quality === 'low' });
+    FX = createFestival(W, C, GROUND_H, { makePerson, rng: (await import('./kit.js?v=20261126d')).rng, low: mobile || S.quality === 'low', avoid: [...(BAL ? BAL.avoid : []), ...(DUCK ? DUCK.avoid : []), ...(MY ? MY.avoid : []), ...(COA ? COA.avoid : []), ...SG.signs.map((s) => s.g.position), ...Object.values(W.islands).flatMap((I) => (I.trees || []).filter((tr) => tr.visible).map((tr) => tr.position.clone().add(I.pos)))], carp: L.carp });
     // 🏮 夜市燈火：燈籠串、攤位燈、島邊小燈、每座島的大暖燈（天黑才亮）
-    try { const { createNightMarket } = await import('./nightlights.js?v=20261126c'); const nmPaths = [], nmLamps = [];
+    try { const { createNightMarket } = await import('./nightlights.js?v=20261126d'); const nmPaths = [], nmLamps = [];
       if (BAL && BAL.dir) { const I = W.islands.center, d = BAL.dir, ang = Math.atan2(d.z, d.x), e = I.top(ang) * .97; nmPaths.push({ a: { x: I.pos.x + d.x * e, z: I.pos.z + d.z * e }, b: { x: BAL.pad.x - d.x * 3.2, z: BAL.pad.z - d.z * 3.2 }, w: .75 }); }   // 熱氣球木棧道
       if (COA && COA.station.land) nmPaths.push({ a: COA.station.land, b: COA.station.exit, w: .8 });                                                                   // 雲霄飛車月台棧道
       for (const I of Object.values(W.islands)) for (const c of I.colliders) if (c.r === .2) nmLamps.push({ x: I.pos.x + c.x, z: I.pos.z + c.z, r: 3.2 });            // 島上的路燈
@@ -2994,17 +3052,17 @@ async function boot() {
       NM = createNightMarket(W, { signs: SG.signs, low: mobile || S.quality === 'low', paths: nmPaths, lampSpots: nmLamps, glow: BAL && BAL.edgeLampM ? [{ m: BAL.edgeLampM, max: 2.4, min: .2 }] : [] }); } catch (e) { console.warn('夜市燈火載入失敗', e); NM = null; }
     try { setupTorch(); } catch (e) { console.warn("手電筒載入失敗", e); }
     // 🎆 煙火船：花鯉魚幣放煙火（停在市集北邊、鯉魚山後面的外海）
-    try { const { createFireworks } = await import('./fireworks.js?v=20261126c'); FW = createFireworks(W, { now: () => (NET ? NET.now() : Date.now()), low: mobile || S.quality === 'low', snd: SND, site: { x: 0, z: -44 } }); $('#fwBtn').hidden = false; fwListen(); } catch (e) { console.warn('煙火載入失敗', e); FW = null; }
+    try { const { createFireworks } = await import('./fireworks.js?v=20261126d'); FW = createFireworks(W, { now: () => (NET ? NET.now() : Date.now()), low: mobile || S.quality === 'low', snd: SND, site: { x: 0, z: -44 } }); $('#fwBtn').hidden = false; fwListen(); } catch (e) { console.warn('煙火載入失敗', e); FW = null; }
     // 🚁 無人機：基地放在服務台島的空地；燈光秀在北邊夜空（煙火船旁邊）
     try {
-      const { createDrones } = await import('./drones.js?v=20261126c');
+      const { createDrones } = await import('./drones.js?v=20261126d');
       const ds = FX.freeSpot('center', 1.4, 1.8);
       DR = createDrones(W, { now: () => (NET ? NET.now() : Date.now()), low: mobile || S.quality === 'low', base: ds ? { x: ds.x, z: ds.z, face: ds.face } : null, showSite: { x: 0, z: -40 }, onShotKey: () => droneShot() });
       $('#drBtn').hidden = false;
     } catch (e) { console.warn('無人機載入失敗', e); DR = null; }
     // 🚲 借車點與環島自行車道（車架放在服務台島的空地；車道沿著原本的石板環路）
     try {
-      BIKE_MOD = await import('./bike.js?v=20261126c');
+      BIKE_MOD = await import('./bike.js?v=20261126d');
       const rs = FX.freeSpot('center', 1.3, 1.7);
       BK = BIKE_MOD.createBikes(W, { spot: rs ? { x: rs.x, z: rs.z, face: rs.face } : null, islandName: (id) => (islandById(id) || {}).name || id, low: mobile || S.quality === 'low' });
       W.gates = [...(W.gates || []), bikeGate];
@@ -3012,7 +3070,7 @@ async function boot() {
     if (MY) { const ms = FX.freeSpot('center', .9, 1.2) || FX.freeSpot('center', .6, .9) || boardSpotScan(); MY.placeBoard(ms ? { x: ms.x, z: ms.z, face: ms.face } : null); MY.setLamps(lampState()); }   // 找不到大空地就放寬條件，不要用固定的備用位置（會立在車道上）
     // 👕 服飾店（服務台島的小攤子）
     try {
-      STY = await import('./style.js?v=20261126c');
+      STY = await import('./style.js?v=20261126d');
       const ss = FX.freeSpot('center', 1.1, 1.5);
       SHOP = STY.createShop(W, { spot: ss ? { x: ss.x, z: ss.z, face: ss.face } : null, low: mobile || S.quality === 'low' });
       applyLook();
@@ -3030,7 +3088,7 @@ async function boot() {
       }
       return best;
     });
-    FA = createFauna(W, { H: GROUND_H, rng: (await import('./kit.js?v=20261126c')).rng });
+    FA = createFauna(W, { H: GROUND_H, rng: (await import('./kit.js?v=20261126d')).rng });
     IA = createInteract(W, C, GROUND_H, {
       toast, carp: L.carp,
       toastIf: (m) => { if (!S.intro) toast(m); },

@@ -3,8 +3,8 @@
 // 大俯衝、海面波浪段，再依序飛過循環挖寶島、手作體驗二島、美食補給島、手作體驗一島，回到車站。
 // 時程用「網路時間」排班（所有裝置看到同一班車）：停站 25 秒 → 跑一圈 → 回站。
 import * as THREE from 'three';
-import { TAU, clamp } from './kit.js?v=20261126c';
-import { H } from './world.js?v=20261126c';
+import { TAU, clamp } from './kit.js?v=20261126d';
+import { H } from './world.js?v=20261126d';
 
 export const COASTER_CAP = 8;                 // 4 節車廂 × 每節 2 人
 const DOCK = 25;                              // 停站秒數
@@ -656,9 +656,11 @@ export function createCoaster(W, opts) {
   }
   const hashSeat = (id) => { let h = 0; for (const ch of String(id)) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return h % COASTER_CAP; };
   // 其他登入者在車上：網路位置有延遲，直接排到座位上
+  let seatFor = () => null;   // 其他人選的座位（main.js 從 market/fx 的 seat 讀來）；沒有就用 id 算出來的座位
+  const seatOf = (id) => { const v = seatFor(id); return Number.isInteger(v) && v >= 0 && v < COASTER_CAP ? v : hashSeat(id); };
   function riderSpot(p, id) {
     if (!p) return null;
-    const i = hashSeat(id), sp = seatPose(i);
+    const i = seatOf(id), sp = seatPose(i);
     const d = Math.hypot(p.x - sp.pos.x, p.z - sp.pos.z), dy = Math.abs((p.y ?? 0) - sp.pos.y);
     // 停站時要剛好坐在座位上；開車後只要在列車附近（網路位置落後）就排進座位
     let near = false; if (cur.phase === 'dock') near = d < .5 && dy < .5; else for (const cp of carP) if (Math.hypot(p.x - cp.x, p.z - cp.z) < 7 && Math.abs((p.y ?? 0) - cp.y) < 4) near = true;
@@ -667,7 +669,7 @@ export function createCoaster(W, opts) {
   return {
     root, cars, cap: COASTER_CAP, length: L, cycle: CYCLE, ride: RIDE, topY,
     station: { pos: stationC, exit: exitSpot, land: landSpot, u: us, t: ts, name: STATION_NAME },
-    update, seatPose, riderSpot, hashSeat,
+    update, seatPose, riderSpot, hashSeat, seatOf, setSeatFor: (f) => { seatFor = f; },
     docked: () => cur.phase === 'dock',
     boardOpen: () => cur.phase === 'dock' && cur.left > 3,
     thrill: () => cur.phase === 'ride' && (cur.s - lastS) > 0 && sample(cur.s).t.y < -.25,   // 正在往下衝
