@@ -5,7 +5,8 @@
 // 資料（都在 market/ 底下）：
 //   wishes/{id}        { uid, name, kind: idea|bug|secret, title, body, where, dev, ver, t, st, reply, card }
 //   wishCount/{uid}    { dn: 台灣日期序號, n: 今天第幾個, w: 剛許的願望 id }（伺服器靠它限制每天幾個）
-//   wishWall/{id}      { name, kind, title, st, reply, card, t }：老師看過、公開在許願牆上的
+//   wishWall/{id}      { name, kind, title, body, where, st, reply, card, t }：老師看過、公開在許願牆上的
+//                      （公開可讀：每天兩次的「願望盤點」會從這裡讀老師答應要做的願望）
 //   wishVotes/{id}/{uid} true：「+1 我也想要／我也遇到」
 //   cards/{uid}/{id}   { k: good|silver|gold, title, t }：老師發的卡片
 //   users/{uid}        { name, t, p: { key: JSON 字串 }, wishes: { id: true } }：學校帳號的紀錄
@@ -39,7 +40,8 @@ export function createWish(ctx) {
   const signedSchool = () => !!(T && T.verified() && isSchoolEmail(email()));
   const canWish = () => signedSchool() || isAdmin();
   const uid = () => NET && NET.uid();
-  const nameNow = () => { const m = store.get('me', null); return (m && m.name) || (email() || '').split('@')[0] || '同學'; };
+  const nick = () => { const m = store.get('me', null); return m && typeof m.name === 'string' ? m.name.trim() : ''; };   // 遊戲暱稱（「👤 加入」取的）
+  const nameNow = () => nick() || '同學';   // 不用 email 當名字：學校帳號常是學號，不能公開在許願牆上
   const rewards = () => Object.assign({ good: 20, silver: 50, gold: 100 }, (C.economy && C.economy.wishRewards) || {});
   let tab = 'wish', wall = {}, votes = {}, mine = {}, myCards = {}, adminList = {}, offs = [];
 
@@ -128,6 +130,7 @@ export function createWish(ctx) {
   const cardChip = (k) => (CARDS[k] ? `<span class="ws-card c-${k}">${CARDS[k].icon} ${CARDS[k].name}</span>` : '');
   const stChip = (st) => { const S = STATES[st] || STATES.new; return `<span class="ws-st s-${esc(st || 'new')}">${S.icon} ${S.name}</span>`; };
   function wishForm() {
+    if (!nick()) return `<div class="ws-login"><p>🙋 許願前要先<b>取一個遊戲暱稱</b>。許願牆上會顯示暱稱，不會顯示你的學校帳號（學號）。</p><button type="button" class="btn" data-ws="nick">👤 去取暱稱</button></div>`;
     const left = WISH_PER_DAY - todayCount();
     return `<form class="ws-form" data-ws-form="wish" autocomplete="off">
       <fieldset class="ws-kinds"><legend>想許哪一種願？</legend>${Object.entries(KINDS).map(([k, K], i) => `<label class="ws-kind"><input type="radio" name="kind" value="${k}" ${i === 0 ? 'checked' : ''}><span><b>${K.icon} ${K.name}</b><small>${esc(K.hint)}</small></span></label>`).join('')}</fieldset>
@@ -146,7 +149,7 @@ export function createWish(ctx) {
     return `${Object.keys(fame).length ? `<div class="ws-fame"><b>🏆 名人堂</b>：${Object.entries(fame).map(([n, c]) => `${esc(n)} 🥇${c > 1 ? `×${c}` : ''}`).join('、')}</div>` : ''}
       <ul class="ws-list">${list.map((w) => `<li class="ws-item"><div class="ws-top">${KINDS[w.kind] ? KINDS[w.kind].icon : '💡'} <b>${esc(w.title)}</b></div>
         <div class="ws-meta">${stChip(w.st)}${cardChip(w.card)}<small>許願的人：${esc(w.name || '同學')}</small></div>
-        ${w.reply ? `<p class="ws-reply">🧑‍🏫 ${esc(w.reply)}</p>` : ''}
+        ${w.body ? `<p class="ws-body">${esc(w.body)}</p>` : ''}${w.reply ? `<p class="ws-reply">🧑‍🏫 ${esc(w.reply)}</p>` : ''}
         <button type="button" class="ws-vote ${iVoted(w.id) ? 'on' : ''}" data-ws-vote="${esc(w.id)}" ${canWish() ? '' : 'disabled'} aria-pressed="${iVoted(w.id)}">👍 ${w.kind === 'bug' ? '我也遇到' : '我也想要'}・${voteN(w.id)}</button></li>`).join('')}</ul>`;
   }
   function mineHTML() {
@@ -200,6 +203,7 @@ export function createWish(ctx) {
     const err = f.querySelector('.ws-err'), show = (m) => { err.textContent = '🙅 ' + m; err.hidden = false; };
     const kind = (f.querySelector('[name="kind"]:checked') || {}).value || 'idea';
     const title = f.elements.title.value.trim(), body = f.elements.body.value.trim();
+    if (!nick()) { show('要先用「👤 加入」取一個遊戲暱稱'); return; }
     const bad = check(title, TITLE_MAX) || (body ? check(body, BODY_MAX) : ''); if (bad) { show(bad); return; }
     if (todayCount() >= WISH_PER_DAY) { show(`今天已經許了 ${WISH_PER_DAY} 個願望，明天再來`); return; }
     const me = uid(), t = NET.now(), id = t.toString(36) + Math.random().toString(36).slice(2, 6);
@@ -220,7 +224,7 @@ export function createWish(ctx) {
   }
   async function adminAct(act, id) {
     const w = adminList[id]; if (!w) return;
-    const pub = (extra) => (w.kind === 'secret' ? {} : { [`wishWall/${id}`]: { name: w.name || '同學', kind: w.kind, title: w.title, st: extra.st || w.st, reply: extra.reply ?? w.reply ?? '', card: extra.card || w.card || '', t: w.t || 0 } });
+    const pub = (extra) => (w.kind === 'secret' ? {} : { [`wishWall/${id}`]: { name: w.name || '同學', kind: w.kind, title: w.title, body: w.body || '', where: w.where || '', st: extra.st || w.st, reply: extra.reply ?? w.reply ?? '', card: extra.card || w.card || '', t: w.t || 0 } });
     try {
       if (act.startsWith('card:')) {
         const k = act.slice(5), K = CARDS[k], coin = rewards()[k] || 0;
@@ -260,6 +264,7 @@ export function createWish(ctx) {
         if (k === 'google') login('google');
         else if (k === 'logout') T.logout().then(() => { toast('已登出'); setTimeout(() => location.reload(), 500); });
         else if (k === 'export') exportList();
+        else if (k === 'nick') { $('#wishDlg').close(); const mb = $('#meBtn'); if (mb) mb.click(); }
       }
     });
     body.addEventListener('submit', (e) => {
