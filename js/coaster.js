@@ -3,8 +3,8 @@
 // 大俯衝、海面波浪段，再依序飛過循環挖寶島、手作體驗二島、美食補給島、手作體驗一島，回到車站。
 // 時程用「網路時間」排班（所有裝置看到同一班車）：停站 25 秒 → 跑一圈 → 回站。
 import * as THREE from 'three';
-import { TAU, clamp } from './kit.js?v=20261126t';
-import { H } from './world.js?v=20261126t';
+import { TAU, clamp } from './kit.js?v=20261126u';
+import { H } from './world.js?v=20261126u';
 
 export const COASTER_CAP = 8;                 // 4 節車廂 × 每節 2 人
 const DOCK = 25;                              // 停站秒數
@@ -305,8 +305,8 @@ export function createCoaster(W, opts) {
   // ------------------------------------------------ 📸 俯衝照：大俯衝最陡的地方旁邊有一台照相機，車子衝下來時喀擦一張
   let photoS = topS + 2, steep = 0; for (let s0 = topS; s0 < topS + 22; s0 += .25) { const ty = sample(s0).t.y; if (ty < steep) { steep = ty; photoS = s0; } }
   const ph = sample(photoS), phUp = new THREE.Vector3().crossVectors(ph.t, ph.r);
-  const photoCamPos = ph.p.clone().addScaledVector(ph.r, -7.5).addScaledVector(ph.t, 2.5).setY(Math.max(1.5, ph.p.y - .4));
-  const photoTarget = ph.p.clone().addScaledVector(ph.t, -1.2).addScaledVector(phUp, .6);
+  const photoCamPos = ph.p.clone().addScaledVector(ph.r, -9).addScaledVector(ph.t, 2).setY(Math.max(1.5, ph.p.y - .4));   // 退遠一點：整台 4 節列車（約 6.5 公尺）都拍得進去
+  const photoTarget = ph.p.clone().addScaledVector(phUp, .6);   // 對準拍照點：列車正中間經過這裡時拍
   { // 照相機的小柱子＋鏡頭
     const pole = new THREE.Mesh(new THREE.CylinderGeometry(.06, .08, photoCamPos.y + .3, 6), postM); pole.position.copy(photoCamPos).setY((photoCamPos.y - .5) / 2); root.add(pole);
     const body = new THREE.Mesh(new THREE.BoxGeometry(.45, .32, .35), new THREE.MeshStandardMaterial({ color: '#333' })); body.position.copy(photoCamPos).setY(photoCamPos.y - .2); body.lookAt(photoTarget); root.add(body);
