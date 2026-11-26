@@ -1,21 +1,24 @@
-// 📞 遊戲電話：打給同時在線上的同學。只能用預設的短句和表情（不能自由打字），比較安全。
+// 📞 遊戲電話：打給同時在線上的同學。可以按預設的短句和表情，也可以自己打字（最多 TEXT_MAX 個字，
+//    不適當的字眼、電話號碼和網址會被擋下來；伺服器規則也會再檢查一次）。
 // 資料（Firebase）：
 //   market/phonebook/{uid} = { name, t }              可以接電話的人（開了「不接電話」就不在這裡）
 //   market/calls/{被叫}/{打來的人} = { from, to, st, t, a, b }
-//       st：ring 響鈴中、ok 通話中、no 拒絕；a：打來的人最新一句 {k, t}；b：接電話的人最新一句 {k, t}
+//       st：ring 響鈴中、ok 通話中、no 拒絕；a：打來的人最新一句 {k, t} 或自己打的 {x, t}；b：接電話的人最新一句
 // db 是一個小轉接頭（真的 Firebase，或測試用的假資料庫），見 main.js
 export const PHRASES = [
   '嗨！👋', '來服務台找我！', '我們一起去坐鴨子船！🦆', '一起去擼貓！🐾', '一起去騎腳踏車！🚲', '來坐雲霄飛車啊！🎢',
   '我在 {where}', '等我一下 ⏳', '好喔 👍', '不行耶 🙏', '謝謝你！😊', '😄', '🎉', '❤️', '掰掰 👋',
 ];
 export const RING_SEC = 20;
+export const TEXT_MAX = 30;      // 自己打的話最多幾個字（伺服器規則也是 30）
+const TEXT_GAP = 2500;           // 兩句話至少隔幾毫秒（不能洗版）
 
 export function createPhone(db, ui) {
-  // ui: { name(), where(), toast, chime, render(state), canUse() }
+  // ui: { name(), where(), toast, chime, render(state), canUse(), check(text) → 錯誤訊息或空字串 }
   let me = null, dnd = false, book = {}, offBook = null, offIn = null, offOut = null;
   let call = null;                 // { role: 'out'|'in', peer, peerName, st, t0, last: {a, b} }
   let incoming = {};               // 打給我的電話
-  let lastDial = 0;
+  let lastDial = 0, lastText = 0;
 
   const now = () => db.now();
   const myBookPath = () => `market/phonebook/${me}`;
@@ -53,9 +56,12 @@ export function createPhone(db, ui) {
   function watchMsgs(c) {
     const peerKey = call.role === 'out' ? 'b' : 'a';
     const m = c[peerKey];
-    if (m && typeof m.k === 'number' && m.t !== (call.last[peerKey] || 0)) {
+    if (m && (typeof m.k === 'number' || typeof m.x === 'string') && m.t !== (call.last[peerKey] || 0)) {
       call.last[peerKey] = m.t;
-      call.heard = { k: m.k, where: typeof m.w === 'string' ? m.w.slice(0, 20) : '', t: m.t };
+      if (typeof m.x === 'string') {   // 對方自己打的話：收到時再檢查一次（萬一對方用的是舊版網頁）
+        const x = m.x.slice(0, TEXT_MAX), bad = ui.check ? ui.check(x) : '';
+        call.heard = { x: bad ? '（這句話有不適當的內容，被擋下來了）' : x, t: m.t };
+      } else call.heard = { k: m.k, where: typeof m.w === 'string' ? m.w.slice(0, 20) : '', t: m.t };
       ui.chime && ui.chime(true);
     }
   }
@@ -104,6 +110,20 @@ export function createPhone(db, ui) {
       db.update(p, { [key]: msg });
       call.said = { k, where: msg.w || '', t: msg.t }; emit();
     },
+    // 自己打的話：回傳空字串＝送出了；不然回傳原因（畫面上顯示給玩家看）
+    sayText(text) {
+      if (!call || call.st !== 'ok') return '還沒接通喔';
+      const t = String(text || '').trim();
+      const bad = ui.check ? ui.check(t) : (t ? '' : '還沒有打字喔'); if (bad) return bad;
+      if (now() - lastText < TEXT_GAP) return '說慢一點，等一下再送';
+      lastText = now();
+      const p = call.role === 'out' ? callPath(call.peer, me) : callPath(me, call.peer);
+      const key = call.role === 'out' ? 'a' : 'b';
+      const msg = { x: t, t: now() };
+      db.update(p, { [key]: msg }).catch(() => ui.toast('📞 這句話沒有送出去（伺服器擋下來了）'));
+      call.said = { x: t, t: msg.t }; emit();
+      return '';
+    },
     hangup() {
       if (!call) return;
       const p = call.role === 'out' ? callPath(call.peer, me) : callPath(me, call.peer);
@@ -122,6 +142,7 @@ export function createPhone(db, ui) {
       return { me, dnd, list, call: call ? { ...call, left: Math.max(0, Math.ceil(RING_SEC - (now() - call.t0) / 1000)) } : null };
     },
     phrase: (k, where) => (PHRASES[k] || '').replace('{where}', where || '市集'),
+    line: (m) => (m && typeof m.x === 'string' ? m.x : (PHRASES[m && m.k] || '').replace('{where}', (m && m.where) || '市集')),
   };
   setInterval(() => api.tick(), 1000);
   return api;
