@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261126j">
+<link rel="stylesheet" href="styles.css?v=20261126k">
 <script type="importmap">{"imports":{"three":"./vendor/three/three.module.js","three/addons/":"./vendor/three/addons/"}}</script>
 </head>
 <body>
@@ -30,7 +30,7 @@
   <div class="brand">
     <span class="mascot" aria-hidden="true" id="brandMascot"></span>
     <div class="brand-text">
-      <h1>115 鯉魚市集</h1>
+      <h1><button type="button" class="brand-link" id="qrBtn" aria-haspopup="dialog" aria-label="115 鯉魚市集：點一下顯示網站的 QR code，讓大家快速找到這裡">115 鯉魚市集<svg class="qr-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h8v8H3zM5 5v4h4V5zM13 3h8v8h-8zm2 2v4h4V5zM3 13h8v8H3zm2 2v4h4v-4zM13 13h3v3h-3zM18 13h3v3h-3zM13 18h3v3h-3zM18 18h3v3h-3zM15.5 15.5h3v3h-3z" fill="currentColor"/></svg></button></h1>
       <p class="tagline">跳上五座六角小島，逛美食、玩手作、闖關挑戰，還能挖二手好物！</p>
     </div>
     <button type="button" class="info-btn" id="infoBtn" aria-haspopup="dialog">📅 12/12 市集資訊</button>
@@ -58,7 +58,8 @@
     <button type="button" class="chip" id="qualityBtn" aria-pressed="false">🖥️ 低畫質</button>
   </div>
   <div class="row">
-    <button type="button" class="chip" id="muteBtn" aria-pressed="false">🔇 貓咪靜音</button>
+    <button type="button" class="chip" id="musicBtn" aria-pressed="true">🎵 背景音樂</button>
+    <button type="button" class="chip" id="muteBtn" aria-pressed="false">🔇 全部靜音</button>
   </div>
   <div class="row">
     <button type="button" class="chip" id="replayBtn">🎬 重播開場</button>
@@ -180,6 +181,10 @@
   <div class="dlg-hd"><h2 id="planTitle">⭐ 我的必逛＋鯉魚幣預算</h2><button type="button" class="x" data-close aria-label="關閉">✕</button></div>
   <div id="planBody"></div>
 </dialog>
+<dialog id="qrDlg" class="dlg" aria-labelledby="qrTitle">
+  <div class="dlg-hd"><h2 id="qrTitle">📱 掃我到 115 鯉魚市集</h2><button type="button" class="x" data-close aria-label="關閉">✕</button></div>
+  <div id="qrBody"></div>
+</dialog>
 <dialog id="seatDlg" class="dlg" aria-labelledby="seatTitle">
   <div class="dlg-hd"><h2 id="seatTitle">💺 選雲霄飛車座位</h2><button type="button" class="x" data-close aria-label="關閉">✕</button></div>
   <div id="seatBody"></div>
@@ -277,6 +282,6 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <noscript><p class="noscript">這個網站需要開啟 JavaScript。</p></noscript>
-<script type="module" src="js/main.js?v=20261126j"></script>
+<script type="module" src="js/main.js?v=20261126k"></script>
 </body>
 </html>

@@ -864,3 +864,16 @@ html[data-theme="deep"] .ticket.coa { background: #4a2414; color: #ffd2bd; }
 .coa-shot .coa-photo { margin-bottom: 8px; }
 .coa-shot figcaption { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
 .coa-shot figcaption .btn { margin-left: auto; }
+
+/* 📱 左上角市集名稱＝QR code 按鈕 */
+.brand-link { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; border-radius: 10px; padding: 0 4px; margin: 0 -4px; }
+.brand-link:hover { background: rgba(255, 255, 255, .35); }
+.brand-link:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.brand-link .qr-ic { width: .85em; height: .85em; opacity: .7; flex: none; }
+.qr-lead { margin: 0 0 10px; font-weight: 700; text-align: center; }
+.qr-box { display: flex; justify-content: center; }
+.qr-box canvas { width: min(280px, 72vw); height: auto; image-rendering: pixelated; border-radius: 12px; box-shadow: var(--shadow); }
+.qr-url { text-align: center; word-break: break-all; font-weight: 700; margin: 12px 0; }
+.qr-btns { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.qr-btns .btn { flex: 1; min-width: 120px; text-align: center; }
+.qr-btns a.btn { text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
