@@ -1,7 +1,7 @@
 // 生活感：居民、送貨員、商人、路人、動物、雲、鳥群、帆船、螢火蟲、貝殼
 import * as THREE from 'three';
-import { TAU, clamp, lerp, rng, mat, GEO, glowTexture, C, batchStatic } from './kit.js?v=20261126s';
-import { H, PIER_Y } from './world.js?v=20261126s';
+import { TAU, clamp, lerp, rng, mat, GEO, glowTexture, C, batchStatic } from './kit.js?v=20261126t';
+import { H, PIER_Y } from './world.js?v=20261126t';
 
 const SKIN = ['#ffd9b8', '#f2c49b', '#e0ad84', '#ffe3c8'];
 const SHIRT = ['#e8762b', '#8a5cd0', '#2f7fd1', '#dc4848', '#3e9b4f', '#e3a33b', '#f2f2f2', '#4fb3b0'];

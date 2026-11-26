@@ -2,8 +2,8 @@
 // 環島自行車道外側有 10 個候選位置；玩家選一個位置，就會在那裡立一盞路燈（大家都看得到，晚上會亮）。
 // 路燈記在 Firebase market/lamps/{位置}；規則還沒加上時只存在這台裝置。
 import * as THREE from 'three';
-import { TAU } from './kit.js?v=20261126s';
-import { H } from './world.js?v=20261126s';
+import { TAU } from './kit.js?v=20261126t';
+import { H } from './world.js?v=20261126t';
 
 const m = (c, o = {}) => new THREE.MeshStandardMaterial({ color: c, roughness: .6, flatShading: true, ...o });
 const label = (text, bg, fg = '#fff', w = 128) => {

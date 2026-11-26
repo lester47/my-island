@@ -51,7 +51,7 @@ export function createWish(ctx) {
     if (em && !canWish()) return `<div class="ws-login"><p>你現在用 <b>${esc(em)}</b> 登入，這不是學校帳號（@${SCHOOL_DOMAIN}）。</p><button type="button" class="btn ghost" data-ws="logout">登出，換學校帳號</button></div>`;
     return `<div class="ws-login"><p>${why || '🌠 許願池要先用<b>學校帳號</b>登入才能使用。'}</p>
       <button type="button" class="btn" data-ws="google">🎓 用學校 Google 帳號登入</button>
-      <form class="ws-mail" data-ws-form="mail" autocomplete="on"><input type="email" class="pp-in" placeholder="學號或名字@${SCHOOL_DOMAIN}" autocomplete="email" required aria-label="學校 email"><button type="submit" class="btn ghost">寄登入連結到學校信箱</button></form>
+      <form class="ws-mail" data-ws-form="mail" autocomplete="on"><div class="ws-acct"><input type="text" class="pp-in" placeholder="學校帳號" autocomplete="username" autocapitalize="off" spellcheck="false" inputmode="email" required aria-label="學校帳號（@ 前面那段）"><span class="ws-dom" aria-hidden="true">@${SCHOOL_DOMAIN}</span></div><button type="submit" class="btn ghost">寄登入連結到學校信箱</button></form>
       <p class="foot">只接受 <b>@${SCHOOL_DOMAIN}</b> 的學校帳號。不登入也可以逛市集；登入後，你的護照、集章、背包、遊戲紀錄、願望和卡片會存在學校帳號裡，換電腦也不會不見。</p></div>`;
   }
   async function login(kind, mail) {
@@ -62,8 +62,9 @@ export function createWish(ctx) {
         if (!isSchoolEmail(email())) { toast(`這不是學校帳號，請用 @${SCHOOL_DOMAIN} 登入`); await T.logout().catch(() => {}); setTimeout(() => location.reload(), 900); return; }
         toast('🎓 登入成功，重新整理中…'); setTimeout(() => location.reload(), 700);
       } else {
-        const m = String(mail || '').trim().toLowerCase();
-        if (!isSchoolEmail(m) || !/^[^@\s]+@/.test(m)) { toast(`請輸入學校 email（結尾是 @${SCHOOL_DOMAIN}）`); return; }
+        let m = String(mail || '').trim().toLowerCase().replace(/\s+/g, '');
+        if (m && !m.includes('@')) m += '@' + SCHOOL_DOMAIN;   // 學生只要輸入 @ 前面的帳號，學校網域自動補上
+        if (!isSchoolEmail(m) || !/^[^@\s]+@/.test(m)) { toast(`只能用學校帳號（@${SCHOOL_DOMAIN}），輸入 @ 前面那段就好`); return; }
         await T.sendLink(m); toast(`📧 登入連結寄到 ${m} 了，請到學校信箱點連結（可能在垃圾郵件）`);
       }
     } catch (e) {

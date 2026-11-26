@@ -944,3 +944,20 @@ html[data-theme="deep"] details.ws-grp.g-done { background: #1f2e22; border-colo
 .ws-item.is-done { opacity: .92; }
 .ws-yay { margin: 0; font-weight: 800; color: #22612a; }
 html[data-theme="deep"] .ws-yay { color: #9fdc9a; }
+
+/* 🏷️ 地圖標籤：只剩圖示／全部藏起來（工具列「標籤」按鈕切換） */
+.tag .no.star { background: var(--tc, var(--primary)); font-size: 15px; }
+.tag.center { padding-left: 7px; }
+.labels.lbl-compact .tag { padding: 3px; gap: 0; min-height: 0; box-shadow: 0 2px 0 var(--tc, var(--primary)), var(--shadow); }
+.labels.lbl-compact .tag > span:not(.no):not(.dir) { display: none; }
+.labels.lbl-compact .tag .no { width: 28px; height: 28px; }
+.labels.lbl-compact .tag:hover > span:not(.no):not(.dir):not(:empty), .labels.lbl-compact .tag:focus-visible > span:not(.no):not(.dir):not(:empty) { display: inline; }   /* 滑過或用鍵盤選到時，暫時顯示名字 */
+.labels.lbl-off { visibility: hidden; }
+
+/* 🎓 學校帳號：只輸入 @ 前面，網域固定顯示在格子裡 */
+.ws-acct { flex: 1 1 260px; display: flex; align-items: center; border: 2px solid var(--line); border-radius: 12px; background: var(--surface); overflow: hidden; }
+.ws-acct:focus-within { border-color: var(--accent); }
+.ws-acct .pp-in { flex: 1; min-width: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.ws-acct .pp-in:focus { outline: none; }
+.ws-dom { flex: none; padding: 0 12px 0 2px; color: var(--muted); font-weight: 700; font-size: 14px; white-space: nowrap; }
+@media (max-width: 420px) { .ws-dom { font-size: 12.5px; padding-right: 8px; } }
