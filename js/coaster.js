@@ -3,8 +3,8 @@
 // 大俯衝、海面波浪段，再依序飛過循環挖寶島、手作體驗二島、美食補給島、手作體驗一島，回到車站。
 // 時程用「網路時間」排班（所有裝置看到同一班車）：停站 25 秒 → 跑一圈 → 回站。
 import * as THREE from 'three';
-import { TAU, clamp } from './kit.js?v=20261126f';
-import { H } from './world.js?v=20261126f';
+import { TAU, clamp } from './kit.js?v=20261126g';
+import { H } from './world.js?v=20261126g';
 
 export const COASTER_CAP = 8;                 // 4 節車廂 × 每節 2 人
 const DOCK = 25;                              // 停站秒數
@@ -629,6 +629,16 @@ export function createCoaster(W, opts) {
     }
   }
   placeCars();
+  // 📸 拍照模式：晚上拍照那一下，從照相機打閃光燈照亮車廂和人物，並暫時關掉光柱（不然照片糊成一片）
+  //   閃光燈一開始就放進場景、平常亮度 0：燈的數量不變，拍照時才不會因為重新編譯材質而卡一下
+  const flash = new THREE.PointLight('#fff6e8', 0, 40, 1.6); root.add(flash);
+  function photoMode(on, camPos, target) {
+    const night = nightN > .05;
+    for (const b of beams) b.m.visible = !on && night;
+    for (const b of carBeams) b.beam.visible = !on && night;
+    if (on && night && camPos) { flash.position.copy(camPos).lerp(target || camPos, .25); flash.intensity = 60 + 140 * nightN; }
+    else flash.intensity = 0;
+  }
   let chaseT = 0, nightN = 0;
   function update(n = 0) {
     // 🌙 天黑程度 n（0 白天～1 深夜）：發光材質、光柱、彩色小燈
@@ -685,7 +695,7 @@ export function createCoaster(W, opts) {
   return {
     root, cars, cap: COASTER_CAP, length: L, cycle: CYCLE, ride: RIDE, topY,
     station: { pos: stationC, exit: exitSpot, land: landSpot, u: us, t: ts, name: STATION_NAME },
-    update, seatPose, riderSpot, hashSeat, seatOf, setSeatFor: (f) => { seatFor = f; },
+    update, photoMode, seatPose, riderSpot, hashSeat, seatOf, setSeatFor: (f) => { seatFor = f; },
     docked: () => cur.phase === 'dock',
     boardOpen: () => cur.phase === 'dock' && cur.left > 3,
     thrill: () => cur.phase === 'ride' && (cur.s - lastS) > 0 && sample(cur.s).t.y < -.25,   // 正在往下衝
