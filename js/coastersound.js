@@ -3,7 +3,7 @@
 //   - 軌道聲：低沉的滾動聲＋輪子壓過軌道接縫的「喀噠喀噠」，越快越大聲、接縫聲越密
 //   - 風聲：速度越快越大
 //   - 爬坡：鏈條「喀啦喀啦」，坡越陡、車越慢，喀啦聲越慢
-//   - 尖叫：衝下大坡、翻大迴圈時，車上的遊客一起「啊～～」
+//   - 尖叫：從坡頂往下俯衝開始，一路大叫到翻完 360 度大迴圈（俯衝最低點、迴圈最高點最大聲）
 export function createCoasterSound() {
   let ctx = null, master = null, noiseBuf = null, muted = false, live = null, nextJoint = 0, nextChain = 0, lastScream = -99;
 
@@ -95,36 +95,57 @@ export function createCoasterSound() {
     }
   }
 
-  // 尖叫：n 個遊客一起「啊～～」（鋸齒波＋「啊」的共振峰，音高各不同，先往上衝再抖著往下）
+  // 一聲「啊～」：鋸齒波＋「啊」的三個共振峰，先往上衝再抖著；out＝接到哪個音量節點
+  function voice(c, t, len, f0, vol, out) {
+    const osc = c.createOscillator(); osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(f0 * .72, t);
+    osc.frequency.exponentialRampToValueAtTime(f0 * 1.35, t + Math.min(.2, len * .2));
+    osc.frequency.linearRampToValueAtTime(f0 * (1.15 + Math.random() * .15), t + len * .65);
+    osc.frequency.exponentialRampToValueAtTime(f0 * .8, t + len);
+    const lfo = c.createOscillator(); lfo.frequency.value = 6 + Math.random() * 3; const lg = c.createGain(); lg.gain.value = f0 * .05; lfo.connect(lg); lg.connect(osc.frequency);
+    const g = c.createGain();
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + .07); g.gain.setValueAtTime(vol * .92, t + len * .75); g.gain.exponentialRampToValueAtTime(.001, t + len);
+    for (const [f, q, a] of [[850 + Math.random() * 150, 7, 1], [1300 + Math.random() * 200, 9, .7], [2900, 10, .35]]) {
+      const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = f; bp.Q.value = q;
+      const ga = c.createGain(); ga.gain.value = a; osc.connect(bp); bp.connect(ga); ga.connect(g);
+    }
+    const br = c.createBufferSource(); br.buffer = noiseBuf; const bf = c.createBiquadFilter(); bf.type = 'bandpass'; bf.frequency.value = 1500; bf.Q.value = 1;
+    const bg = c.createGain(); bg.gain.value = .25; br.connect(bf); bf.connect(bg); bg.connect(g);
+    g.connect(out);
+    osc.start(t); lfo.start(t); br.start(t, Math.random()); osc.stop(t + len + .05); lfo.stop(t + len + .05); br.stop(t + len + .05);
+  }
+  const PITCH = [330, 420, 560, 680, 760];
+
+  // 大尖叫：從坡頂一路叫到出迴圈（dur 秒），每個人「啊～」一口氣叫完換氣再叫，大家錯開，整段不斷；
+  // peaks＝[{ at: 幾秒後, v: 音量倍數 }]：俯衝最低點、迴圈最高點叫得最大聲
+  function bigScream(n = 3, dur = 5, peaks = []) {
+    const c = ensure(); if (!c || muted) return;
+    const now = c.currentTime + .03; lastScream = now + dur;
+    const bus = c.createGain(); bus.connect(master);
+    bus.gain.setValueAtTime(.75, now);
+    for (const p of [...peaks].sort((a, b) => a.at - b.at)) if (p.at > 0 && p.at < dur) bus.gain.linearRampToValueAtTime(p.v, now + p.at);
+    bus.gain.linearRampToValueAtTime(.7, now + dur); bus.gain.linearRampToValueAtTime(0, now + dur + 1.2);
+    for (let i = 0; i < n; i++) {
+      const f0 = PITCH[(i + Math.floor(Math.random() * 5)) % 5] * (.9 + Math.random() * .25), vol = (.17 + Math.random() * .07) / Math.sqrt(n);
+      let t = now + i * .06 + Math.random() * .1;
+      while (t < now + dur) {
+        const len = Math.min(now + dur + .6 - t, 1.6 + Math.random() * 1.2);   // 最後一口氣拖到出迴圈之後一點點
+        if (len < .4) break;
+        voice(c, t, len, f0 * (.95 + Math.random() * .1), vol, bus);
+        t += len - .05 + .12 + Math.random() * .2;                               // 換氣
+      }
+    }
+    setTimeout(() => { try { bus.disconnect(); } catch (e) { /* 已經斷了 */ } }, (dur + 3) * 1000);
+  }
+  // 短短的尖叫（保留給別的地方用）
   function scream(n = 3, big = 1) {
     const c = ensure(); if (!c || muted) return;
-    const now = c.currentTime; if (now - lastScream < 2.5) return; lastScream = now;
-    for (let i = 0; i < n; i++) {
-      const t = now + i * .07 + Math.random() * .12, len = 1.6 + Math.random() * 1.1 * big;
-      const f0 = [330, 420, 560, 680, 760][Math.floor(Math.random() * 5)] * (.9 + Math.random() * .25);
-      const osc = c.createOscillator(); osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(f0 * .7, t);
-      osc.frequency.exponentialRampToValueAtTime(f0 * 1.35, t + .18);
-      osc.frequency.linearRampToValueAtTime(f0 * 1.2, t + len * .6);
-      osc.frequency.exponentialRampToValueAtTime(f0 * .75, t + len);
-      const lfo = c.createOscillator(); lfo.frequency.value = 6 + Math.random() * 3; const lg = c.createGain(); lg.gain.value = f0 * .05; lfo.connect(lg); lg.connect(osc.frequency);
-      const g = c.createGain(), vol = (.16 + Math.random() * .08) * big / Math.sqrt(n);
-      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + .08); g.gain.setValueAtTime(vol * .9, t + len * .7); g.gain.exponentialRampToValueAtTime(.001, t + len);
-      // 「啊」的三個共振峰
-      for (const [f, q, a] of [[850 + Math.random() * 150, 7, 1], [1300 + Math.random() * 200, 9, .7], [2900, 10, .35]]) {
-        const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = f; bp.Q.value = q;
-        const ga = c.createGain(); ga.gain.value = a; osc.connect(bp); bp.connect(ga); ga.connect(g);
-      }
-      // 一點氣音
-      const br = c.createBufferSource(); br.buffer = noiseBuf; const bf = c.createBiquadFilter(); bf.type = 'bandpass'; bf.frequency.value = 1500; bf.Q.value = 1;
-      const bg = c.createGain(); bg.gain.value = .25; br.connect(bf); bf.connect(bg); bg.connect(g);
-      g.connect(master);
-      osc.start(t); lfo.start(t); br.start(t, Math.random()); osc.stop(t + len + .05); lfo.stop(t + len + .05); br.stop(t + len + .05);
-    }
+    const now = c.currentTime; if (now < lastScream) return; lastScream = now + 2.5;
+    for (let i = 0; i < n; i++) voice(c, now + i * .07 + Math.random() * .12, 1.6 + Math.random() * 1.1 * big, PITCH[Math.floor(Math.random() * 5)] * (.9 + Math.random() * .25), (.16 + Math.random() * .08) * big / Math.sqrt(n), master);
   }
 
   return {
-    start, stop, update, scream,
+    start, stop, update, scream, bigScream,
     unlock: () => ensure(),
     setMuted(v) { muted = v; if (master && ctx) master.gain.setTargetAtTime(v ? 0 : .7, ctx.currentTime, .05); },
     active: () => !!live,
