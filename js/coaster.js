@@ -3,8 +3,8 @@
 // 大俯衝、海面波浪段，再依序飛過循環挖寶島、手作體驗二島、美食補給島、手作體驗一島，回到車站。
 // 時程用「網路時間」排班（所有裝置看到同一班車）：停站 25 秒 → 跑一圈 → 回站。
 import * as THREE from 'three';
-import { TAU, clamp } from './kit.js?v=20261126g';
-import { H } from './world.js?v=20261126g';
+import { TAU, clamp } from './kit.js?v=20261126h';
+import { H } from './world.js?v=20261126h';
 
 export const COASTER_CAP = 8;                 // 4 節車廂 × 每節 2 人
 const DOCK = 25;                              // 停站秒數
@@ -92,18 +92,21 @@ export function createCoaster(W, opts) {
   // ------------------------------------------------ 時刻表：用能量守恆算速度（爬坡用鏈條、進站煞車），先算好整趟的「時間 → 位置」
   const yAt = (s) => sample(s).p.y;
   let topS = 0, topY = -1; for (let s = 0; s < L * .3; s += .5) { const y = yAt(s); if (y > topY) { topY = y; topS = s; } }
-  const G = 9.8 * .6, LIFT = 2.4, BRAKE_S = L - 14, MINV = 3.2;
-  const times = [0], dist = [0];
+  // 爬坡：鏈條拉著走，坡越陡越慢（緩坡約 3 m/s、最陡約 1.3 m/s）
+  // 過了坡頂：照物理法則——重力沿軌道方向加速（下坡變快、上坡變慢），再扣掉輪子摩擦和空氣阻力；太慢時軌道上的輪胎助推器頂一下
+  const G = 9.8, LIFT_MAX = 3.0, LIFT_MIN = 1.3, MU = .004, DRAG = .0008, BRAKE_S = L - 14, MINV = 2.6, VMAX = 17;   // 真實重力；摩擦、空氣阻力小一點，整趟不會停下來（最高約 12 m/s）
+  const liftV = (s) => { const g = Math.max(0, sample(s).t.y); return LIFT_MAX - (LIFT_MAX - LIFT_MIN) * Math.min(1, g / .5); };
+  const times = [0], dist = [0], speeds = [0];
   { let s = 0, v = 0, t = 0; const dt = .02;
     while (s < L) {
-      let want;
-      if (s < 3) want = Math.min(LIFT, v + 1.5 * dt);                       // 出站
-      else if (s < topS) want = LIFT;                                       // 鏈條爬坡：喀啦喀啦
-      else if (s < BRAKE_S) want = Math.max(MINV, Math.sqrt(LIFT * LIFT + 2 * G * Math.max(0, topY - yAt(s))) * .97);
-      else want = Math.max(.9, Math.min(v, 1.2 + (L - s) * .45));            // 煞車進站
-      v = want; s += v * dt; t += dt; times.push(t); dist.push(Math.min(s, L));
+      if (s < 3) v = Math.min(liftV(3), v + 1.2 * dt);                                  // 出站，慢慢加速
+      else if (s < topS) { const w = liftV(s); v += Math.sign(w - v) * Math.min(Math.abs(w - v), 1.1 * dt); }   // 鏈條爬坡：喀啦喀啦
+      else if (s < BRAKE_S) { const ty = sample(s).t.y; v += (-G * ty - MU * G - DRAG * v * v) * dt; v = Math.min(VMAX, Math.max(MINV, v)); }
+      else v = Math.max(.9, Math.min(v, 1.2 + (L - s) * .45));                           // 煞車進站
+      s += v * dt; t += dt; times.push(t); dist.push(Math.min(s, L)); speeds.push(v);
     } }
   const RIDE = times[times.length - 1], CYCLE = DOCK + RIDE;
+  const vAtTime = (tr) => { if (tr <= 0 || tr >= times[times.length - 1]) return 0; const i = Math.min(speeds.length - 1, Math.round(tr / .02)); return speeds[i]; };
   const sAtTime = (tr) => { if (tr <= 0) return 0; if (tr >= RIDE) return L; let lo = 0, hi = times.length - 1; while (hi - lo > 1) { const m = (lo + hi) >> 1; if (times[m] < tr) lo = m; else hi = m; } const k = (tr - times[lo]) / Math.max(1e-6, times[hi] - times[lo]); return dist[lo] + (dist[hi] - dist[lo]) * k; };
 
   // ------------------------------------------------ 軌道：兩條紅色鋼軌、白色枕木、中間的支撐管、白色支柱
@@ -617,7 +620,7 @@ export function createCoaster(W, opts) {
     const tc = ((sec % CYCLE) + CYCLE) % CYCLE;
     if (tc < DOCK) return { phase: 'dock', s: 0, left: DOCK - tc, eta: 0 };
     const tr = tc - DOCK, s = sAtTime(tr);
-    return { phase: s < topS ? 'lift' : s < BRAKE_S ? 'ride' : 'brake', s, left: 0, eta: RIDE - tr };
+    return { phase: s < topS ? 'lift' : s < BRAKE_S ? 'ride' : 'brake', s, left: 0, eta: RIDE - tr, v: vAtTime(tr) };
   }
   const carQ = [], carP = [];
   function placeCars() {
@@ -704,6 +707,9 @@ export function createCoaster(W, opts) {
     boardOpen: () => cur.phase === 'dock' && cur.left > 3,
     thrill: () => cur.phase === 'ride' && (cur.s - lastS) > 0 && sample(cur.s).t.y < -.25,   // 正在往下衝
     status: () => ({ phase: cur.phase, docked: cur.phase === 'dock', left: Math.ceil(cur.left), eta: Math.ceil(cur.eta), s: cur.s }),
+    speed: () => cur.v || 0,
+    profile: () => ({ times, speeds, dist, topS, brakeS: BRAKE_S, L, at: (s0) => { const q = sample(s0); return [q.p.y, q.t.y]; } }),
+    grade: () => (cur.phase === 'dock' ? 0 : sample(cur.s).t.y),
     anchor: () => cars[0].position,
     pick: (ray) => ray.intersectObjects([...cars, st], true).length > 0,
     carPick: (ray) => ray.intersectObjects(cars, true).length > 0,
