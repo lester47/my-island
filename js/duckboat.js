@@ -3,8 +3,8 @@
 // 繞手作體驗二島（puzzle）外側的海面一圈，再倒退回棧道。坐在椅子上的人會用腳踩踏板，船兩側的水車跟著轉。
 // 時程用「網路時間」排班（所有裝置看到的鴨子船都在同一個位置），一起搭的人在同一艘船上。
 import * as THREE from 'three';
-import { TAU, clamp } from './kit.js?v=20261126d';
-import { H } from './world.js?v=20261126d';
+import { TAU, clamp } from './kit.js?v=20261126e';
+import { H } from './world.js?v=20261126e';
 
 export const DUCK_CAP = 4;                       // 船上最多 4 位登入者（前後兩排，每排兩人）
 const DOCK = 30, DEP = 6, PIV = 5, BACK = 7, SPEED = 1.5;   // 停靠秒數、出港、掉頭、倒退入泊、腳踏速度（公尺／秒）

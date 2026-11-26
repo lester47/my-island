@@ -857,3 +857,10 @@ html[data-theme="deep"] .ticket.coa { background: #4a2414; color: #ffd2bd; }
 .seat-now { margin: 8px 0; }
 @media (max-width: 420px) { .seat { min-width: 54px; } .seat-cn { font-size: 12.5px; } }
 #seatBody .pay-btns { flex-wrap: wrap; } #seatBody .pay-btns .btn { flex: 1; min-width: 96px; }
+
+/* 📸 照片視窗（雲霄飛車兩張、空拍一張） */
+#coaPhotoList { display: grid; gap: 14px; }
+.coa-shot { margin: 0; }
+.coa-shot .coa-photo { margin-bottom: 8px; }
+.coa-shot figcaption { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.coa-shot figcaption .btn { margin-left: auto; }
