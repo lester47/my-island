@@ -1,10 +1,10 @@
 // 登入者：自己的人物＋頭上名牌；之後接上連線服務時，其他人也用同一套顯示（upsert / remove）
 import * as THREE from 'three';
-import { rng } from './kit.js?v=20261126l';
-import { makePerson } from './life.js?v=20261126l';
-import { ROLES, HATS } from './roles.js?v=20261126l';
-import { makeBike, poseRider, BIKE_LIFT } from './bike.js?v=20261126l';
-import { makeAcc, makePet, stepPet, poseDance, DANCE_SEC } from './style.js?v=20261126l';
+import { rng } from './kit.js?v=20261126n';
+import { makePerson } from './life.js?v=20261126n';
+import { ROLES, HATS } from './roles.js?v=20261126n';
+import { makeBike, poseRider, BIKE_LIFT } from './bike.js?v=20261126n';
+import { makeAcc, makePet, stepPet, poseDance, DANCE_SEC } from './style.js?v=20261126n';
 const SPAWN = { x: 0, z: 7.4, yaw: Math.PI };
 
 const seedOf = (s) => { let h = 2166136261; for (const c of String(s)) h = Math.imul(h ^ c.codePointAt(0), 16777619); return h >>> 0; };
@@ -13,7 +13,7 @@ const escH = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '
 // 登入者上衣胸前的小鯉魚 Logo（和網站左上角同一張圖）
 let LOGO_MAT = null;
 function withLogo(P) {
-  if (!LOGO_MAT) { const tx = new THREE.TextureLoader().load('assets/brand/koi-logo.png?v=20261126l'); tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 4; LOGO_MAT = new THREE.MeshStandardMaterial({ map: tx, transparent: true, alphaTest: .4, roughness: .8, polygonOffset: true, polygonOffsetFactor: -2 }); }
+  if (!LOGO_MAT) { const tx = new THREE.TextureLoader().load('assets/brand/koi-logo.png?v=20261126n'); tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 4; LOGO_MAT = new THREE.MeshStandardMaterial({ map: tx, transparent: true, alphaTest: .4, roughness: .8, polygonOffset: true, polygonOffsetFactor: -2 }); }
   const m = new THREE.Mesh(new THREE.PlaneGeometry(.17, .17), LOGO_MAT);
   m.position.set(0, .76, .232); m.rotation.x = -.1;          // 上衣是上窄下寬的圓柱，貼片稍微往後仰才貼合
   P.g.add(m); P.logo = m; return P;
@@ -91,7 +91,17 @@ export function createPlayers(W, H) {
     if (meId && (!profile || profile.id !== meId)) { remove(meId); meId = null; }
     if (!profile) return;
     meId = profile.id;
+    const fresh = !all.get(meId);
     const p = all.get(meId) || build(meId, profile); setInfo(p, profile);
+    if (fresh) {   // 剛加入：每個人出生在服務台前不同的位置，不然大家疊在同一點，看起來像只有自己一個人
+      const h = seedOf(meId), a0 = (h % 360) / 180 * Math.PI, r0 = 1.4 + ((h >>> 9) % 100) / 100 * 1.6;
+      for (let k = 0; k < 16; k++) {   // 那個位置不能站（建築物、水邊）就換個方向、近一點再試
+        const a = a0 + k * 2.4, r = Math.max(1, r0 - (k >> 2) * .4);
+        const x = SPAWN.x + Math.cos(a) * r, z = SPAWN.z + Math.sin(a) * r * .7;
+        const gy = W.ground ? W.ground(x, z) : H;
+        if (gy != null) { p.pos.set(x, gy, z); p.yaw = SPAWN.yaw + (((h >>> 3) % 60) - 30) / 180 * Math.PI; break; }
+      }
+    }
   }
   const me = () => (meId ? all.get(meId) : null);
 

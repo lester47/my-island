@@ -12,6 +12,7 @@ export const PHRASES = [
 export const RING_SEC = 20;
 export const TEXT_MAX = 30;      // 自己打的話最多幾個字（伺服器規則也是 30）
 const TEXT_GAP = 2500;           // 兩句話至少隔幾毫秒（不能洗版）
+const BOOK_STALE = 3 * 60 * 1000;   // 電話簿超過 3 分鐘沒報平安的人不列出來（關掉網頁時伺服器沒清掉的）
 
 export function createPhone(db, ui) {
   // ui: { name(), where(), toast, chime, render(state), canUse(), check(text) → 錯誤訊息或空字串 }
@@ -36,6 +37,7 @@ export function createPhone(db, ui) {
     me = db.uid(); if (!me) { setTimeout(start, 400); return; }
     publish();
     offBook = db.on('market/phonebook', (v) => { book = v || {}; emit(); });
+    setInterval(publish, 60000);   // 每分鐘報一次平安：還開著網頁的人才會留在別人的電話簿裡
     offIn = db.on(`market/calls/${me}`, (v) => {
       incoming = v || {};
       // 有人打來：響鈴
@@ -80,7 +82,7 @@ export function createPhone(db, ui) {
       if (call) { ui.toast('📞 你正在講電話'); return; }
       if (peer === me) return;
       if (now() - lastDial < 8000) { ui.toast('📞 等幾秒再打'); return; }
-      const pb = book[peer]; if (!pb) { ui.toast('📞 對方現在不能接電話'); return; }
+      const pb = book[peer]; if (!pb || !(now() - (pb.t || 0) < BOOK_STALE)) { ui.toast('📞 對方現在不能接電話'); return; }
       lastDial = now();
       call = { role: 'out', peer, peerName: String(pb.name || '同學').slice(0, 16), st: 'ring', t0: now(), last: {} };
       const p = callPath(peer, me);
@@ -138,7 +140,7 @@ export function createPhone(db, ui) {
       }
     },
     state() {
-      const list = Object.entries(book).filter(([id, v]) => id !== me && v && typeof v.name === 'string').map(([id, v]) => ({ id, name: v.name.slice(0, 16) }));
+      const list = Object.entries(book).filter(([id, v]) => id !== me && v && typeof v.name === 'string' && typeof v.t === 'number' && now() - v.t < BOOK_STALE).map(([id, v]) => ({ id, name: v.name.slice(0, 16) }));
       return { me, dnd, list, call: call ? { ...call, left: Math.max(0, Math.ceil(RING_SEC - (now() - call.t0) / 1000)) } : null };
     },
     phrase: (k, where) => (PHRASES[k] || '').replace('{where}', where || '市集'),
