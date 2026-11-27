@@ -3,8 +3,8 @@
 // 繞手作體驗二島（puzzle）外側的海面一圈，再倒退回棧道。坐在椅子上的人會用腳踩踏板，船兩側的水車跟著轉。
 // 時程用「網路時間」排班（所有裝置看到的鴨子船都在同一個位置），一起搭的人在同一艘船上。
 import * as THREE from 'three';
-import { TAU, clamp } from './kit.js?v=20261127h';
-import { H } from './world.js?v=20261127h';
+import { TAU, clamp } from './kit.js?v=20261127i';
+import { H } from './world.js?v=20261127i';
 
 export const DUCK_CAP = 4;                       // 船上最多 4 位登入者（前後兩排，每排兩人）
 const DOCK = 30, DEP = 6, PIV = 5, BACK = 7, SPEED = 1.5;   // 停靠秒數、出港、掉頭、倒退入泊、腳踏速度（公尺／秒）
@@ -176,19 +176,39 @@ export function createDuckBoat(W, opts) {
   // 停靠時誰都能踩到船艙；開出去以後只有在船上的人（自己）才踩得到
   (W.over = W.over || []).push((x, z) => { const f = floorAt(x, z); return f != null && (docked() || W.duckRiding) ? f : null; });
   const seatWorld = (i) => g.localToWorld(new THREE.Vector3(SEATS[i][0], FY, SEATS[i][1] - .12));
-  // 其他登入者在鴨子船上：網路位置有延遲，直接排到四個座位（依 id 固定）
+  // 💺 座位同步：自己坐哪一個位子會寫進 market/fx 的 seat（0～3），其他人照這個位子畫你，
+  //    大家看到的座位才會一樣（以前是用 id 算一個固定座位，自己卻坐最近的位子，兩邊對不起來）。
+  //    舊版網頁沒有送座位的人，才用 id 算出來的座位。
+  let seatFor = () => null, others = () => [], me = null;
+  const hashSeat = (id) => { let h = 0; for (const ch of String(id)) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return h % 4; };
+  const fxSeat = (id) => { const v = seatFor(id); return Number.isInteger(v) && v >= 0 && v < 4 ? v : null; };
+  const seatOf = (id) => fxSeat(id) ?? hashSeat(id);
+  // 其他登入者在鴨子船上：網路位置有延遲，直接排到他的座位
   function riderSpot(p, id) {
     if (!p) return null;
     const lp = toLocal(p.x, p.z), onWater = W.ground(p.x, p.z) == null;
     const near = Math.hypot(p.x - g.position.x, p.z - g.position.z) < 4.2;
-    if (!(inCabin(lp) || (!docked() && near && (onWater || Math.abs((p.y ?? H) - FY) < .6)))) return null;
-    let h = 0; for (const ch of String(id)) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-    return seatWorld(h % 4);
+    if (docked()) {   // 停靠時船不動，網路位置是準的：有說自己坐哪就排進那個位子，沒說就照他實際站的地方畫
+      const i = fxSeat(id); return i != null && inCabin(lp) ? seatWorld(i) : null;
+    }
+    if (!(inCabin(lp) || (near && (onWater || Math.abs((p.y ?? H) - FY) < .6)))) return null;
+    return seatWorld(seatOf(id));
   }
-  // 自己沒在走路時：坐到最近的座位上踩踏板
-  function nearestSeat(v) { let best = null, bd = 1e9; for (let i = 0; i < 4; i++) { const s = seatWorld(i), dd = s.distanceToSquared(v); if (dd < bd) { bd = dd; best = s; } } return best; }
+  // 別人已經坐走的位子
+  function taken() { const t = new Set(); for (const [id, p] of others()) if (riderSpot(p, id)) t.add(seatOf(id)); return t; }
+  // 自己沒在走路時：坐到最近的「空位」上（四個都有人才跟別人擠）；坐哪個位子記在 me
+  function nearestSeat(v) {
+    const t = taken(); let best = null, bd = 1e9, bi = null;
+    for (const free of [true, false]) {
+      for (let i = 0; i < 4; i++) { if (free && t.has(i)) continue; const s = seatWorld(i), dd = s.distanceToSquared(v); if (dd < bd) { bd = dd; best = s; bi = i; } }
+      if (best) break;
+    }
+    me = bi; return best;
+  }
   return {
     g, berth, floorAt, inBoat, riderSpot, nearestSeat, docked, doorOpen, cap: DUCK_CAP,
+    seatOf, mySeat: () => me, standUp: () => { me = null; },
+    setSeatFor: (f) => { seatFor = f; }, setOthers: (f) => { others = f; },
     anchor: () => g.position,
     yaw: () => g.rotation.y,
     pedaling: () => cur.phase !== 'dock',

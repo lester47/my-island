@@ -1,9 +1,9 @@
 // 鏡頭：拖曳旋轉縮放、回到全景、點島飛近（電影史詩運鏡）、開場、導覽、地面漫遊
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { TAU, clamp, lerp, easeInOut, smooth } from './kit.js?v=20261127h';
-import { H } from './world.js?v=20261127h';
-import { SHORE } from './scenery.js?v=20261127h';
+import { TAU, clamp, lerp, easeInOut, smooth } from './kit.js?v=20261127i';
+import { H } from './world.js?v=20261127i';
+import { SHORE } from './scenery.js?v=20261127i';
 
 export function createCam(W, canvas, hooks) {
   const camera = W.camera;
@@ -197,7 +197,9 @@ export function createCam(W, canvas, hooks) {
     {
       const k = walk.keys, p = walk.pad, idle = !(k.KeyW || k.KeyS || k.KeyA || k.KeyD || k.ArrowUp || k.ArrowDown || p.up || p.down);
       walk.duckIdle = W.duckRiding && idle ? (walk.duckIdle || 0) + dt : 0;
-      if (walk.duckIdle > .35 && W.duck.pedaling()) { const st = W.duck.nearestSeat(walk.pos); if (st) { const f = Math.min(1, dt * 6); walk.pos.x += (st.x - walk.pos.x) * f; walk.pos.z += (st.z - walk.pos.z) * f; } }
+      // 站著不動就坐到空位上（停靠時也坐，大家看到的座位才一樣）；下船就把座位清掉
+      if (walk.duckIdle > .35) { const st = W.duck.nearestSeat(walk.pos); if (st) { const f = Math.min(1, dt * 6); walk.pos.x += (st.x - walk.pos.x) * f; walk.pos.z += (st.z - walk.pos.z) * f; } }
+      else if (W.duck && !W.duckRiding) W.duck.standUp();
     }
     if (walk.frozen) { placeWalk(); return; }        // 躲貓貓當鬼閉眼時不能走
     const k = walk.keys, p = walk.pad;
