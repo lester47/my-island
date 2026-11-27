@@ -913,6 +913,12 @@ html[data-theme="deep"] .ticket.coa { background: #4a2414; color: #ffd2bd; }
 .ws-st.s-ok, .ws-st.s-done { background: #e3f4e1; color: #22612a; border-color: #b9dfb5; }
 .ws-st.s-making { background: #e5efff; color: #1f4f9a; border-color: #bcd2f5; }
 .ws-st.s-no, .ws-st.s-dup { background: #f3eee8; color: #6a5a4a; }
+.ws-st.s-think { background: #fff6dc; color: #7a5a00; border-color: #f0dc9c; }
+.ws-st.s-test { background: #f1e8ff; color: #5a2f9a; border-color: #d6c2f5; }
+.ws-adm-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; width: 100%; }
+.ws-adm-row > small { min-width: 3em; color: var(--muted, #777); font-weight: 800; }
+.ws-adm button.a-no, .ws-adm button.a-dup { color: #8a3b2b; }
+.ws-adm button.a-ok, .ws-adm button.a-done { color: #22612a; font-weight: 800; }
 .ws-card.c-good { background: #e3f6e8; color: #1f6b38; } .ws-card.c-silver { background: #eef0f4; color: #4a5260; } .ws-card.c-gold { background: #fff1c2; color: #7a5200; }
 .ws-reply { margin: 0; padding: 6px 10px; border-radius: 10px; background: var(--surface); font-size: 13.5px; }
 .ws-vote { justify-self: start; min-height: 34px; padding: 0 12px; border-radius: 999px; border: 2px solid var(--line); background: var(--surface); color: var(--ink); font: inherit; font-weight: 800; cursor: pointer; }
