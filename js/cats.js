@@ -1,7 +1,7 @@
 // 島上的貓：每座島一隻，會散步、坐、舔毛、睡覺；被擼的時候有 10 種反應
 import * as THREE from 'three';
-import { TAU, clamp, lerp, rng, mat, GEO } from './kit.js?v=20261127h';
-import { H } from './world.js?v=20261127h';
+import { TAU, clamp, lerp, rng, mat, GEO } from './kit.js?v=20261127i';
+import { H } from './world.js?v=20261127i';
 
 // ------------------------------------------------------------------ 反應清單
 export const REACTIONS = {
