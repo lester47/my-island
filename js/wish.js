@@ -147,7 +147,8 @@ export function createWish(ctx) {
       <p class="ws-msg ws-err m-${fmsg.kind}" role="alert" ${fmsg.text ? '' : 'hidden'}>${esc(fmsg.text)}</p>
       <button type="submit" class="btn" ${left > 0 && !sending ? '' : 'disabled'}>${sending ? '⏳ 送出中…' : '🌠 送出願望'}</button></form>`;
   }
-  function todayCount() { const d = dayNo(NET ? NET.now() : Date.now()); return Object.values(mine).filter((w) => w && w.t && dayNo(w.t) === d).length; }
+  const myWishes = () => (isAdmin() ? { ...Object.fromEntries(Object.entries(adminList).filter(([, w]) => w && w.uid === uid())), ...mine } : mine);   // 老師的願望也從審核清單找
+  function todayCount() { const d = dayNo(NET ? NET.now() : Date.now()); return Object.values(myWishes()).filter((w) => w && w.t && dayNo(w.t) === d).length; }
   // 分區：還在做的、已經實現的、其他（重複／這次不做）分開放，已經做完的不會跟還沒做的混在一起
   const GROUPS = {
     wait: { title: '📮 等老師看', st: ['new', 'think'] },
@@ -179,7 +180,7 @@ export function createWish(ctx) {
   }
   function mineHTML() {
     const cards = Object.entries(myCards).map(([id, c]) => ({ id, ...c })).sort((a, b) => (b.t || 0) - (a.t || 0));
-    const list = Object.entries(mine).map(([id, w]) => ({ id, ...w })).filter((w) => w.title).sort((a, b) => (b.t || 0) - (a.t || 0));
+    const list = Object.entries(myWishes()).map(([id, w]) => ({ id, ...w })).filter((w) => w.title).sort((a, b) => (b.t || 0) - (a.t || 0));
     const cnt = { good: 0, silver: 0, gold: 0 }; for (const c of cards) if (cnt[c.k] != null) cnt[c.k]++;
     const item = (w) => `<li class="ws-item ${w.st === 'done' ? 'is-done' : ''}"><div class="ws-top">${kindIcon(w)} <b>${esc(w.title)}</b></div><div class="ws-meta">${stChip(w.st)}${cardChip(w.card)}</div>${w.reply ? `<p class="ws-reply">🧑‍🏫 ${esc(w.reply)}</p>` : ''}</li>`;
     return `<h3 class="wl-h">🎴 我的卡片</h3>
@@ -235,6 +236,17 @@ export function createWish(ctx) {
   // 送出願望：按下去一定會有回應（送出中 → 已經送出／沒有送出＋原因），訊息顯示在表單裡（提示泡泡會被對話框蓋住）
   let online = true, sending = false, fmsg = { text: '', kind: 'bad' };
   const SEND_WAIT = 12000;   // 等伺服器回應最多 12 秒
+  // 學生：願望＋每日計數＋自己的願望清單一起寫（規則用來擋每天超過 3 個）。
+  // 老師帳號（不是學校信箱）：規則不讓寫 wishCount／users，被擋下時改成只寫 wishes/{id}（老師本來就能改願望），
+  // 老師的「我的」從審核清單裡找自己的願望。
+  async function sendWish(me, id, wish, t, cnt) {
+    const full = { [`wishes/${id}`]: wish, [`wishCount/${me}`]: { dn: dayNo(t), n: cnt, w: id }, [`users/${me}/wishes/${id}`]: true };
+    try { await fb.update(fb.ref(db, 'market'), full); }
+    catch (e) {
+      if (!isAdmin() || !/permission/i.test(String((e && e.code) || (e && e.message) || ''))) throw e;
+      await fb.update(fb.ref(db, 'market'), { [`wishes/${id}`]: wish });
+    }
+  }
   async function submit(f) {
     // 訊息和「送出中」記在變數裡：資料庫一有變動就會重畫表單，不能只改畫面上的元素（之前就是被重畫蓋掉，看起來沒反應）
     const show = (m, kind = 'bad') => { fmsg = { text: m, kind }; const el = $('#wishBody .ws-err'); if (el) { el.textContent = m; el.className = `ws-msg ws-err m-${kind}`; el.hidden = false; } };
@@ -259,7 +271,7 @@ export function createWish(ctx) {
       let timer;
       try {
         await Promise.race([
-          fb.update(fb.ref(db, 'market'), { [`wishes/${id}`]: wish, [`wishCount/${me}`]: { dn: dayNo(t), n: cnt, w: id }, [`users/${me}/wishes/${id}`]: true }),
+          sendWish(me, id, wish, t, cnt),
           new Promise((_, rej) => { timer = setTimeout(() => rej(Object.assign(new Error('timeout'), { code: 'timeout' })), SEND_WAIT); }),
         ]);
         clearTimeout(timer); sending = false; fmsg = { text: '', kind: 'bad' };
