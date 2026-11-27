@@ -2,8 +2,8 @@
 // 借車後在漫遊裡騎：速度比走路快，上下橋雙向都能騎；不能騎上船、熱氣球、鴨子船（要先下車）。
 // 車子掛在人物身上（人物的座標系：腳底 y=0、頭在 1.16，最後整個人縮放 0.66）。
 import * as THREE from 'three';
-import { TAU } from './kit.js?v=20261127d';
-import { H } from './world.js?v=20261127d';
+import { TAU } from './kit.js?v=20261127e';
+import { H } from './world.js?v=20261127e';
 
 export const BIKE_SPEED = 2.1;                 // 騎車速度是走路的幾倍
 const LIFT = .2;                               // 坐上車座：人物抬高（人物座標）
