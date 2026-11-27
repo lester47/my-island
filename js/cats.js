@@ -1,7 +1,7 @@
 // 島上的貓：每座島一隻，會散步、坐、舔毛、睡覺；被擼的時候有 10 種反應
 import * as THREE from 'three';
-import { TAU, clamp, lerp, rng, mat, GEO } from './kit.js?v=20261126v';
-import { H } from './world.js?v=20261126v';
+import { TAU, clamp, lerp, rng, mat, GEO } from './kit.js?v=20261127a';
+import { H } from './world.js?v=20261127a';
 
 // ------------------------------------------------------------------ 反應清單
 export const REACTIONS = {
@@ -126,9 +126,12 @@ function makeCat(look, sc) {
   if (L.extra === 'bandana') add(GEO.cone4, col, 0, .08, .55, .3, .22, .06, trunk, Math.PI, Math.PI / 4, 0);
   // 點擊判定
   const hit = new THREE.Mesh(new THREE.SphereGeometry(.85, 8, 6), new THREE.MeshBasicMaterial({ visible: false })); hit.position.set(0, .45, .15); g.add(hit);
-  g.scale.setScalar(1.08 * sc);
+  g.scale.setScalar(CAT_SIZE * sc);
   return { g, body, inner, trunk, head, ears, eyes, mouth, legsF, legsB, tailBase, tail, hit };
 }
+
+// 🌠 願望「貓」：同學覺得貓太大，整體縮小（原本 1.08）
+export const CAT_SIZE = .8;
 
 // 一組姿勢參數（目前值會平滑追上目標值）
 const POSE0 = { sit: 0, low: 0, lean: 0, roll: 0, rollY: 0, jump: 0, spin: 0, buzz: 0, bodyRY: 0, headRX: 0, headRY: 0, headRZ: 0, eye: 1, mouth: 0, ear: 0, tailUp: .35, tailCurl: .1, tailWag: .12, wagSp: 2, lf0: 0, lf1: 0, lb0: 0, lb1: 0 };
@@ -365,7 +368,7 @@ export function createCats(W, content, opts = {}) {
 
   return {
     cats, pickables, update, pet, remote, scare, celebrate, puff,
-    headOf(o) { return headPos(o.cat).add(new THREE.Vector3(0, .5 * (o.cat.data.scale || 1), 0)); },
+    headOf(o) { return headPos(o.cat).add(new THREE.Vector3(0, .5 * CAT_SIZE / 1.08 * (o.cat.data.scale || 1), 0)); },
     byId(id) { return cats.find((c) => c.data.id === id); },
     // 每隻貓在自己的島上找一塊空地當家
     setHomes(find) { for (const c of cats) { const s = find(c.data.island); if (s) c.home = { x: s.x, z: s.z }; } },
