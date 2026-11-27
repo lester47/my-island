@@ -5,8 +5,8 @@
 // - 島面整片暖光（像被燈照亮）
 // 全部用發光材質和加亮的透明圓片，沒有真的光源：手機也跑得動。
 import * as THREE from 'three';
-import { TAU } from './kit.js?v=20261127n';
-import { H } from './world.js?v=20261127n';
+import { TAU } from './kit.js?v=20261127o';
+import { H } from './world.js?v=20261127o';
 
 export function createNightMarket(W, opts = {}) {
   const { scene } = W, low = !!opts.low;
