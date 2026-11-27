@@ -249,6 +249,11 @@ html[data-theme="deep"] .stamp.got { color: var(--ink); }
 .share-img { width: 100%; border-radius: 14px; display: block; margin-bottom: 12px; border: 1px solid var(--line); }
 .toast { position: fixed; z-index: 60; left: 50%; top: 86px; transform: translate(-50%, -20px); opacity: 0; transition: .3s; background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 999px; font-weight: 700; pointer-events: none; max-width: calc(100vw - 24px); }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
+.toast[popover] { inset: auto; left: 50%; top: 86px; margin: 0; border: 0; overflow: visible; width: max-content; }
+.ws-msg { margin: 6px 0; padding: 8px 12px; border-radius: 10px; font-size: 14px; font-weight: 800; line-height: 1.5; }
+.ws-msg.m-bad { background: #fdecea; color: #b3261e; border: 1px solid #f3c1bb; }
+.ws-msg.m-wait { background: #e5efff; color: #1f4f9a; border: 1px solid #bcd2f5; }
+.ws-msg.m-ok { background: #e3f4e1; color: #22612a; border: 1px solid #b9dfb5; }
 .noscript { padding: 20px; }
 
 /* 沒有 WebGL：文字清單版 */

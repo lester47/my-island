@@ -47,7 +47,7 @@ export function createWish(ctx) {
   const nick = () => { const m = store.get('me', null); return m && typeof m.name === 'string' ? m.name.trim() : ''; };   // 遊戲暱稱（「👤 加入」取的）
   const nameNow = () => nick() || (isAdmin() ? '老師' : '同學');   // 不用 email 當名字：學校帳號常是學號，不能公開在許願牆上
   const rewards = () => Object.assign({ good: 20, silver: 50, gold: 100 }, (C.economy && C.economy.wishRewards) || {});
-  let tab = 'wish', wall = {}, votes = {}, mine = {}, myCards = {}, adminList = {}, offs = [];
+  let sent = '', tab = 'wish', wall = {}, votes = {}, mine = {}, myCards = {}, adminList = {}, offs = [];
 
   // ---------------------------------------------------------------- 登入
   function loginHTML(why) {
@@ -119,6 +119,7 @@ export function createWish(ctx) {
   // ---------------------------------------------------------------- 讀資料
   function watch() {
     offs.forEach((f) => f && f()); offs = [];
+    offs.push(fb.onValue(fb.ref(db, '.info/connected'), (s) => { online = !!s.val(); }, () => {}));   // 網路有沒有連上（送出前先檢查）
     const on = (p, cb) => offs.push(fb.onValue(R(p), (s) => { cb(s.val() || {}); render(); }, () => {}));
     on('wishWall', (v) => { wall = v; });
     on('wishVotes', (v) => { votes = v; });
@@ -143,7 +144,7 @@ export function createWish(ctx) {
       <div class="ws-similar" aria-live="polite"></div>
       <label class="ws-lab">說明（最多 ${BODY_MAX} 字）<textarea class="pp-in" name="body" rows="4" maxlength="${BODY_MAX}" placeholder="想要怎麼玩？或是：在哪裡、做了什麼、發生了什麼事？"></textarea></label>
       <p class="foot">🐞 抓蟲時會自動附上你現在在哪裡（${esc(whereAmI() || '市集')}）和你的裝置型號，方便老師查。不適當的字眼、電話號碼、網址會被擋下來。今天還可以許 <b>${Math.max(0, left)}</b> 個願望。</p>
-      <p class="cc-err ws-err" role="alert" hidden></p>
+      <p class="ws-msg ws-err" role="alert" hidden></p>
       <button type="submit" class="btn" ${left > 0 ? '' : 'disabled'}>🌠 送出願望</button></form>`;
   }
   function todayCount() { const d = dayNo(NET ? NET.now() : Date.now()); return Object.values(mine).filter((w) => w && w.t && dayNo(w.t) === d).length; }
@@ -216,7 +217,7 @@ export function createWish(ctx) {
     const focusId = document.activeElement && body.contains(document.activeElement) && document.activeElement.name;
     const keep = {}; body.querySelectorAll('.ws-form [name]').forEach((el) => { keep[el.name] = el.type === 'radio' ? (el.checked ? el.value : keep[el.name]) : el.value; });
     const tabs = [['wish', '🌠 許願'], ['wall', '🧱 許願牆'], ['mine', '🎴 我的'], ...(isAdmin() ? [['admin', `🧑‍🏫 審核${Object.values(adminList).filter((w) => w.st === 'new').length ? `（${Object.values(adminList).filter((w) => w.st === 'new').length}）` : ''}`]] : [])];
-    const panel = tab === 'wall' ? wallHTML() : !canWish() ? loginHTML() : tab === 'mine' ? mineHTML() : tab === 'admin' && isAdmin() ? adminHTML() : wishForm();
+    const panel = tab === 'wall' ? wallHTML() : !canWish() ? loginHTML() : tab === 'mine' ? (sent ? `<p class="ws-msg m-ok" role="status">${esc(sent)}</p>` : '') + mineHTML() : tab === 'admin' && isAdmin() ? adminHTML() : wishForm();
     body.innerHTML = `<div class="cp-tabs" role="tablist">${tabs.map(([k, t]) => `<button type="button" role="tab" aria-selected="${tab === k}" class="${tab === k ? 'on' : ''}" data-ws-tab="${k}">${t}</button>`).join('')}</div><div role="tabpanel">${panel}</div>`;
     const f = body.querySelector('.ws-form');
     if (f) { for (const [k, v] of Object.entries(keep)) { if (k === 'kind') { const r = f.querySelector(`[name="kind"][value="${v}"]`); if (r) r.checked = true; } else if (f.elements[k]) f.elements[k].value = v; } if (focusId && f.elements[focusId] && f.elements[focusId].focus) f.elements[focusId].focus(); similar(f); }
@@ -231,23 +232,46 @@ export function createWish(ctx) {
   }
 
   // ---------------------------------------------------------------- 動作
+  // 送出願望：按下去一定會有回應（送出中 → 已經送出／沒有送出＋原因），訊息顯示在表單裡（提示泡泡會被對話框蓋住）
+  let online = true;
+  const SEND_WAIT = 12000;   // 等伺服器回應最多 12 秒
   async function submit(f) {
-    const err = f.querySelector('.ws-err'), show = (m) => { err.textContent = '🙅 ' + m; err.hidden = false; };
-    const kind = (f.querySelector('[name="kind"]:checked') || {}).value || 'idea';
-    const title = f.elements.title.value.trim(), body = f.elements.body.value.trim();
-    if (!nick() && !isAdmin()) { show('要先用「👤 加入」取一個遊戲暱稱'); return; }   // 老師沒取暱稱就用「老師」
-    const bad = check(title, TITLE_MAX) || (body ? check(body, BODY_MAX) : ''); if (bad) { show(bad); return; }
-    if (todayCount() >= WISH_PER_DAY) { show(`今天已經許了 ${WISH_PER_DAY} 個願望，明天再來`); return; }
-    const me = uid(), t = NET.now(), id = t.toString(36) + Math.random().toString(36).slice(2, 6);
-    const cnt = todayCount() + 1;
-    const wish = { uid: me, name: nameNow().slice(0, 16), email: (email() || '').slice(0, 60), kind, title, body, st: 'new', t: fb.serverTimestamp(),
-      where: String(whereAmI() || '').slice(0, 40), dev: navigator.userAgent.replace(/\s+/g, ' ').slice(0, 120), ver: String(C.assetVersion || '').slice(0, 20) };
-    if (kind === 'idea') { delete wish.where; delete wish.dev; }
-    const btn = f.querySelector('[type="submit"]'); btn.disabled = true;
+    const err = f.querySelector('.ws-err'), btn = f.querySelector('[type="submit"]');
+    const show = (m, kind = 'bad') => { err.textContent = m; err.className = `ws-msg ws-err m-${kind}`; err.hidden = false; };
+    if (btn.dataset.busy) return;   // 送出中不要重複按
     try {
-      await fb.update(fb.ref(db, 'market'), { [`wishes/${id}`]: wish, [`wishCount/${me}`]: { dn: dayNo(t), n: cnt, w: id }, [`users/${me}/wishes/${id}`]: true });
-      mine[id] = { ...wish, t }; f.reset(); toast('🌠 願望送出了！老師看過後會在「🎴 我的」回覆你'); tab = 'mine'; render();
-    } catch (e) { console.warn(e); show('沒有送出去：可能今天已經許滿了，或是內容被伺服器擋下來'); btn.disabled = false; }
+      const kind = (f.querySelector('[name="kind"]:checked') || {}).value || 'idea';
+      const title = f.elements.title.value.trim(), body = f.elements.body.value.trim();
+      if (!title) { show('🙅 標題還沒寫'); return; }
+      if (!nick() && !isAdmin()) { show('🙅 要先用「👤 加入」取一個遊戲暱稱'); return; }
+      const bad = check(title, TITLE_MAX) || (body ? check(body, BODY_MAX) : ''); if (bad) { show('🙅 ' + bad); return; }
+      if (todayCount() >= WISH_PER_DAY) { show(`🙅 今天已經許了 ${WISH_PER_DAY} 個願望，明天再來`); return; }
+      if (!online) { show('📡 網路斷線了，願望沒有送出。請確認網路後再按一次。'); return; }
+      const me = uid(); if (!me) { show('📡 還沒連上伺服器，願望沒有送出。請等幾秒再按一次。'); return; }
+      const t = NET.now(), id = t.toString(36) + Math.random().toString(36).slice(2, 6);
+      const cnt = todayCount() + 1;
+      const wish = { uid: me, name: nameNow().slice(0, 16), email: (email() || '').slice(0, 60), kind, title, body, st: 'new', t: fb.serverTimestamp(),
+        where: String(whereAmI() || '').slice(0, 40), dev: navigator.userAgent.replace(/\s+/g, ' ').slice(0, 120), ver: String(C.assetVersion || '').slice(0, 20) };
+      if (kind === 'idea') { delete wish.where; delete wish.dev; }
+      btn.disabled = true; btn.dataset.busy = '1'; const label = btn.textContent; btn.textContent = '⏳ 送出中…';
+      show('⏳ 送出中，請稍等…', 'wait');
+      let timer;
+      try {
+        await Promise.race([
+          fb.update(fb.ref(db, 'market'), { [`wishes/${id}`]: wish, [`wishCount/${me}`]: { dn: dayNo(t), n: cnt, w: id }, [`users/${me}/wishes/${id}`]: true }),
+          new Promise((_, rej) => { timer = setTimeout(() => rej(Object.assign(new Error('timeout'), { code: 'timeout' })), SEND_WAIT); }),
+        ]);
+        clearTimeout(timer);
+        mine[id] = { ...wish, t }; f.reset(); sent = `✅ 已經送出「${title}」！老師看過後會在這裡回覆你。`; toast('🌠 願望送出了！'); tab = 'mine'; render();
+      } catch (e) {
+        clearTimeout(timer); console.warn('願望沒有送出', e);
+        const code = String((e && e.code) || (e && e.message) || '');
+        show(code === 'timeout' ? '📡 等了很久伺服器都沒有回應，可能是網路有問題，願望還沒確定送出。等一下看「🎴 我的」有沒有出現；沒有的話再按一次。'
+          : /permission/i.test(code) ? '⛔ 伺服器沒有收下這個願望：可能今天已經許滿了，或這個帳號沒有許願權限。請告訴老師。'
+          : `❌ 願望沒有送出（${code.slice(0, 40) || '不明原因'}），請再試一次。`);
+        btn.disabled = false; btn.textContent = label;
+      } finally { delete btn.dataset.busy; }
+    } catch (e) { console.warn(e); show('❌ 願望沒有送出，請重新整理網頁再試一次。'); btn.disabled = false; delete btn.dataset.busy; }
   }
   async function vote(id) {
     if (!canWish()) { toast('要先用學校帳號登入才能 +1'); return; }
@@ -288,7 +312,7 @@ export function createWish(ctx) {
     body.addEventListener('click', (e) => {
       const t = e.target instanceof Element ? e.target : null; if (!t) return;
       let b;
-      if ((b = t.closest('[data-ws-tab]'))) { tab = b.dataset.wsTab; render(); return; }
+      if ((b = t.closest('[data-ws-tab]'))) { tab = b.dataset.wsTab; sent = ''; render(); return; }
       if ((b = t.closest('[data-ws-vote]'))) { vote(b.dataset.wsVote); return; }
       if ((b = t.closest('[data-ws-adm]'))) { adminAct(b.dataset.wsAdm, b.dataset.id); return; }
       if ((b = t.closest('[data-ws]'))) {
@@ -309,7 +333,7 @@ export function createWish(ctx) {
     body.addEventListener('keydown', (e) => { if (e.target.matches && e.target.matches('input, textarea')) e.stopPropagation(); });   // 打字時不觸發漫遊快捷鍵
   }
   return {
-    open(which) { if (!NET) { toast('許願池要連上線才能用'); return; } tab = which || (canWish() ? 'wish' : 'wall'); openDlg('#wishDlg'); bind(); watch(); render(); },
+    open(which) { if (!NET) { toast('許願池要連上線才能用'); return; } sent = ''; tab = which || (canWish() ? 'wish' : 'wall'); openDlg('#wishDlg'); bind(); watch(); render(); },
     close() { offs.forEach((f) => f && f()); offs = []; },
     refresh() { if (NET && $('#wishDlg').open) { if (tab === 'admin' && !isAdmin()) tab = 'wish'; watch(); render(); } },   // 老師身分晚一點才確認：重新讀資料、重畫（不然老師會看到「不是學校帳號」）
     startSync, loginHTML, login, signedSchool, isSchoolEmail,
