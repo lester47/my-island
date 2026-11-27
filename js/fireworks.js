@@ -3,7 +3,7 @@
 // - 每顆火花都會拖出一條彩色的光線（尾巴越後面越淡），爆開時有閃光照亮海面
 // - 用「種子＋網路時間」決定花樣，所以大家看到同一場煙火
 import * as THREE from 'three';
-import { TAU, rng } from './kit.js?v=20261127l';
+import { TAU, rng } from './kit.js?v=20261127m';
 
 export const FW_KINDS = [
   { id: 'mum', icon: '🌼', name: '菊花' },
