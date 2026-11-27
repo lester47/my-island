@@ -12,7 +12,8 @@
 //   users/{uid}        { name, t, p: { key: JSON 字串 }, wishes: { id: true } }：學校帳號的紀錄
 export const SCHOOL_DOMAIN = 'liwps.ntct.edu.tw';
 export const isSchoolEmail = (e) => typeof e === 'string' && e.toLowerCase().endsWith('@' + SCHOOL_DOMAIN);
-export const WISH_PER_DAY = 3, TITLE_MAX = 30, BODY_MAX = 200;
+// 每天許願次數：老師要求取消限制（舊版網頁讀這個常數，保留名稱）
+export const WISH_PER_DAY = Infinity, TITLE_MAX = 30, BODY_MAX = 200;
 export const CARDS = {
   good: { icon: '💚', name: '好人卡', desc: '點子被採用、回報的問題是真的' },
   silver: { icon: '🥈', name: '銀卡', desc: '很棒的點子、影響很多人的問題' },
@@ -137,15 +138,14 @@ export function createWish(ctx) {
   const stChip = (st) => { const S = STATES[st] || STATES.new; return `<span class="ws-st s-${esc(STATES[st] ? st : 'new')}">${S.n ? S.n + ' ' : ''}${S.icon} ${S.name}</span>`; };
   function wishForm() {
     if (!nick() && !isAdmin()) return `<div class="ws-login"><p>🙋 許願前要先<b>取一個遊戲暱稱</b>。許願牆上會顯示暱稱，不會顯示你的學校帳號（學號）。</p><button type="button" class="btn" data-ws="nick">👤 去取暱稱</button></div>`;
-    const left = WISH_PER_DAY - todayCount();
     return `<form class="ws-form" data-ws-form="wish" autocomplete="off">
       <fieldset class="ws-kinds"><legend>想許哪一種願？</legend>${Object.entries(KINDS).map(([k, K], i) => `<label class="ws-kind"><input type="radio" name="kind" value="${k}" ${i === 0 ? 'checked' : ''}><span><b>${K.icon} ${K.name}</b><small>${esc(K.hint)}</small></span></label>`).join('')}</fieldset>
       <label class="ws-lab">標題（最多 ${TITLE_MAX} 字）<input class="pp-in" name="title" maxlength="${TITLE_MAX}" required placeholder="例如：想要一個摩天輪"></label>
       <div class="ws-similar" aria-live="polite"></div>
       <label class="ws-lab">說明（最多 ${BODY_MAX} 字）<textarea class="pp-in" name="body" rows="4" maxlength="${BODY_MAX}" placeholder="想要怎麼玩？或是：在哪裡、做了什麼、發生了什麼事？"></textarea></label>
-      <p class="foot">🐞 抓蟲時會自動附上你現在在哪裡（${esc(whereAmI() || '市集')}）和你的裝置型號，方便老師查。不適當的字眼、電話號碼、網址會被擋下來。今天還可以許 <b>${Math.max(0, left)}</b> 個願望。</p>
+      <p class="foot">🐞 抓蟲時會自動附上你現在在哪裡（${esc(whereAmI() || '市集')}）和你的裝置型號，方便老師查。不適當的字眼、電話號碼、網址會被擋下來。許願次數不限，一樣的願望到許願牆按 👍 就好。</p>
       <p class="ws-msg ws-err m-${fmsg.kind}" role="alert" ${fmsg.text ? '' : 'hidden'}>${esc(fmsg.text)}</p>
-      <button type="submit" class="btn" ${left > 0 && !sending ? '' : 'disabled'}>${sending ? '⏳ 送出中…' : '🌠 送出願望'}</button></form>`;
+      <button type="submit" class="btn" ${sending ? 'disabled' : ''}>${sending ? '⏳ 送出中…' : '🌠 送出願望'}</button></form>`;
   }
   const myWishes = () => (isAdmin() ? { ...Object.fromEntries(Object.entries(adminList).filter(([, w]) => w && w.uid === uid())), ...mine } : mine);   // 老師的願望也從審核清單找
   function todayCount() { const d = dayNo(NET ? NET.now() : Date.now()); return Object.values(myWishes()).filter((w) => w && w.t && dayNo(w.t) === d).length; }
@@ -250,7 +250,7 @@ export function createWish(ctx) {
   async function submit(f) {
     // 訊息和「送出中」記在變數裡：資料庫一有變動就會重畫表單，不能只改畫面上的元素（之前就是被重畫蓋掉，看起來沒反應）
     const show = (m, kind = 'bad') => { fmsg = { text: m, kind }; const el = $('#wishBody .ws-err'); if (el) { el.textContent = m; el.className = `ws-msg ws-err m-${kind}`; el.hidden = false; } };
-    const setBusy = (on) => { sending = on; const b = $('#wishBody .ws-form [type="submit"]'); if (b) { b.disabled = on || todayCount() >= WISH_PER_DAY; b.textContent = on ? '⏳ 送出中…' : '🌠 送出願望'; } };
+    const setBusy = (on) => { sending = on; const b = $('#wishBody .ws-form [type="submit"]'); if (b) { b.disabled = on; b.textContent = on ? '⏳ 送出中…' : '🌠 送出願望'; } };
     if (sending) return;   // 送出中不要重複按
     try {
       const kind = (f.querySelector('[name="kind"]:checked') || {}).value || 'idea';
@@ -258,7 +258,6 @@ export function createWish(ctx) {
       if (!title) { show('🙅 標題還沒寫'); return; }
       if (!nick() && !isAdmin()) { show('🙅 要先用「👤 加入」取一個遊戲暱稱'); return; }
       const bad = check(title, TITLE_MAX) || (body ? check(body, BODY_MAX) : ''); if (bad) { show('🙅 ' + bad); return; }
-      if (todayCount() >= WISH_PER_DAY) { show(`🙅 今天已經許了 ${WISH_PER_DAY} 個願望，明天再來`); return; }
       if (!online) { show('📡 網路斷線了，願望沒有送出。請確認網路後再按一次。'); return; }
       const me = uid(); if (!me) { show('📡 還沒連上伺服器，願望沒有送出。請等幾秒再按一次。'); return; }
       const t = NET.now(), id = t.toString(36) + Math.random().toString(36).slice(2, 6);
@@ -280,7 +279,7 @@ export function createWish(ctx) {
         clearTimeout(timer); console.warn('願望沒有送出', e);
         const code = String((e && e.code) || (e && e.message) || '');
         show(code === 'timeout' ? '📡 等了很久伺服器都沒有回應，可能是網路有問題，願望還沒確定送出。等一下看「🎴 我的」有沒有出現；沒有的話再按一次。'
-          : /permission/i.test(code) ? (isAdmin() && !signedSchool() ? '⛔ 伺服器沒有收下：Firebase 規則目前只讓學校帳號許願，老師帳號（非學校信箱）要先在規則裡開放。' : '⛔ 伺服器沒有收下這個願望：可能今天已經許滿了，或這個帳號沒有許願權限。請告訴老師。')
+          : /permission/i.test(code) ? (isAdmin() && !signedSchool() ? '⛔ 伺服器沒有收下：Firebase 規則目前只讓學校帳號許願，老師帳號（非學校信箱）要先在規則裡開放。' : (todayCount() >= 3 ? '⛔ 伺服器沒有收下：Firebase 規則還限制每天 3 個願望，要請老師在規則裡取消。' : '⛔ 伺服器沒有收下這個願望：可能這個帳號沒有許願權限。請告訴老師。'))
           : `❌ 願望沒有送出（${code.slice(0, 40) || '不明原因'}），請再試一次。`);
         setBusy(false);
       }
