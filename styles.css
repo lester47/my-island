@@ -991,3 +991,12 @@ html[data-theme="deep"] .ws-yay { color: #9fdc9a; }
 
 /* 設定最下面的版本號 */
 .ver-line { margin: 6px 0 0; font-size: 12px; color: var(--muted, #777); text-align: right; user-select: all; }
+/* 🎤 許願語音輸入 */
+.ws-row { display: flex; gap: 6px; align-items: flex-start; }
+.ws-row > .pp-in { flex: 1; min-width: 0; }
+.ws-mic { flex: none; width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--line, #d8cbb3); background: var(--card, #fff); font-size: 20px; cursor: pointer; }
+.ws-mic.on { background: #ffe1dc; border-color: #e4532c; animation: wsMic 1s ease-in-out infinite; }
+.ws-mic:focus-visible { outline: 3px solid #2f7fd1; outline-offset: 2px; }
+@keyframes wsMic { 50% { transform: scale(1.08); } }
+@media (prefers-reduced-motion: reduce) { .ws-mic.on { animation: none; } }
+.ws-mic-tip { margin-top: -4px; }

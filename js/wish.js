@@ -136,13 +136,40 @@ export function createWish(ctx) {
   const iVoted = (id) => !!(votes[id] && votes[id][uid()]);
   const cardChip = (k) => (CARDS[k] ? `<span class="ws-card c-${k}">${CARDS[k].icon} ${CARDS[k].name}</span>` : '');
   const stChip = (st) => { const S = STATES[st] || STATES.new; return `<span class="ws-st s-${esc(STATES[st] ? st : 'new')}">${S.n ? S.n + ' ' : ''}${S.icon} ${S.name}</span>`; };
+  // 🎤 語音輸入：用瀏覽器內建的語音辨識（Chrome、Edge、Safari 有；不支援的裝置改用鍵盤上的麥克風鍵）
+  const SR = typeof window !== 'undefined' ? (window.SpeechRecognition || window.webkitSpeechRecognition) : null;
+  let rec = null, recField = null;
+  const micBtn = (field, label) => `<button type="button" class="ws-mic${recField === field ? ' on' : ''}" data-ws-mic="${field}" aria-pressed="${recField === field}" aria-label="用說的輸入${label}" title="用說的輸入${label}">${recField === field ? '⏹️' : '🎤'}</button>`;
+  function micTip(text) { const p = $('#wishBody') && $('#wishBody').querySelector('.ws-mic-tip'); if (p) p.textContent = text; }
+  function micPaint() { const body = $('#wishBody'); if (!body) return; body.querySelectorAll('[data-ws-mic]').forEach((b) => { const on = b.dataset.wsMic === recField; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); b.textContent = on ? '⏹️' : '🎤'; }); }
+  function micStop() { if (rec) { try { rec.stop(); } catch (e) { /* 已經停了 */ } } }
+  function mic(field) {
+    if (!SR) { micTip('😢 這台裝置的瀏覽器不能用說的輸入。可以點輸入框，再按鍵盤上的 🎤 麥克風鍵（iPad、手機的鍵盤都有）。'); return; }
+    if (rec) { const same = recField === field; micStop(); if (same) return; }
+    const el = () => $('#wishBody') && $('#wishBody').querySelector(`.ws-form [name="${field}"]`);
+    const box = el(); if (!box) return;
+    const max = +box.getAttribute('maxlength') || 200, base = box.value;
+    const r = new SR(); rec = r; recField = field;
+    r.lang = 'zh-TW'; r.interimResults = true; r.continuous = field === 'body'; r.maxAlternatives = 1;
+    let done = '';
+    r.onresult = (e) => {
+      let live = ''; for (let i = e.resultIndex; i < e.results.length; i++) { const t = e.results[i][0].transcript; if (e.results[i].isFinal) done += t; else live += t; }
+      const b = el(); if (!b) return;
+      b.value = (base + done + live).slice(0, max);
+      b.dispatchEvent(new Event('input', { bubbles: true }));   // 讓「相近的願望」和錯誤訊息跟著更新
+    };
+    r.onerror = (e) => { micTip(e.error === 'not-allowed' || e.error === 'service-not-allowed' ? '🙅 沒有允許使用麥克風。請在網址列旁邊的設定打開麥克風，再按一次 🎤。' : e.error === 'no-speech' ? '🤔 沒有聽到聲音，靠近一點再按 🎤 說一次。' : e.error === 'network' ? '📡 語音辨識要連上網路，請檢查網路後再試。' : '😢 語音辨識出了點問題，請再按一次 🎤，或用打字的。'); };
+    r.onend = () => { if (rec === r) { rec = null; recField = null; micPaint(); } };
+    try { r.start(); micPaint(); micTip(`🎙️ 請說話…（${field === 'title' ? '標題' : '說明'}）說完按 ⏹️ 停止`); } catch (e) { rec = null; recField = null; micPaint(); micTip('😢 麥克風開不起來，請再試一次，或用打字的。'); }
+  }
   function wishForm() {
     if (!nick() && !isAdmin()) return `<div class="ws-login"><p>🙋 許願前要先<b>取一個遊戲暱稱</b>。許願牆上會顯示暱稱，不會顯示你的學校帳號（學號）。</p><button type="button" class="btn" data-ws="nick">👤 去取暱稱</button></div>`;
     return `<form class="ws-form" data-ws-form="wish" autocomplete="off">
       <fieldset class="ws-kinds"><legend>想許哪一種願？</legend>${Object.entries(KINDS).map(([k, K], i) => `<label class="ws-kind"><input type="radio" name="kind" value="${k}" ${i === 0 ? 'checked' : ''}><span><b>${K.icon} ${K.name}</b><small>${esc(K.hint)}</small></span></label>`).join('')}</fieldset>
-      <label class="ws-lab">標題（最多 ${TITLE_MAX} 字）<input class="pp-in" name="title" maxlength="${TITLE_MAX}" required placeholder="例如：想要一個摩天輪"></label>
+      <label class="ws-lab">標題（最多 ${TITLE_MAX} 字）<span class="ws-row"><input class="pp-in" name="title" maxlength="${TITLE_MAX}" required placeholder="例如：想要一個摩天輪">${micBtn('title', '標題')}</span></label>
       <div class="ws-similar" aria-live="polite"></div>
-      <label class="ws-lab">說明（最多 ${BODY_MAX} 字）<textarea class="pp-in" name="body" rows="4" maxlength="${BODY_MAX}" placeholder="想要怎麼玩？或是：在哪裡、做了什麼、發生了什麼事？"></textarea></label>
+      <label class="ws-lab">說明（最多 ${BODY_MAX} 字）<span class="ws-row"><textarea class="pp-in" name="body" rows="4" maxlength="${BODY_MAX}" placeholder="想要怎麼玩？或是：在哪裡、做了什麼、發生了什麼事？"></textarea>${micBtn('body', '說明')}</span></label>
+      <p class="foot ws-mic-tip" aria-live="polite">🎤 按麥克風用說的輸入，說完再按一次停止。</p>
       <p class="foot">🐞 抓蟲時會自動附上你現在在哪裡（${esc(whereAmI() || '市集')}）和你的裝置型號，方便老師查。不適當的字眼、電話號碼、網址會被擋下來。每天可以許 ${WISH_PER_DAY} 個，今天還可以許 <b>${Math.max(0, WISH_PER_DAY - todayCount())}</b> 個；一樣的願望到許願牆按 👍 就好。</p>
       <p class="ws-msg ws-err m-${fmsg.kind}" role="alert" ${fmsg.text ? '' : 'hidden'}>${esc(fmsg.text)}</p>
       <button type="submit" class="btn" ${sending || todayCount() >= WISH_PER_DAY ? 'disabled' : ''}>${sending ? '⏳ 送出中…' : '🌠 送出願望'}</button></form>`;
@@ -325,6 +352,7 @@ export function createWish(ctx) {
     body.addEventListener('click', (e) => {
       const t = e.target instanceof Element ? e.target : null; if (!t) return;
       let b;
+      if ((b = t.closest('[data-ws-mic]'))) { mic(b.dataset.wsMic); return; }
       if ((b = t.closest('[data-ws-tab]'))) { tab = b.dataset.wsTab; sent = ''; render(); return; }
       if ((b = t.closest('[data-ws-vote]'))) { vote(b.dataset.wsVote); return; }
       if ((b = t.closest('[data-ws-adm]'))) { adminAct(b.dataset.wsAdm, b.dataset.id); return; }
@@ -337,10 +365,12 @@ export function createWish(ctx) {
       }
     });
     body.addEventListener('submit', (e) => {
+      micStop();
       const f = e.target; e.preventDefault();
       if (f.dataset.wsForm === 'mail') login('mail', f.querySelector('input').value);
       else if (f.dataset.wsForm === 'wish') submit(f);
     });
+    $('#wishDlg').addEventListener('close', micStop);   // 關掉許願視窗就停止收音
     body.addEventListener('toggle', (e) => { const d = e.target; if (d.dataset && d.dataset.grp) { if (d.open) openGrp.add(d.dataset.grp); else openGrp.delete(d.dataset.grp); } }, true);
     body.addEventListener('input', (e) => { const f = e.target.closest && e.target.closest('.ws-form'); if (f) { const er = f.querySelector('.ws-err'); if (er && !sending) { er.hidden = true; fmsg = { text: '', kind: 'bad' }; } if (e.target.name === 'title') similar(f); } });
     body.addEventListener('keydown', (e) => { if (e.target.matches && e.target.matches('input, textarea')) e.stopPropagation(); });   // 打字時不觸發漫遊快捷鍵
