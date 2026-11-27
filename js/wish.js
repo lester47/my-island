@@ -23,9 +23,13 @@ export const KINDS = {
   bug: { icon: '🐞', name: '抓蟲', hint: '遊戲時遇到的問題：卡住、按了沒反應、畫面怪怪的' },
   secret: { icon: '🔒', name: '祕密回報', hint: '發現可以作弊的漏洞（只有老師看得到，不會公開）' },
 };
+// 願望的流程階段：數字＝進度（⓪ 不做 → ⑤ 上線了），老師審核時照數字一步一步往前推
 export const STATES = {
-  new: { icon: '📮', name: '收到了' }, ok: { icon: '👍', name: '採用' }, making: { icon: '🛠️', name: '製作中' },
-  done: { icon: '✅', name: '上線了' }, dup: { icon: '🔁', name: '重複' }, no: { icon: '🙏', name: '這次不做' },
+  new: { n: '', icon: '📮', name: '收到了' },
+  no: { n: '⓪', icon: '🙏', name: '這次不做', adm: '否決（這次不做）' }, dup: { n: '⓪', icon: '🔁', name: '重複', adm: '重複（跟別則一樣）' },
+  think: { n: '①', icon: '🤔', name: '考慮中', adm: '考慮一下' },
+  ok: { n: '②', icon: '👍', name: '同意了', adm: '同意' }, making: { n: '③', icon: '🛠️', name: '施工中' },
+  test: { n: '④', icon: '🧪', name: '試玩中', adm: '試玩中（做好了，老師檢查中）' }, done: { n: '⑤', icon: '✅', name: '上線了' },
 };
 // 用學校帳號登入時，這些紀錄會存到資料庫
 const SYNC_KEYS = ['me', 'stamps', 'cats', 'catsDone', 'closet', 'bag', 'gameClears', 'gameAll', 'fishlog', 'fishAll', 'hideBest', 'coinplan', 'plan', 'mayorDay'];
@@ -38,10 +42,10 @@ export function createWish(ctx) {
   const email = () => (T ? T.email() : null);
   const isAdmin = () => !!(wallet() && wallet().admin);
   const signedSchool = () => !!(T && T.verified() && isSchoolEmail(email()));
-  const canWish = () => signedSchool() || isAdmin();
+  const canWish = () => signedSchool() || isAdmin();   // 老師帳號（老師名冊上的 email）也可以許願
   const uid = () => NET && NET.uid();
   const nick = () => { const m = store.get('me', null); return m && typeof m.name === 'string' ? m.name.trim() : ''; };   // 遊戲暱稱（「👤 加入」取的）
-  const nameNow = () => nick() || '同學';   // 不用 email 當名字：學校帳號常是學號，不能公開在許願牆上
+  const nameNow = () => nick() || (isAdmin() ? '老師' : '同學');   // 不用 email 當名字：學校帳號常是學號，不能公開在許願牆上
   const rewards = () => Object.assign({ good: 20, silver: 50, gold: 100 }, (C.economy && C.economy.wishRewards) || {});
   let tab = 'wish', wall = {}, votes = {}, mine = {}, myCards = {}, adminList = {}, offs = [];
 
@@ -129,9 +133,9 @@ export function createWish(ctx) {
   const voteN = (id) => Object.keys(votes[id] || {}).length;
   const iVoted = (id) => !!(votes[id] && votes[id][uid()]);
   const cardChip = (k) => (CARDS[k] ? `<span class="ws-card c-${k}">${CARDS[k].icon} ${CARDS[k].name}</span>` : '');
-  const stChip = (st) => { const S = STATES[st] || STATES.new; return `<span class="ws-st s-${esc(st || 'new')}">${S.icon} ${S.name}</span>`; };
+  const stChip = (st) => { const S = STATES[st] || STATES.new; return `<span class="ws-st s-${esc(STATES[st] ? st : 'new')}">${S.n ? S.n + ' ' : ''}${S.icon} ${S.name}</span>`; };
   function wishForm() {
-    if (!nick()) return `<div class="ws-login"><p>🙋 許願前要先<b>取一個遊戲暱稱</b>。許願牆上會顯示暱稱，不會顯示你的學校帳號（學號）。</p><button type="button" class="btn" data-ws="nick">👤 去取暱稱</button></div>`;
+    if (!nick() && !isAdmin()) return `<div class="ws-login"><p>🙋 許願前要先<b>取一個遊戲暱稱</b>。許願牆上會顯示暱稱，不會顯示你的學校帳號（學號）。</p><button type="button" class="btn" data-ws="nick">👤 去取暱稱</button></div>`;
     const left = WISH_PER_DAY - todayCount();
     return `<form class="ws-form" data-ws-form="wish" autocomplete="off">
       <fieldset class="ws-kinds"><legend>想許哪一種願？</legend>${Object.entries(KINDS).map(([k, K], i) => `<label class="ws-kind"><input type="radio" name="kind" value="${k}" ${i === 0 ? 'checked' : ''}><span><b>${K.icon} ${K.name}</b><small>${esc(K.hint)}</small></span></label>`).join('')}</fieldset>
@@ -145,15 +149,15 @@ export function createWish(ctx) {
   function todayCount() { const d = dayNo(NET ? NET.now() : Date.now()); return Object.values(mine).filter((w) => w && w.t && dayNo(w.t) === d).length; }
   // 分區：還在做的、已經實現的、其他（重複／這次不做）分開放，已經做完的不會跟還沒做的混在一起
   const GROUPS = {
-    wait: { title: '📮 等老師看', st: ['new'] },
-    doing: { title: '🛠️ 進行中（老師答應要做）', st: ['ok', 'making'] },
+    wait: { title: '📮 等老師看', st: ['new', 'think'] },
+    doing: { title: '🛠️ 進行中（老師答應要做）', st: ['ok', 'making', 'test'] },
     done: { title: '✅ 已經實現的願望', st: ['done'], fold: true },
     other: { title: '📦 其他（重複、這次不做）', st: ['dup', 'no'], fold: true },
   };
   const openGrp = new Set();   // 使用者打開的摺疊區（重畫時保持打開）
   function groupsHTML(list, keys, item, scope, empty) {
     const out = keys.map((k) => {
-      const G = GROUPS[k], rows = list.filter((w) => G.st.includes(w.st || 'new')); if (!rows.length) return '';
+      const G = GROUPS[k], rows = list.filter((w) => G.st.includes(STATES[w.st] ? w.st : 'new')); if (!rows.length) return '';
       const inner = `<ul class="ws-list">${rows.map(item).join('')}</ul>`, key = `${scope}:${k}`;
       return G.fold ? `<details class="ws-grp g-${k}" data-grp="${key}" ${openGrp.has(key) ? 'open' : ''}><summary><b>${G.title}</b>（${rows.length}）</summary>${inner}</details>`
         : `<section class="ws-grp g-${k}"><h3 class="wl-h">${G.title}（${rows.length}）</h3>${inner}</section>`;
@@ -184,6 +188,14 @@ export function createWish(ctx) {
       ${groupsHTML(list, ['wait', 'doing', 'done', 'other'], item, 'mine', '<p class="foot">還沒有許願。</p>')}
       <p class="foot">🎓 已用 ${esc(email() || '')} 登入。<button type="button" class="linkish" data-ws="logout">登出</button></p>`;
   }
+  // 審核按鈕照流程排：⓪ 不做 → ① 考慮 → ② 同意（選卡）→ ③ 施工中 → ④ 試玩中 → ⑤ 上線了；目前的階段不顯示
+  function admBtns(w) {
+    const b = (st, extra = '') => (w.st === st ? '' : `<button type="button" class="a-${st}" data-ws-adm="st:${st}" data-id="${esc(w.id)}">${STATES[st].n} ${STATES[st].icon} ${STATES[st].adm || STATES[st].name}${extra}</button>`);
+    const agree = w.card ? b('ok') : Object.entries(CARDS).map(([k, K]) => `<button type="button" class="a-ok" data-ws-adm="card:${k}" data-id="${esc(w.id)}">② 👍 同意＋${K.icon} ${K.name}</button>`).join('');
+    return `<div class="ws-adm-row"><small>不做：</small>${b('no')}${b('dup')}</div>
+      <div class="ws-adm-row"><small>審核：</small>${b('think')}${agree}</div>
+      <div class="ws-adm-row"><small>進度：</small>${b('making')}${b('test')}${b('done')}</div>`;
+  }
   function adminHTML() {
     const list = Object.entries(adminList).map(([id, w]) => ({ id, ...w })).sort((a, b) => (b.t || 0) - (a.t || 0));
     const rw = rewards();
@@ -194,11 +206,9 @@ export function createWish(ctx) {
         ${w.kind !== 'idea' ? `<p class="foot">📍 ${esc(w.where || '')}・${esc(w.dev || '')}・${esc(w.ver || '')}</p>` : ''}
         <div class="ws-meta">${stChip(w.st)}${cardChip(w.card)}<small>👍 ${voteN(w.id)}</small></div>
         ${w.reply ? `<p class="ws-reply">🧑‍🏫 ${esc(w.reply)}</p>` : ''}
-        <div class="ws-adm">${w.card ? '' : Object.entries(CARDS).map(([k, K]) => `<button type="button" data-ws-adm="card:${k}" data-id="${esc(w.id)}">${K.icon} 採用＋${K.name}</button>`).join('')}
-          ${w.st === 'making' ? '' : `<button type="button" data-ws-adm="st:making" data-id="${esc(w.id)}">🛠️ 製作中</button>`}${w.st === 'done' ? '' : `<button type="button" data-ws-adm="st:done" data-id="${esc(w.id)}">✅ 上線了</button>`}
-          <button type="button" data-ws-adm="st:dup" data-id="${esc(w.id)}">🔁 重複</button><button type="button" data-ws-adm="st:no" data-id="${esc(w.id)}">🙏 這次不做</button>
+        <div class="ws-adm">${admBtns(w)}
           <button type="button" data-ws-adm="reply" data-id="${esc(w.id)}">💬 回覆</button></div></li>`;
-    return `<p class="foot">採用時選一張卡，會自動發卡給學生，並加發鯉魚幣（💚 ${rw.good}・🥈 ${rw.silver}・🥇 ${rw.gold} 枚）。🔒 祕密回報不會公開到許願牆。做完的願望按「✅ 上線了」，就會移到「已經實現」那一區。<button type="button" class="linkish" data-ws="export">📋 複製採用的點子清單</button></p>
+    return `<p class="foot">採用時選一張卡，會自動發卡給學生，並加發鯉魚幣（💚 ${rw.good}・🥈 ${rw.silver}・🥇 ${rw.gold} 枚）。🔒 祕密回報不會公開到許願牆。數字是進度：⓪ 不做・① 考慮一下・② 同意・③ 施工中・④ 試玩中・⑤ 上線了。按「⑤ ✅ 上線了」就會移到「已經實現」那一區。<button type="button" class="linkish" data-ws="export">📋 複製採用的點子清單</button></p>
       ${groupsHTML(list, ['wait', 'doing', 'done', 'other'], item, 'admin', '<p class="foot">還沒有人許願。</p>')}`;
   }
   function render() {
@@ -225,7 +235,7 @@ export function createWish(ctx) {
     const err = f.querySelector('.ws-err'), show = (m) => { err.textContent = '🙅 ' + m; err.hidden = false; };
     const kind = (f.querySelector('[name="kind"]:checked') || {}).value || 'idea';
     const title = f.elements.title.value.trim(), body = f.elements.body.value.trim();
-    if (!nick()) { show('要先用「👤 加入」取一個遊戲暱稱'); return; }
+    if (!nick() && !isAdmin()) { show('要先用「👤 加入」取一個遊戲暱稱'); return; }   // 老師沒取暱稱就用「老師」
     const bad = check(title, TITLE_MAX) || (body ? check(body, BODY_MAX) : ''); if (bad) { show(bad); return; }
     if (todayCount() >= WISH_PER_DAY) { show(`今天已經許了 ${WISH_PER_DAY} 個願望，明天再來`); return; }
     const me = uid(), t = NET.now(), id = t.toString(36) + Math.random().toString(36).slice(2, 6);
@@ -263,7 +273,7 @@ export function createWish(ctx) {
         const reply = r.slice(0, 60);
         await fb.update(fb.ref(db, 'market'), { [`wishes/${id}/reply`]: reply, ...pub({ reply }) });
       }
-    } catch (e) { console.warn(e); toast('沒有成功：請確認 Firebase 規則已更新'); }
+    } catch (e) { console.warn(e); toast(/st:(think|test)/.test(act) ? '沒有成功：Firebase 規則可能還不認得「考慮一下／試玩中」，請更新規則' : '沒有成功：請確認 Firebase 規則已更新'); }
   }
   function exportList() {
     const list = Object.values(adminList).filter((w) => w.st === 'ok' || w.st === 'making').map((w) => `・${KINDS[w.kind] ? KINDS[w.kind].name : ''}｜${w.title}${w.body ? `：${w.body}` : ''}${w.where ? `（${w.where}）` : ''}`);
@@ -301,6 +311,7 @@ export function createWish(ctx) {
   return {
     open(which) { if (!NET) { toast('許願池要連上線才能用'); return; } tab = which || (canWish() ? 'wish' : 'wall'); openDlg('#wishDlg'); bind(); watch(); render(); },
     close() { offs.forEach((f) => f && f()); offs = []; },
+    refresh() { if (NET && $('#wishDlg').open) { if (tab === 'admin' && !isAdmin()) tab = 'wish'; watch(); render(); } },   // 老師身分晚一點才確認：重新讀資料、重畫（不然老師會看到「不是學校帳號」）
     startSync, loginHTML, login, signedSchool, isSchoolEmail,
   };
 }
