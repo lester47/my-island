@@ -1,7 +1,7 @@
 // 園遊會氣氛：氣球、拱門、彩旗、燈籠、踩高蹺、小丑、舞獅、吉祥物、熱氣球、風箏、煙火……
 // 所有東西都放在橋上、天空、海面，或島上步道外側的空地（避開攤子），不擋步道
 import * as THREE from 'three';
-import { batchStatic } from './kit.js?v=20261127i';
+import { batchStatic } from './kit.js?v=20261127j';
 
 const TAU = Math.PI * 2;
 const M = {};
@@ -24,7 +24,7 @@ function markBalloon(mesh, group, color) {
 // 一顆氣球（橢圓球＋小結）
 // 鯉魚 Logo 貼片（旗子用）
 const LOGO_GEO = new THREE.PlaneGeometry(1, 1); let LOGO_M = null;
-function logoMat() { if (!LOGO_M) { const tx = new THREE.TextureLoader().load('assets/brand/koi-logo.png?v=20261127i'); tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 4; LOGO_M = new THREE.MeshStandardMaterial({ map: tx, transparent: true, alphaTest: .4, roughness: .8, polygonOffset: true, polygonOffsetFactor: -2 }); } return LOGO_M; }
+function logoMat() { if (!LOGO_M) { const tx = new THREE.TextureLoader().load('assets/brand/koi-logo.png?v=20261127j'); tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 4; LOGO_M = new THREE.MeshStandardMaterial({ map: tx, transparent: true, alphaTest: .4, roughness: .8, polygonOffset: true, polygonOffsetFactor: -2 }); } return LOGO_M; }
 function balloon(parent, c, x, y, z, s = 1) {
   const g = new THREE.Group(); g.position.set(x, y, z); parent.add(g);
   const b = add(g, G.sph, mat(c, { roughness: .35, metalness: .05 }), 0, 0, 0, .34 * s, .42 * s, .34 * s);
@@ -276,10 +276,11 @@ export function createFestival(W, content, H, opts = {}) {
 
   // ------------------------------------------------ 會走動的表演者（沿各島步道外圈走）
   const walkers = [];
+  let people = () => [];   // 島上的人（自己、其他登入者）的位置：表演者會繞開，不會從人身上穿過去
   function ringWalker(id, build, speed, dir = 1) {
     const I = islands[id]; if (!I || !I.walk) return;
     const g = new THREE.Group(); root.add(g); const parts = build(g);
-    const w = { I, g, ang: R() * TAU, speed, dir, parts }; walkers.push(w); return w;
+    const w = { I, g, ang: R() * TAU, speed, dir, parts, off: 0, stop: false }; walkers.push(w); return w;
   }
   function person(g, shirt, y0 = 0) {
     if (!makePerson) return null;
@@ -376,12 +377,28 @@ export function createFestival(W, content, H, opts = {}) {
     for (const bl of bridgeLights) for (const it of bl.items) { it.lit = Math.max(0, it.lit - dt * .35); it.m.emissiveIntensity = Math.max(night * 1.4, it.lit * 1.6); }
     if (!moving) return;
     for (const f of anim) f(t, dt);
+    const ppl = people();
     for (const w of walkers) {
-      const I = w.I; w.ang += w.dir * dt * w.speed / Math.max(1, I.walk.radAt(w.ang));
-      const r = I.walk.radAt(w.ang) + .05, x = I.pos.x + Math.cos(w.ang) * r, z = I.pos.z + Math.sin(w.ang) * r;
+      const I = w.I, step = w.dir * dt * w.speed / Math.max(1, I.walk.radAt(w.ang));
+      // 🚶 不從人身上穿過去：前面有人就往步道旁邊讓開繞過去；兩邊都沒地方走、或人就貼在面前，就停下來等
+      const at = (ang, off) => { const r = I.walk.radAt(ang) + .05 + off; return { x: I.pos.x + Math.cos(ang) * r, z: I.pos.z + Math.sin(ang) * r }; };
+      const ahead = at(w.ang + w.dir * 1.1 / Math.max(1, I.walk.radAt(w.ang)), w.off), here = at(w.ang, w.off);
+      let close = false, soon = false;
+      for (const q of ppl) { if (Math.hypot(q.x - ahead.x, q.z - ahead.z) < 1.3 || Math.hypot(q.x - here.x, q.z - here.z) < 1.1) soon = true; if (Math.hypot(q.x - here.x, q.z - here.z) < .75) close = true; }
+      let want = 0;
+      if (soon) {
+        const aAng = w.ang + w.dir * 1.1 / Math.max(1, I.walk.radAt(w.ang)), free = (c) => W.ground && W.ground(c.x, c.z) != null && !ppl.some((q) => Math.hypot(q.x - c.x, q.z - c.z) < .8);
+        for (const o of w.off < 0 ? [-1.1, 1.1] : [1.1, -1.1]) if (free(at(w.ang, o)) && free(at(aAng, o))) { want = o; break; }   // 已經往哪邊讓，就繼續走那一邊
+        if (!want || (want * w.off < 0 && Math.abs(w.off) > .2)) { want = w.off; close = true; }                                   // 沒地方繞、或要從人面前橫切過去：先停下來等
+      }
+      w.off += Math.max(-dt * 1.6, Math.min(dt * 1.6, want - w.off));
+      const wait = close && Math.abs(w.off - want) > .05;
+      w.stop = wait;
+      if (!wait) w.ang += step;
+      const r = I.walk.radAt(w.ang) + .05 + w.off, x = I.pos.x + Math.cos(w.ang) * r, z = I.pos.z + Math.sin(w.ang) * r;
       w.g.position.set(x, H, z);
       w.g.rotation.y = Math.atan2(-Math.sin(w.ang) * w.dir, Math.cos(w.ang) * w.dir);
-      const s = Math.sin(t * 6 + w.ang * 3), p = w.parts || {};
+      const s = wait ? 0 : Math.sin(t * 6 + w.ang * 3), p = w.parts || {};
       if (p.legs) p.legs.forEach((l, i) => { l.rotation.x = (i % 2 ? -s : s) * (p.stilt ? .25 : .5); });
       if (p.P && !p.stilt) { p.P.legs[0].rotation.x = s * .5; p.P.legs[1].rotation.x = -s * .5; }
       if (p.P && p.stilt) { p.P.arms[0].rotation.z = -.4 - Math.sin(t * 3) * .3; p.P.arms[1].rotation.z = .4 + Math.sin(t * 3) * .3; }
@@ -468,7 +485,7 @@ export function createFestival(W, content, H, opts = {}) {
     return null;
   }
   batchStatic(stat); for (const g of statics) batchStatic(g);
-  return { root, update, walkerAt, bridgeLights, stringPoles, freeSpot: (id, n, r) => spotAny([id], n, r), kinds: [...kinds], balloons: () => BALLOONS.filter((h) => !h.userData.balloon.group.userData.popped && h.parent && isVisible(h)), pop };
+  return { root, update, walkerAt, setPeople: (f) => { people = f; }, walkers, bridgeLights, stringPoles, freeSpot: (id, n, r) => spotAny([id], n, r), kinds: [...kinds], balloons: () => BALLOONS.filter((h) => !h.userData.balloon.group.userData.popped && h.parent && isVisible(h)), pop };
 }
 function isVisible(o) { for (let p = o; p; p = p.parent) if (!p.visible) return false; return true;
 }
