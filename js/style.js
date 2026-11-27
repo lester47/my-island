@@ -3,8 +3,8 @@
 // - 閃身步：雙腳輪流往外踢、身體左右滑、手臂擺動，跳 4 秒
 // - 寵物：小狗、小兔、小雞，走在主人旁邊，走路時一跳一跳
 import * as THREE from 'three';
-import { TAU } from './kit.js?v=20261127j';
-import { H } from './world.js?v=20261127j';
+import { TAU } from './kit.js?v=20261127k';
+import { H } from './world.js?v=20261127k';
 
 const m = (c, o = {}) => new THREE.MeshStandardMaterial({ color: c, roughness: .7, flatShading: true, ...o });
 const part = (g, geo, mat, x, y, z, sx = 1, sy = 1, sz = 1, rx = 0, ry = 0, rz = 0) => { const o = new THREE.Mesh(geo, mat); o.position.set(x, y, z); o.scale.set(sx, sy, sz); o.rotation.set(rx, ry, rz); o.castShadow = true; g.add(o); return o; };
