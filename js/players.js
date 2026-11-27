@@ -1,10 +1,10 @@
 // 登入者：自己的人物＋頭上名牌；之後接上連線服務時，其他人也用同一套顯示（upsert / remove）
 import * as THREE from 'three';
-import { rng } from './kit.js?v=20261127k';
-import { makePerson } from './life.js?v=20261127k';
-import { ROLES, HATS } from './roles.js?v=20261127k';
-import { makeBike, poseRider, BIKE_LIFT } from './bike.js?v=20261127k';
-import { makeAcc, makePet, stepPet, poseDance, DANCE_SEC } from './style.js?v=20261127k';
+import { rng } from './kit.js?v=20261127l';
+import { makePerson } from './life.js?v=20261127l';
+import { ROLES, HATS } from './roles.js?v=20261127l';
+import { makeBike, poseRider, BIKE_LIFT } from './bike.js?v=20261127l';
+import { makeAcc, makePet, stepPet, poseDance, DANCE_SEC, danceKind } from './style.js?v=20261127l';
 const SPAWN = { x: 0, z: 7.4, yaw: Math.PI };
 
 const seedOf = (s) => { let h = 2166136261; for (const c of String(s)) h = Math.imul(h ^ c.codePointAt(0), 16777619); return h >>> 0; };
@@ -13,7 +13,7 @@ const escH = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '
 // 登入者上衣胸前的小鯉魚 Logo（和網站左上角同一張圖）
 let LOGO_MAT = null;
 function withLogo(P) {
-  if (!LOGO_MAT) { const tx = new THREE.TextureLoader().load('assets/brand/koi-logo.png?v=20261127k'); tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 4; LOGO_MAT = new THREE.MeshStandardMaterial({ map: tx, transparent: true, alphaTest: .4, roughness: .8, polygonOffset: true, polygonOffsetFactor: -2 }); }
+  if (!LOGO_MAT) { const tx = new THREE.TextureLoader().load('assets/brand/koi-logo.png?v=20261127l'); tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 4; LOGO_MAT = new THREE.MeshStandardMaterial({ map: tx, transparent: true, alphaTest: .4, roughness: .8, polygonOffset: true, polygonOffsetFactor: -2 }); }
   const m = new THREE.Mesh(new THREE.PlaneGeometry(.17, .17), LOGO_MAT);
   m.position.set(0, .76, .232); m.rotation.x = -.1;          // 上衣是上窄下寬的圓柱，貼片稍微往後仰才貼合
   P.g.add(m); P.logo = m; return P;
@@ -61,7 +61,7 @@ export function createPlayers(W, H) {
     p.tag.innerHTML = `<span class="r">${R.icon} ${R.label}</span><b>${escH(info.name)}</b>${p.id === meId ? '<i>我</i>' : ''}${p.badge ? `<em class="bd">${escH(p.badge)}</em>` : ''}`;
   }
   function remove(id) { const p = all.get(id); if (!p) return; scene.remove(p.P.g); if (p.pet) scene.remove(p.pet.g); p.tag.remove(); all.delete(id); }
-  // 👕 配件、🐾 寵物、💃 閃身步（自己和別人都一樣；別人的從 market/fx 來）
+  // 👕 配件、🐾 寵物、💃 跳舞（自己和別人都一樣；別人的從 market/fx 來）
   function setLook(id, look) {
     const p = all.get(id); if (!p) return;
     const acc = look.acc || null, pet = look.pet || null;
@@ -73,7 +73,7 @@ export function createPlayers(W, H) {
       if (p.pet) scene.remove(p.pet.g); p.pet = null;
       if (pet) { p.pet = makePet(pet); p.pet.kind = pet; scene.add(p.pet.g); }
     }
-    if (look.dance && look.dance !== p.danceKey) { p.danceKey = look.dance; p.danceT0 = performance.now(); }
+    if (look.dance && look.dance !== p.danceKey) { p.danceKey = look.dance; p.danceKind = danceKind(look.dance); p.danceT0 = performance.now(); }
   }
   const lookOf = (id) => { const p = all.get(id); return p ? { acc: p.acc ? p.acc.userData.kind : null, pet: p.pet ? p.pet.kind : null } : null; };
   // 🚲 騎腳踏車：車子掛在人物身上（換衣服重建人物時重新掛上）
@@ -186,8 +186,8 @@ export function createPlayers(W, H) {
         p.P.g.position.y += BIKE_LIFT * p.P.g.scale.x;
         poseRider(p.P, B, t, roll);
       } else if (danceK < DANCE_SEC && !sit && !(p.moving > 0)) {
-        // 💃 閃身步：腳往外踢、身體左右滑、彈跳
-        const d = poseDance(p.P, danceK), sc = p.P.g.scale.x;
+        // 💃 跳舞：照舞的種類擺動作（閃身步、揮手舞、機器人舞、轉圈圈、開合跳、小雞舞）
+        const d = poseDance(p.P, danceK, p.danceKind), sc = p.P.g.scale.x;
         p.P.g.position.x += Math.cos(p.yaw) * d.slide * sc; p.P.g.position.z -= Math.sin(p.yaw) * d.slide * sc; p.P.g.position.y += d.bounce; p.P.g.rotation.y += d.twist;
       } else pose(p.P, t + p.phase, p.moving > 0 && !sit, sit, duckSit && W.duck.pedaling());
       if (p.acc) for (const c of p.acc.children) if (c.userData.cape) c.rotation.x = .12 + (p.moving > 0 || p.ride ? .5 + Math.sin(t * 9) * .12 : Math.sin(t * 1.5) * .04);

@@ -3,8 +3,8 @@
 // - 閃身步：雙腳輪流往外踢、身體左右滑、手臂擺動，跳 4 秒
 // - 寵物：小狗、小兔、小雞，走在主人旁邊，走路時一跳一跳
 import * as THREE from 'three';
-import { TAU } from './kit.js?v=20261127k';
-import { H } from './world.js?v=20261127k';
+import { TAU } from './kit.js?v=20261127l';
+import { H } from './world.js?v=20261127l';
 
 const m = (c, o = {}) => new THREE.MeshStandardMaterial({ color: c, roughness: .7, flatShading: true, ...o });
 const part = (g, geo, mat, x, y, z, sx = 1, sy = 1, sz = 1, rx = 0, ry = 0, rz = 0) => { const o = new THREE.Mesh(geo, mat); o.position.set(x, y, z); o.scale.set(sx, sy, sz); o.rotation.set(rx, ry, rz); o.castShadow = true; g.add(o); return o; };
@@ -96,14 +96,52 @@ export function stepPet(pet, owner, ownerYaw, t, dt, groundAt) {
   if (pet.tail) pet.tail.rotation.z = Math.sin(t * (moving ? 14 : 6)) * .5;
 }
 
-// ------------------------------------------------ 閃身步：4 秒的舞步
+// ------------------------------------------------ 💃 跳舞：每支舞 4 秒（閃身步以外的舞是願望「可以有更多舞」加的）
 export const DANCE_SEC = 4;
-export function poseDance(P, k) {
-  // k：跳了幾秒。兩拍一組：右腳往外踢＋身體往左滑，再換邊
+// 舞的種類：key 是送到 market/fx 的舞步代號開頭（例如 "w:abc123"）；舊版網頁看不懂代號，會跳閃身步
+export const DANCES = {
+  s: { icon: '🕺', name: '閃身步', tip: '腳往外踢、身體左右滑' },
+  w: { icon: '🙌', name: '揮手舞', tip: '雙手舉高左右揮' },
+  r: { icon: '🤖', name: '機器人舞', tip: '手臂一格一格動' },
+  t: { icon: '🌀', name: '轉圈圈', tip: '張開雙手轉兩圈' },
+  j: { icon: '⭐', name: '開合跳', tip: '跳起來手腳張開' },
+  c: { icon: '🐔', name: '小雞舞', tip: '手肘拍拍像翅膀、蹲低搖屁股' },
+};
+export const danceKind = (key) => { const m = /^([a-z]):/.exec(String(key || '')); return m && DANCES[m[1]] ? m[1] : 's'; };
+export function poseDance(P, k, kind = 's') {
+  const L0 = P.legs[0].rotation, L1 = P.legs[1].rotation, A0 = P.arms[0].rotation, A1 = P.arms[1].rotation;
+  if (kind === 'w') {   // 🙌 揮手舞：雙手舉高，跟著拍子左右揮，膝蓋一彈一彈
+    const s = Math.sin(k * 6);
+    L0.set(-.15 - Math.abs(s) * .2, 0, 0); L1.set(-.15 - Math.abs(s) * .2, 0, 0);
+    A0.set(Math.PI * .92, 0, -.25 + s * .45); A1.set(Math.PI * .92, 0, .25 + s * .45);
+    return { slide: s * .06, bounce: Math.abs(Math.sin(k * 12)) * .04, twist: s * .15 };
+  }
+  if (kind === 'r') {   // 🤖 機器人舞：每半拍換一個姿勢，動作一格一格
+    const step = Math.floor(k * 4) % 4, poses = [[-1.57, 0, 0, -.3], [0, -1.57, .3, 0], [-1.57, -1.57, 0, 0], [-.4, -.4, .9, -.9]];
+    const [a, b, za, zb] = poses[step];
+    A0.set(a, 0, .1 + za); A1.set(b, 0, -.1 + zb); L0.set(step === 1 ? -.35 : 0, 0, 0); L1.set(step === 3 ? -.35 : 0, 0, 0);
+    return { slide: 0, bounce: 0, twist: [0, .5, 0, -.5][step] };
+  }
+  if (kind === 't') {   // 🌀 轉圈圈：張開雙手，4 秒轉兩圈，最後停回原本的方向
+    const e = Math.min(1, k / DANCE_SEC), turn = (e < .5 ? 2 * e * e : 1 - Math.pow(-2 * e + 2, 2) / 2) * Math.PI * 4;
+    A0.set(0, 0, -1.45); A1.set(0, 0, 1.45); L0.set(Math.sin(k * 10) * .25, 0, 0); L1.set(-Math.sin(k * 10) * .25, 0, 0);
+    return { slide: 0, bounce: Math.abs(Math.sin(k * 10)) * .03, twist: turn };
+  }
+  if (kind === 'j') {   // ⭐ 開合跳：跳起來手腳張開，落地合起來
+    const s = Math.max(0, Math.sin(k * 7));
+    L0.set(0, 0, -s * .4); L1.set(0, 0, s * .4); A0.set(0, 0, -.2 - s * 2.6); A1.set(0, 0, .2 + s * 2.6);
+    return { slide: 0, bounce: s * .28, twist: 0 };
+  }
+  if (kind === 'c') {   // 🐔 小雞舞：手肘往外拍拍像翅膀，蹲低左右搖
+    const s = Math.sin(k * 14), sway = Math.sin(k * 5);
+    A0.set(-.3, 0, -.9 - s * .45); A1.set(-.3, 0, .9 + s * .45); L0.set(-.5, 0, -.15); L1.set(-.5, 0, .15);
+    return { slide: sway * .08, bounce: -.08 + Math.abs(s) * .02, twist: sway * .3 };
+  }
+  // 🕺 閃身步：兩拍一組，右腳往外踢＋身體往左滑，再換邊
   const w = k * 9, s = Math.sin(w), c = Math.cos(w * .5);
-  P.legs[0].rotation.set(Math.max(0, s) * -.9, 0, Math.max(0, s) * .35);
-  P.legs[1].rotation.set(Math.max(0, -s) * -.9, 0, Math.max(0, -s) * -.35);
-  P.arms[0].rotation.set(-1.2 + s * .6, 0, .3); P.arms[1].rotation.set(-1.2 - s * .6, 0, -.3);
+  L0.set(Math.max(0, s) * -.9, 0, Math.max(0, s) * .35);
+  L1.set(Math.max(0, -s) * -.9, 0, Math.max(0, -s) * -.35);
+  A0.set(-1.2 + s * .6, 0, .3); A1.set(-1.2 - s * .6, 0, -.3);
   return { slide: c * .14, bounce: Math.abs(s) * .05, twist: Math.sin(w * .5) * .35 };
 }
 
