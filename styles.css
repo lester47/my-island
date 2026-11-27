@@ -988,3 +988,6 @@ html[data-theme="deep"] .ws-yay { color: #9fdc9a; }
 .closed-tch summary { cursor: pointer; color: #cfd8ff; }
 .closed-tch .foot, .closed-tch p { color: #dfe4f7; }
 .closed-tch .linkish { color: #ffd76a; }
+
+/* 設定最下面的版本號 */
+.ver-line { margin: 6px 0 0; font-size: 12px; color: var(--muted, #777); text-align: right; user-select: all; }
