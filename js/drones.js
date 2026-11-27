@@ -1,11 +1,11 @@
 // 🚁 無人機：三種玩法
 // 1. 無人機燈光秀：花鯉魚幣，一群發光無人機在北邊夜空排出「115」、鯉魚、愛心、「市集」、星星、漩渦，再降落
 //    （畫面只由「開始時間」決定，所以大家看到同一場秀）
-// 2. 遙控無人機：從服務台旁的無人機基地起飛，用方向鍵／螢幕按鈕自己飛，可以空拍照相，電池 2 分鐘
+// 2. 遙控無人機：從服務台島旁海上的無人機停機坪起飛（木棧道走過去），用方向鍵／螢幕按鈕自己飛，可以空拍照相，電池 2 分鐘
 // 3. 送貨無人機：平常有幾台載著包裹在島之間飛；打工「無人機快遞」＝自己開無人機把包裹送到指定的島
 import * as THREE from 'three';
-import { TAU, rng } from './kit.js?v=20261127n';
-import { H } from './world.js?v=20261127n';
+import { TAU, rng } from './kit.js?v=20261127o';
+import { H } from './world.js?v=20261127o';
 
 const ease = (k) => (k <= 0 ? 0 : k >= 1 ? 1 : k * k * (3 - 2 * k));
 
@@ -42,17 +42,77 @@ export function createDrones(W, opts = {}) {
     return { g, props, box, spin: (dt, k = 1) => { for (let i = 0; i < props.length; i++) props[i].rotation.z += dt * 40 * k * (i % 2 ? 1 : -1); } };
   }
 
-  // ================================================================ 無人機基地（服務台島上）
-  const base = opts.base ? new THREE.Vector3(opts.base.x, H, opts.base.z) : new THREE.Vector3(3, H, -6);
-  const baseG = new THREE.Group(); baseG.position.copy(base); baseG.rotation.y = opts.base?.face ?? 0; scene.add(baseG);
+  // ================================================================ 無人機基地
+  // opts.pier = { island, angle(度) }：像熱氣球一樣，從島邊拉一條木棧道到海上的小型圓形停機坪（不佔島上的路口）
+  // 沒有 pier 就用 opts.base 放在島上的空地
+  const PAD_R = 1.45, WK_W = 1.3;   // 小停機坪半徑（畫圖案的那一圈）、木棧道寬
+  let base, face = opts.base?.face ?? 0, edgeLampM = null, padDir = null;
+  if (opts.pier) {
+    const I = W.islands[opts.pier.island || 'center'], ang = opts.pier.angle * Math.PI / 180, edge = I.top(ang);
+    const dir = new THREE.Vector3(Math.cos(ang), 0, Math.sin(ang)); padDir = dir;
+    const a = I.pos.clone().addScaledVector(dir, edge - 1.0).setY(H);
+    base = I.pos.clone().addScaledVector(dir, edge + (opts.pier.out ?? 1.4) + PAD_R + .3).setY(H);
+    const PR = PAD_R + .35, len = a.distanceTo(base) - PR + .25;
+    face = Math.atan2(-dir.x, -dir.z);   // 停著的無人機、起飛時的機頭都朝島
+    // 漫遊時可以走：圓坪＋棧道
+    W.surfaces.push((x, z) => {
+      if (Math.hypot(x - base.x, z - base.z) < PR - .05) return H;
+      const dx = x - a.x, dz = z - a.z, u = dx * dir.x + dz * dir.z, v = -dx * dir.z + dz * dir.x;
+      return u > -.2 && u < len + .1 && Math.abs(v) < WK_W / 2 - .12 ? H : null;
+    });
+    const padG = new THREE.Group(); padG.position.copy(base); scene.add(padG);
+    const wood = m('#a07448'), woodD = m('#6e4b2c'), rail = m('#f2efe6');
+    const deck = new THREE.Mesh(new THREE.CylinderGeometry(PR, PR, .26, 32), wood); deck.position.y = -.13; deck.receiveShadow = true; deck.castShadow = true; padG.add(deck);
+    const rimT = new THREE.Mesh(new THREE.TorusGeometry(PR, .06, 6, 40), woodD); rimT.rotation.x = Math.PI / 2; rimT.position.y = -.02; padG.add(rimT);
+    for (let i = 0; i < 6; i++) { const t = i / 6 * TAU; const c = new THREE.Mesh(new THREE.CylinderGeometry(.11, .13, 3, 7), woodD); c.position.set(Math.cos(t) * (PR - .3), -1.6, Math.sin(t) * (PR - .3)); padG.add(c); }
+    // 欄杆：圓坪外圈，朝島的方向留開口
+    const back = Math.atan2(-dir.z, -dir.x), N = 20, open = (t) => Math.abs(Math.atan2(Math.sin(t - back), Math.cos(t - back))) < .5;
+    for (let i = 0; i < N; i++) {
+      const t = i / N * TAU; if (open(t)) continue;
+      const c = new THREE.Mesh(new THREE.CylinderGeometry(.035, .035, .6, 5), rail); c.position.set(Math.cos(t) * (PR - .07), .3, Math.sin(t) * (PR - .07)); padG.add(c);
+      if (open(t + TAU / N)) continue;
+      const tm = t + TAU / (2 * N), rr = (PR - .07) * Math.cos(TAU / (2 * N));
+      const seg = new THREE.Mesh(new THREE.BoxGeometry(.045, .045, 2 * (PR - .07) * Math.sin(TAU / (2 * N)) + .02), rail); seg.position.set(Math.cos(tm) * rr, .6, Math.sin(tm) * rr); seg.rotation.y = -tm; padG.add(seg);
+    }
+    // 地面圖案：深色圓＋黃色外圈＋白色虛線＋中間的「H」和 UAV
+    const c = document.createElement('canvas'); c.width = c.height = 512; const x = c.getContext('2d'), C2 = 256;
+    x.fillStyle = '#2f3b48'; x.beginPath(); x.arc(C2, C2, 256, 0, TAU); x.fill();
+    x.strokeStyle = '#ffcc33'; x.lineWidth = 28; x.beginPath(); x.arc(C2, C2, 232, 0, TAU); x.stroke();
+    x.setLineDash([28, 20]); x.strokeStyle = '#22d6ff'; x.lineWidth = 9; x.beginPath(); x.arc(C2, C2, 196, 0, TAU); x.stroke(); x.setLineDash([]);
+    x.fillStyle = '#ffffff'; x.fillRect(C2 - 92, C2 - 110, 44, 190); x.fillRect(C2 + 48, C2 - 110, 44, 190); x.fillRect(C2 - 48, C2 - 37, 96, 40);
+    x.font = 'bold 48px sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = '#22d6ff'; x.fillText('UAV', C2, C2 + 128);
+    const tex = new THREE.CanvasTexture(c); tex.anisotropy = 4; tex.colorSpace = THREE.SRGBColorSpace;
+    const disc = new THREE.Mesh(new THREE.CircleGeometry(PAD_R, 40), new THREE.MeshStandardMaterial({ map: tex, roughness: .85 }));
+    disc.rotation.x = -Math.PI / 2; disc.rotation.z = Math.atan2(dir.x, dir.z) + Math.PI; disc.position.y = .02; disc.receiveShadow = true; padG.add(disc);   // 「H」正著朝向走過來的人
+    // 邊緣一圈小燈（晚上亮）
+    edgeLampM = new THREE.MeshStandardMaterial({ color: '#dff6ff', emissive: '#22d6ff', emissiveIntensity: .2 });
+    const edgeL = new THREE.InstancedMesh(new THREE.SphereGeometry(.06, 8, 6), edgeLampM, 14);
+    { const M = new THREE.Matrix4(); for (let i = 0; i < 14; i++) { const t = i / 14 * TAU; edgeL.setMatrixAt(i, M.makeTranslation(Math.cos(t) * (PAD_R + .1), .06, Math.sin(t) * (PAD_R + .1))); } }
+    padG.add(edgeL);
+    // 木棧道：從島邊（踩在島上 1 公尺）到圓坪
+    const wk = new THREE.Group(); wk.position.copy(a); wk.rotation.y = Math.atan2(dir.x, dir.z); scene.add(wk);
+    const plank = new THREE.Mesh(new THREE.BoxGeometry(WK_W, .2, len), wood); plank.position.set(0, -.1, len / 2); plank.receiveShadow = true; plank.castShadow = true; wk.add(plank);
+    for (let k = 0; k < Math.floor(len / .5); k++) { const o = new THREE.Mesh(new THREE.BoxGeometry(WK_W + .02, .02, .05), woodD); o.position.set(0, .005, k * .5 + .25); wk.add(o); }
+    for (let k = 1; k < len / 1.6; k++) for (const sx of [-1, 1]) { const o = new THREE.Mesh(new THREE.CylinderGeometry(.08, .09, 3, 6), woodD); o.position.set(sx * (WK_W / 2 - .08), -1.5, k * 1.6); wk.add(o); }
+    for (const sx of [-1, 1]) {
+      const r = new THREE.Mesh(new THREE.BoxGeometry(.05, .05, len - 1.1), rail); r.position.set(sx * (WK_W / 2 - .04), .6, (len - 1.1) / 2 + 1.1); wk.add(r);
+      for (let z = 1.1; z <= len + .01; z += .9) { const o = new THREE.Mesh(new THREE.BoxGeometry(.045, .6, .045), rail); o.position.set(sx * (WK_W / 2 - .04), .3, z); wk.add(o); }
+    }
+    for (const o of wk.children) { o.castShadow = o.castShadow && !low; }
+  } else {
+    base = opts.base ? new THREE.Vector3(opts.base.x, H, opts.base.z) : new THREE.Vector3(3, H, -6);
+  }
+  const baseG = new THREE.Group(); baseG.position.copy(base); baseG.rotation.y = face; scene.add(baseG);
   {
-    const c = document.createElement('canvas'); c.width = c.height = 256; const x = c.getContext('2d');
-    x.fillStyle = '#2f3b48'; x.fillRect(0, 0, 256, 256); x.strokeStyle = '#22d6ff'; x.lineWidth = 14; x.strokeRect(10, 10, 236, 236);
-    x.strokeStyle = '#ffffff'; x.lineWidth = 10; x.beginPath(); x.arc(128, 128, 78, 0, TAU); x.stroke();
-    x.fillStyle = '#ffffff'; x.font = 'bold 54px sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('UAV', 128, 132);
-    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
-    const pad = new THREE.Mesh(new THREE.BoxGeometry(1.9, .08, 1.9), [m('#2f3b48'), m('#2f3b48'), new THREE.MeshStandardMaterial({ map: t, roughness: .8 }), m('#2f3b48'), m('#2f3b48'), m('#2f3b48')]); pad.position.y = .04; pad.receiveShadow = true; baseG.add(pad);
-    // 小看板
+    if (!opts.pier) {
+      const c = document.createElement('canvas'); c.width = c.height = 256; const x = c.getContext('2d');
+      x.fillStyle = '#2f3b48'; x.fillRect(0, 0, 256, 256); x.strokeStyle = '#22d6ff'; x.lineWidth = 14; x.strokeRect(10, 10, 236, 236);
+      x.strokeStyle = '#ffffff'; x.lineWidth = 10; x.beginPath(); x.arc(128, 128, 78, 0, TAU); x.stroke();
+      x.fillStyle = '#ffffff'; x.font = 'bold 54px sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('UAV', 128, 132);
+      const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+      const pad = new THREE.Mesh(new THREE.BoxGeometry(1.9, .08, 1.9), [m('#2f3b48'), m('#2f3b48'), new THREE.MeshStandardMaterial({ map: t, roughness: .8 }), m('#2f3b48'), m('#2f3b48'), m('#2f3b48')]); pad.position.y = .04; pad.receiveShadow = true; baseG.add(pad);
+    }
+    // 小看板（停機坪版：立在棧道口旁邊，面向島）
     // 字太長會被切掉：畫布加寬，並依實際字寬自動縮小字級（字型晚載入時再畫一次）
     const sc = document.createElement('canvas'); sc.width = 512; sc.height = 168; const sx = sc.getContext('2d');
     const st = new THREE.CanvasTexture(sc); st.colorSpace = THREE.SRGBColorSpace;
@@ -64,11 +124,12 @@ export function createDrones(W, opts = {}) {
       sx.fillText('🚁 無人機基地', 256, 88); st.needsUpdate = true;
     };
     paintSign(); if (document.fonts && document.fonts.ready) document.fonts.ready.then(paintSign);
-    const post = new THREE.Mesh(new THREE.CylinderGeometry(.04, .05, 1.5, 6), m('#dddddd')); post.position.set(-1.15, .75, -.7); baseG.add(post);
-    for (const ry of [0, Math.PI]) { const sign = new THREE.Mesh(new THREE.PlaneGeometry(1.3, .43), new THREE.MeshStandardMaterial({ map: st, emissive: '#ffffff', emissiveMap: st, emissiveIntensity: .25 })); sign.position.set(-1.15, 1.55, -.7 + (ry ? -.005 : .005)); sign.rotation.y = ry; baseG.add(sign); }   // 前後兩面都是正的字
+    const sp = opts.pier ? [.95, 1.15] : [-1.15, -.7];   // 停機坪版：機頭（+z）朝島，看板在棧道口右手邊
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(.04, .05, 1.5, 6), m('#dddddd')); post.position.set(sp[0], .75, sp[1]); baseG.add(post);
+    for (const ry of [0, Math.PI]) { const sign = new THREE.Mesh(new THREE.PlaneGeometry(1.3, .43), new THREE.MeshStandardMaterial({ map: st, emissive: '#ffffff', emissiveMap: st, emissiveIntensity: .25 })); sign.position.set(sp[0], 1.55, sp[1] + (ry ? -.005 : .005)); sign.rotation.y = ry; baseG.add(sign); }   // 前後兩面都是正的字
   }
   // 停在基地上的一台（沒人在飛時看得到）
-  const parked = makeDrone('#ff8a1f', 1.2); parked.g.position.copy(base).setY(H + .25); parked.g.rotation.y = opts.base?.face ?? 0; scene.add(parked.g);
+  const parked = makeDrone('#ff8a1f', 1.2); parked.g.position.copy(base).setY(H + .25); parked.g.rotation.y = face; scene.add(parked.g);
 
   // ================================================================ 2. 遙控無人機
   const me = makeDrone('#ff8a1f', 1.2, true); me.g.visible = false; scene.add(me.g);
@@ -91,7 +152,7 @@ export function createDrones(W, opts = {}) {
 
   function startPilot(o = {}) {
     P.on = true; P.left = o.secs ?? 120; P.mission = o.mission || null; P.onEnd = o.onEnd || null; P.onInfo = o.onInfo || null; P.keys = {}; P.pad = {};
-    P.pos.copy(base).setY(H + .3); P.vel.set(0, 0, 0); P.vy = 0; P.yaw = opts.base?.face ?? 0; P.tilt = P.roll = 0;
+    P.pos.copy(base).setY(H + .3); P.vel.set(0, 0, 0); P.vy = 0; P.yaw = face; P.tilt = P.roll = 0;
     me.g.visible = true; parked.g.visible = false; me.box.visible = !!P.mission;
     const fwd = new THREE.Vector3(Math.sin(P.yaw), 0, Math.cos(P.yaw));
     P.camP.copy(P.pos).addScaledVector(fwd, -4.5).add(new THREE.Vector3(0, 2, 0)); P.camT.copy(P.pos);
@@ -259,11 +320,13 @@ export function createDrones(W, opts = {}) {
     }
     for (let k = drops.length - 1; k >= 0; k--) { const b = drops[k]; b.userData.t += dt; if (b.position.y > b.userData.gy) { b.userData.vy -= 9.8 * dt; b.position.y = Math.max(b.userData.gy, b.position.y + b.userData.vy * dt); } if (b.userData.t > 4) { scene.remove(b); drops.splice(k, 1); } }
     showStep(night);
+    if (edgeLampM) { const v = .2 + night * 2.2; if (Math.abs(edgeLampM.emissiveIntensity - v) > .01) edgeLampM.emissiveIntensity = v; }
   }
   return {
     update, startShow, showLen: SHOW_LEN, showing: () => { const tn = now(); return shows.some((s) => tn >= s - 2000 && tn - s < SHOW_LEN * 1000); }, base, showSite: site,
     pilot: { start: startPilot, stop: stopPilot, cam: pilotCam, state: P, get on() { return P.on; } },
     couriers: () => couriers.map((c) => c.d.g.position.clone()),
-    avoid: [base, base.clone().add(new THREE.Vector3(1, 0, 0)), base.clone().add(new THREE.Vector3(-1, 0, 0))],
+    pad: padDir ? { dir: padDir } : null,
+    avoid: padDir ? [] : [base, base.clone().add(new THREE.Vector3(1, 0, 0)), base.clone().add(new THREE.Vector3(-1, 0, 0))],   // 停機坪在海上，不佔島上的地方
   };
 }
