@@ -4,7 +4,7 @@
 // 鯉魚山為示意地形（未取得實景稜線資料）。所有隨機都用固定種子，每次載入構圖相同。
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { TAU, clamp, lerp, rng, glowTexture } from './kit.js?v=20261127l';
+import { TAU, clamp, lerp, rng, glowTexture } from './kit.js?v=20261127m';
 
 const D2R = Math.PI / 180;
 export const SHORE = 210;            // 湖岸半徑（鏡頭水平距離永遠小於這個值）

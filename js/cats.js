@@ -1,7 +1,7 @@
 // 島上的貓：每座島一隻，會散步、坐、舔毛、睡覺；被擼的時候有 10 種反應
 import * as THREE from 'three';
-import { TAU, clamp, lerp, rng, mat, GEO } from './kit.js?v=20261127l';
-import { H } from './world.js?v=20261127l';
+import { TAU, clamp, lerp, rng, mat, GEO } from './kit.js?v=20261127m';
+import { H } from './world.js?v=20261127m';
 
 // ------------------------------------------------------------------ 反應清單
 export const REACTIONS = {
@@ -315,6 +315,20 @@ export function createCats(W, content, opts = {}) {
 
       // ---- 位置與朝向
       const ctr = c.home || I.pos, p = new THREE.Vector3(ctr.x + Math.cos(c.ang) * ringR(I, c), H, ctr.z + Math.sin(c.ang) * ringR(I, c));
+      // 🐱 趴在頭上（願望「讓貓咪在我頭上」）：跟著頭走，縮小一點趴好、呼嚕嚕；時間到或跳下來就回家
+      if (c.onHead) {
+        const hp = c.onHead.at(), done = !hp || now > c.onHead.until;
+        if (done) { const from = M.g.position.clone(); c.onHead = null; M.g.scale.setScalar(c.baseScale); puff('heart', from, 2, .3); c.state = 'sit'; c.timer = 3; }
+        else {
+          M.g.position.copy(hp); M.g.scale.setScalar(c.baseScale * .55);
+          Object.assign(T, POSE0); T.low = 1; T.eye = .25; T.tailUp = .2; T.tailCurl = .5; T.tailWag = .25; T.wagSp = 2.2;
+          c.heading = c.onHead.yaw(); const P = c.pose, rate = Math.min(1, dt * 7);
+          for (const k in T) P[k] = SNAP.has(k) ? T[k] : lerp(P[k], T[k], rate);
+          applyPose(c, t); M.g.rotation.y = c.heading;
+          if (Math.random() < dt * .8) puff('heart', headPos(c), 1, .2);
+          continue;
+        }
+      }
       M.g.position.copy(p);
       let want;
       if (faceCam) want = Math.atan2(camPos.x - p.x, camPos.z - p.z);
@@ -374,5 +388,9 @@ export function createCats(W, content, opts = {}) {
     setHomes(find) { for (const c of cats) { const s = find(c.data.island); if (s) c.home = { x: s.x, z: s.z }; } },
     cooldown(c) { return Math.max(0, Math.ceil(c.coolUntil - performance.now() / 1000)); },
     moodOf(c) { return c.mood; }, MOOD_MAX,
+    // 🐱 抱到頭上：at() 回傳頭頂位置（沒有就跳下來），yaw() 回傳人面向的方向；sec 秒後自己跳下來
+    toHead(c, at, yaw, sec = 15) { if (c.baseScale == null) c.baseScale = c.M.g.scale.x; c.react = null; c.onHead = { at, yaw, until: performance.now() / 1000 + sec }; puff('heart', headPos(c), 3, .4); },
+    offHead(c) { if (c.onHead) c.onHead.until = 0; },
+    onHeadOf: () => cats.find((c) => c.onHead) || null,
   };
 }
