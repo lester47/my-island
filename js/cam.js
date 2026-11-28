@@ -1,9 +1,9 @@
 // 鏡頭：拖曳旋轉縮放、回到全景、點島飛近（電影史詩運鏡）、開場、導覽、地面漫遊
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { TAU, clamp, lerp, easeInOut, smooth } from './kit.js?v=20261127o';
-import { H } from './world.js?v=20261127o';
-import { SHORE } from './scenery.js?v=20261127o';
+import { TAU, clamp, lerp, easeInOut, smooth } from './kit.js?v=20261128a';
+import { H } from './world.js?v=20261128a';
+import { SHORE } from './scenery.js?v=20261128a';
 
 export function createCam(W, canvas, hooks) {
   const camera = W.camera;
@@ -210,7 +210,7 @@ export function createCam(W, canvas, hooks) {
     // 跳躍（重力往下拉）與蹲下（蹲著走比較慢）
     walk.ck += ((walk.crouch && !walk.jumpY ? 1 : 0) - walk.ck) * Math.min(1, dt * 12);
     if (walk.vy || walk.jumpY > 0) { const jd = Math.min(dt, .05); walk.jumpY = Math.max(0, walk.jumpY + walk.vy * jd - 7 * jd * jd); walk.vy -= 14 * jd; if (walk.jumpY === 0 && walk.vy < 0) walk.vy = 0; }
-    const sp = 4.2 * dt * (1 - walk.ck * .55) * (walk.speedMul || 1);   // 騎腳踏車時比較快
+    const sp = 4.2 * dt * (1 - walk.ck * .55) * (walk.speedMul || 1) * (W.swimAt && W.swimAt(walk.pos.x, walk.pos.z) ? .62 : W.wetAt && W.wetAt(walk.pos.x, walk.pos.z) ? .8 : 1);   // 騎腳踏車時比較快；在水裡游比較慢
     const dx = (Math.sin(walk.yaw) * fwd - Math.cos(walk.yaw) * strafe) * sp, dz = (Math.cos(walk.yaw) * fwd + Math.sin(walk.yaw) * strafe) * sp;
     if (dx || dz) {
       // 分軸嘗試，碰到牆可以沿牆滑動；走到海邊或建築會被擋住
